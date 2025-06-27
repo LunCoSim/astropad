@@ -1,0 +1,37 @@
+{
+  "name": "zenit",
+  "version": "1.0.0",
+  "description": "A web interface for deploying and managing Clanker tokens.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "lint": "biome check && tsc --noEmit",
+    "format": "biome check --write --unsafe",
+    "build": "tsup"
+  },
+  "keywords": ["clanker", "token", "deployment", "ethereum", "superchain"],
+  "author": "Clanker Team",
+  "license": "MIT",
+  "dependencies": {
+    "clanker-sdk": "^4.0.21",
+    "@openzeppelin/merkle-tree": "^1.0.8",
+    "abitype": "^1.0.8",
+    "dotenv": "^16.4.7",
+    "inquirer": "^8.2.6",
+    "viem": "^2.7.9",
+    "zod": "^3.24.4",
+    "wagmi": "^2.5.7",
+    "@web3modal/wagmi": "^4.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.0.0",
+    "@types/bun": "latest",
+    "@types/inquirer": "^8.2.6",
+    "@types/node": "^22.14.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "viem": "^2.7.9"
+  }
+}
