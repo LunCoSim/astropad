@@ -1,106 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clanker Token Tools</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f4f4f4;
-            color: #333;
-        }
-        .container {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        h1, h2 {
-            color: #0056b3;
-        }
-        button {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-right: 10px;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        input[type="text"], input[type="number"] {
-            width: calc(100% - 22px);
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        .section {
-            margin-bottom: 30px;
-            padding: 20px;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            background-color: #f9f9f9;
-        }
-        .result {
-            background-color: #e9ecef;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 10px;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-        .error {
-            color: red;
-            margin-top: 10px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Clanker Token Tools</h1>
-
-        <div class="section">
-            <h2>Wallet Connection</h2>
-            <button id="connectWalletBtn">Connect Wallet</button>
-            <button id="disconnectWalletBtn" style="display: none;">Disconnect Wallet</button>
-            <p>Connected Account: <span id="connectedAccount">None</span></p>
-            <p>Connected Chain: <span id="connectedChain">None</span></p>
-            <div id="walletStatus" class="result"></div>
-        </div>
-
-        <div class="section">
-            <h2>Deploy Token</h2>
-            <label for="tokenName">Token Name:</label>
-            <input type="text" id="tokenName" value="My Project Coin">
-            <label for="tokenSymbol">Token Symbol:</label>
-            <input type="text" id="tokenSymbol" value="MPC">
-            <label for="devBuyEthAmount">Dev Buy ETH Amount:</label>
-            <input type="number" id="devBuyEthAmount" value="0.0001" step="0.0001">
-            <button id="deployTokenBtn">Deploy Token</button>
-            <div id="deployResult" class="result"></div>
-            <div id="deployError" class="error"></div>
-        </div>
-
-        <div class="section">
-            <h2>Check Fees</h2>
-            <label for="feeOwnerAddress">Fee Owner Address:</label>
-            <input type="text" id="feeOwnerAddress" value="0xCd2a99C6d6b27976537fC3737b0ef243E7C49946">
-            <label for="checkTokenAddress">Token Address (for fees):</label>
-            <input type="text" id="checkTokenAddress" value="0x699E27a42095D3cb9A6a23097E5C201E33E314B4">
-            <button id="checkFeesBtn">Check Fees</button>
-            <div id="feesResult" class="result"></div>
-            <div id="feesError" class="error"></div>
-        </div>
-    </div>
-
-    <script type="module" src="./src/script.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + React + TS</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

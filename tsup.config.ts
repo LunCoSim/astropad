@@ -1,11 +1,17 @@
-import { copyFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { defineConfig } from 'tsup';
-
-import { copyFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['checkFees.ts', 'generateSafeDeploymentTx.ts', 'script.js'],
+  entry: ['script.js'],
+  outDir: 'dist',
+  format: ['iife'],
+  splitting: false,
+  sourcemap: true,
+  clean: true,
+  dts: false,
+  platform: 'browser',
+  target: 'es2020',
+  env: {
+    // Ensure browser-compatible versions of libraries are used
+    BROWSER: 'true',
+  },
 });

@@ -5,7 +5,7 @@ import { http, createPublicClient, formatUnits } from 'viem';
 import { TokenConfigV4Builder, WETH_ADDRESS, simulateDeploy, availableFees } from 'clanker-sdk';
 
 // 1. Define constants
-const projectId = 'YOUR_PROJECT_ID'; // Replace with your WalletConnect Project ID
+const projectId = '03cafb3be79ba7760436a3741199a564';
 
 const metadata = {
   name: 'Clanker Token Tools',
