@@ -1,15 +1,15 @@
 {
   "compilerOptions": {
     // Target and modules
-    "target": "ES2024",
-    "module": "nodenext",
+    "target": "ES2020",
+    "module": "ESNext",
     "moduleResolution": "nodenext",
     "moduleDetection": "force",
     // Library building
     "declaration": true,
     "outDir": "dist",
     // Features
-    "lib": ["ES2024"],
+    "lib": ["ES2024", "DOM"],
     "allowJs": false,
     "verbatimModuleSyntax": true,
     // Best practices
@@ -23,6 +23,6 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "include": ["checkFees.ts", "generateSafeDeploymentTx.ts", "script.js"],
+  "include": ["checkFees.ts", "generateSafeDeploymentTx.ts", "script.js", "src"],
   "exclude": ["node_modules", "dist"]
 }
