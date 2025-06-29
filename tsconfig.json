@@ -12,6 +12,10 @@
     "lib": ["ES2024", "DOM"],
     "allowJs": false,
     "verbatimModuleSyntax": true,
+    "baseUrl": ".",
+    "paths": {
+      "@lib/*": ["lib/*"]
+    },
     // Best practices
     "strict": true,
     "skipLibCheck": true,
@@ -23,6 +27,6 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "include": ["checkFees.ts", "generateSafeDeploymentTx.ts", "script.js", "src"],
+  "include": ["checkFees.ts", "generateSafeDeploymentTx.ts", "script.js", "src", "lib"],
   "exclude": ["node_modules", "dist"]
 }

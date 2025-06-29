@@ -55,8 +55,7 @@ function App() {
   const [tokenName, setTokenName] = useState('My Project Coin');
   const [tokenSymbol, setTokenSymbol] = useState('MPC');
   const [devBuyEthAmount, setDevBuyEthAmount] = useState(0.0001);
-  const [feeOwnerAddress, setFeeOwnerAddress] = useState('0xCd2a99C6d6b27976537fC3737b0ef243E7C49946');
-  const [checkTokenAddress, setCheckTokenAddress] = useState('0x699E27a42095D3cb9A6a23097E5C201E33E314B4');
+  const [deployedTokenAddress, setDeployedTokenAddress] = useState('');
 
   const [deployLoading, setDeployLoading] = useState(false);
   const [deployResult, setDeployResult] = useState('');
@@ -86,6 +85,9 @@ function App() {
     setDeployLoading(true);
     setDeployResult('');
     setDeployError('');
+    setDeployedTokenAddress('');
+    setFeesResult('');
+    setFeesError('');
 
     if (!isConnected || !address) {
       setDeployError('Please connect your wallet first.');
@@ -155,6 +157,7 @@ function App() {
         account: walletClient.account,
       });
 
+      setDeployedTokenAddress(simulatedAddress);
       setDeployResult(`Transaction sent! Hash: ${hash}\nSimulated Token Address: ${simulatedAddress}\nView on BaseScan: https://basescan.org/tx/${hash}`);
     } catch (error: any) {
       console.error('Deployment failed:', error);
@@ -169,41 +172,30 @@ function App() {
     setFeesResult('');
     setFeesError('');
 
-    if (!publicClient || !clanker) {
-      setFeesError('Public client or Clanker instance not available.');
-      setFeesLoading(false);
-      return;
-    }
-
-    if (!feeOwnerAddress || !checkTokenAddress) {
-      setFeesError('Fee Owner Address and Token Address are required.');
+    if (!address || !deployedTokenAddress) {
+      setFeesError('Fee Owner Address (your connected wallet) and a deployed Token Address are required.');
       setFeesLoading(false);
       return;
     }
 
     try {
-      let resultText = '';
+      const response = await fetch(`/api/check-fees?feeOwnerAddress=${address}&clankerTokenAddress=${deployedTokenAddress}`);
+      const data = await response.json();
 
-      // Get fees for the specified token
-      const specifiedTokenRawFees = await clanker.availableRewards(feeOwnerAddress as `0x${string}`, checkTokenAddress as `0x${string}`);
-      const specifiedTokenDecimals = await getTokenDecimals(publicClient, checkTokenAddress as `0x${string}`);
-      const specifiedTokenSymbol = await getTokenSymbol(publicClient, checkTokenAddress as `0x${string}`);
-      const specifiedTokenFormattedFees = formatUnits(specifiedTokenRawFees, specifiedTokenDecimals);
-      resultText += `Available fees for ${specifiedTokenSymbol} (${checkTokenAddress}): ${specifiedTokenFormattedFees}\n`;
-
-      // Get fees for WETH
-      const wethTokenAddress = WETH_ADDRESS;
-      const wethRawFees = await clanker.availableRewards(feeOwnerAddress as `0x${string}`, wethTokenAddress);
-      const wethDecimals = await getTokenDecimals(publicClient, wethTokenAddress);
-      const wethSymbol = await getTokenSymbol(publicClient, wethTokenAddress);
-      const wethFormattedFees = formatUnits(wethRawFees, wethDecimals);
-      resultText += `Available fees for ${wethSymbol} (${wethTokenAddress}): ${wethFormattedFees}`;
-
-      setFeesResult(resultText);
+      if (response.ok) {
+        let resultText = '';
+        for (const [symbol, amount] of Object.entries(data)) {
+          resultText += `Available fees for ${symbol}: ${amount}\n`;
+        }
+        setFeesResult(resultText);
+      } else {
+        throw new Error(data.error || 'Failed to check fees');
+      }
     } catch (error: any) {
       console.error('Error checking fees:', error);
       setFeesError(`Error checking fees: ${error.message || error}`);
-    } finally {
+    }
+    finally {
       setFeesLoading(false);
     }
   };
@@ -253,30 +245,16 @@ function App() {
         <button onClick={handleDeployToken} disabled={deployLoading}>
           {deployLoading ? 'Deploying...' : 'Deploy Token'}
         </button>
-        {deployResult && <div id="deployResult" className="result">{deployResult}</div>}
+        {deployResult && <div id="deployResult" className="result" style={{ whiteSpace: 'pre-wrap' }}>{deployResult}</div>}
         {deployError && <div id="deployError" className="error">{deployError}</div>}
       </div>
 
       <div className="section">
         <h2>Check Fees</h2>
-        <label htmlFor="feeOwnerAddress">Fee Owner Address:</label>
-        <input
-          type="text"
-          id="feeOwnerAddress"
-          value={feeOwnerAddress}
-          onChange={(e) => setFeeOwnerAddress(e.target.value)}
-        />
-        <label htmlFor="checkTokenAddress">Token Address (for fees):</label>
-        <input
-          type="text"
-          id="checkTokenAddress"
-          value={checkTokenAddress}
-          onChange={(e) => setCheckTokenAddress(e.target.value)}
-        />
-        <button onClick={handleCheckFees} disabled={feesLoading}>
-          {feesLoading ? 'Checking...' : 'Check Fees'}
+        <button onClick={handleCheckFees} disabled={!deployedTokenAddress || feesLoading}>
+          {feesLoading ? 'Checking...' : 'Check Fees for Deployed Token'}
         </button>
-        {feesResult && <div id="feesResult" className="result">{feesResult}</div>}
+        {feesResult && <div id="feesResult" className="result" style={{ whiteSpace: 'pre-wrap' }}>{feesResult}</div>}
         {feesError && <div id="feesError" className="error">{feesError}</div>}
       </div>
     </div>
