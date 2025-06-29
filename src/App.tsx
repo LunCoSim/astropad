@@ -983,119 +983,325 @@ function App() {
 
   const renderFeaturesStep = () => (
     <div className="space-y-8">
+      {/* Modern Header */}
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Coin Features</h2>
-        <p className="text-gray-600 max-w-lg mx-auto">
-          Configure optional features like vault, airdrops, and dev buy.
+        <h2 className="text-3xl font-bold text-white mb-4">
+          Coin <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Features</span>
+        </h2>
+        <p className="text-blue-200 text-lg max-w-2xl mx-auto">
+          Enhance your coin with powerful features like vaults, airdrops, and automated purchases.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className={`p-6 rounded-2xl border-2 transition-all ${
-          vaultEnabled ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white'
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Vault Feature */}
+        <div className={`relative bg-white/10 backdrop-blur-md border-2 rounded-2xl p-8 transition-all duration-300 transform hover:scale-105 ${
+          vaultEnabled 
+            ? 'border-purple-400/50 shadow-lg shadow-purple-500/20' 
+            : 'border-white/20 hover:border-white/30'
         }`}>
+          <div className="absolute top-4 right-4">
+            <div className={`w-3 h-3 rounded-full transition-all duration-300 ${
+              vaultEnabled ? 'bg-purple-400 animate-pulse' : 'bg-white/30'
+            }`}></div>
+          </div>
+          
+          <div className="flex items-center space-x-4 mb-6">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
+              vaultEnabled 
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-lg' 
+                : 'bg-white/20'
+            }`}>
+              <span className="text-2xl">🔒</span>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-white">Coin Vault</h3>
+              <p className="text-sm text-white/60">Team allocation</p>
+            </div>
+          </div>
+
           <div className="flex items-center space-x-3 mb-4">
             <input
               type="checkbox"
               id="vaultEnabled"
               checked={vaultEnabled}
               onChange={(e) => setVaultEnabled(e.target.checked)}
-              className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+              className="w-5 h-5 text-purple-600 bg-white/10 border-white/30 rounded focus:ring-purple-500 focus:ring-2"
             />
-            <label htmlFor="vaultEnabled" className="text-lg font-semibold text-gray-900">
-              🔒 Vault
+            <label htmlFor="vaultEnabled" className="text-white font-medium cursor-pointer">
+              Enable Vault System
             </label>
           </div>
-          <p className="text-sm text-gray-600 mb-4">Lock coins with vesting schedule for team allocation</p>
+
+          <p className="text-white/70 mb-6 leading-relaxed">
+            Lock coins with customizable vesting schedule for team allocation and long-term incentives.
+          </p>
+
           {vaultEnabled && (
-            <div className="space-y-3">
-              <input
-                type="number"
-                value={vaultPercentage}
-                onChange={(e) => setVaultPercentage(parseInt(e.target.value) || 0)}
-                placeholder="10"
-                className="input w-full text-sm"
-                min="0"
-                max="90"
-              />
-              <div className="text-xs text-gray-500">{vaultPercentage}% of total supply</div>
+            <div className="space-y-4 bg-white/5 backdrop-blur-sm rounded-xl p-4">
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Vault Allocation (% of total supply)
+                </label>
+                <input
+                  type="number"
+                  value={vaultPercentage}
+                  onChange={(e) => setVaultPercentage(parseInt(e.target.value) || 0)}
+                  placeholder="10"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+                  min="0"
+                  max="90"
+                />
+                <div className="mt-2 flex justify-between text-xs text-white/60">
+                  <span>{vaultPercentage}% locked in vault</span>
+                  <span>{100 - vaultPercentage}% available for trading</span>
+                </div>
+              </div>
+              
+              <div className="bg-purple-500/20 border border-purple-400/30 rounded-lg p-3">
+                <div className="flex items-center space-x-2 mb-2">
+                  <svg className="w-4 h-4 text-purple-300" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-xs font-semibold text-purple-300">Vault Benefits</span>
+                </div>
+                <ul className="text-xs text-purple-200 space-y-1">
+                  <li>• Builds investor confidence</li>
+                  <li>• Prevents token dumping</li>
+                  <li>• Customizable vesting schedule</li>
+                </ul>
+              </div>
             </div>
           )}
         </div>
 
-        <div className={`p-6 rounded-2xl border-2 transition-all ${
-          airdropEnabled ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white'
+        {/* Airdrop Feature */}
+        <div className={`relative bg-white/10 backdrop-blur-md border-2 rounded-2xl p-8 transition-all duration-300 transform hover:scale-105 ${
+          airdropEnabled 
+            ? 'border-green-400/50 shadow-lg shadow-green-500/20' 
+            : 'border-white/20 hover:border-white/30'
         }`}>
+          <div className="absolute top-4 right-4">
+            <div className={`w-3 h-3 rounded-full transition-all duration-300 ${
+              airdropEnabled ? 'bg-green-400 animate-pulse' : 'bg-white/30'
+            }`}></div>
+          </div>
+          
+          <div className="flex items-center space-x-4 mb-6">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
+              airdropEnabled 
+                ? 'bg-gradient-to-r from-green-500 to-emerald-500 shadow-lg' 
+                : 'bg-white/20'
+            }`}>
+              <span className="text-2xl">🎁</span>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-white">Airdrop System</h3>
+              <p className="text-sm text-white/60">Token distribution</p>
+            </div>
+          </div>
+
           <div className="flex items-center space-x-3 mb-4">
             <input
               type="checkbox"
               id="airdropEnabled"
               checked={airdropEnabled}
               onChange={(e) => setAirdropEnabled(e.target.checked)}
-              className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500"
+              className="w-5 h-5 text-green-600 bg-white/10 border-white/30 rounded focus:ring-green-500 focus:ring-2"
             />
-            <label htmlFor="airdropEnabled" className="text-lg font-semibold text-gray-900">
-              🎁 Airdrop
+            <label htmlFor="airdropEnabled" className="text-white font-medium cursor-pointer">
+              Enable Airdrops
             </label>
           </div>
-          <p className="text-sm text-gray-600 mb-4">Distribute coins to specific addresses via merkle tree</p>
+
+          <p className="text-white/70 mb-6 leading-relaxed">
+            Distribute coins to specific addresses using secure merkle tree technology for fair token allocation.
+          </p>
+
           {airdropEnabled && (
-            <div className="space-y-3">
-              <input
-                type="number"
-                value={airdropPercentage}
-                onChange={(e) => setAirdropPercentage(parseInt(e.target.value) || 0)}
-                placeholder="5"
-                className="input w-full text-sm"
-                min="0"
-                max="50"
-              />
-              <div className="text-xs text-gray-500">{airdropPercentage}% of total supply</div>
+            <div className="space-y-4 bg-white/5 backdrop-blur-sm rounded-xl p-4">
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Airdrop Allocation (% of total supply)
+                </label>
+                <input
+                  type="number"
+                  value={airdropPercentage}
+                  onChange={(e) => setAirdropPercentage(parseInt(e.target.value) || 0)}
+                  placeholder="5"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                  min="0"
+                  max="50"
+                />
+                <div className="mt-2 text-xs text-white/60">
+                  {airdropPercentage}% reserved for community airdrops
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-white">Airdrop Recipients</label>
+                  <button
+                    type="button"
+                    onClick={addAirdropEntry}
+                    className="px-3 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-medium rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-200"
+                  >
+                    + Add
+                  </button>
+                </div>
+                
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {airdropEntries.map((entry, index) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <input
+                        type="text"
+                        value={entry.address}
+                        onChange={(e) => updateAirdropEntry(index, 'address', e.target.value)}
+                        placeholder="0x..."
+                        className="flex-1 px-3 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-1 focus:ring-green-400 text-xs font-mono"
+                      />
+                      <input
+                        type="number"
+                        value={entry.amount}
+                        onChange={(e) => updateAirdropEntry(index, 'amount', parseFloat(e.target.value) || 0)}
+                        placeholder="1000"
+                        className="w-20 px-2 py-2 bg-white/10 border border-white/30 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-1 focus:ring-green-400 text-xs"
+                        min="0"
+                      />
+                      {airdropEntries.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeAirdropEntry(index)}
+                          className="w-8 h-8 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg flex items-center justify-center"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-green-500/20 border border-green-400/30 rounded-lg p-3">
+                <div className="flex items-center space-x-2 mb-2">
+                  <svg className="w-4 h-4 text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-xs font-semibold text-green-300">Airdrop Features</span>
+                </div>
+                <ul className="text-xs text-green-200 space-y-1">
+                  <li>• Gas-efficient merkle tree distribution</li>
+                  <li>• Prevents double claims</li>
+                  <li>• Community engagement boost</li>
+                </ul>
+              </div>
             </div>
           )}
         </div>
 
-        <div className={`p-6 rounded-2xl border-2 transition-all ${
-          devBuyEnabled ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
+        {/* Dev Buy Feature */}
+        <div className={`relative bg-white/10 backdrop-blur-md border-2 rounded-2xl p-8 transition-all duration-300 transform hover:scale-105 ${
+          devBuyEnabled 
+            ? 'border-blue-400/50 shadow-lg shadow-blue-500/20' 
+            : 'border-white/20 hover:border-white/30'
         }`}>
+          <div className="absolute top-4 right-4">
+            <div className={`w-3 h-3 rounded-full transition-all duration-300 ${
+              devBuyEnabled ? 'bg-blue-400 animate-pulse' : 'bg-white/30'
+            }`}></div>
+          </div>
+          
+          <div className="flex items-center space-x-4 mb-6">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
+              devBuyEnabled 
+                ? 'bg-gradient-to-r from-blue-500 to-cyan-500 shadow-lg' 
+                : 'bg-white/20'
+            }`}>
+              <span className="text-2xl">🛒</span>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-white">Dev Buy</h3>
+              <p className="text-sm text-white/60">Auto purchase</p>
+            </div>
+          </div>
+
           <div className="flex items-center space-x-3 mb-4">
             <input
               type="checkbox"
               id="devBuyEnabled"
               checked={devBuyEnabled}
               onChange={(e) => setDevBuyEnabled(e.target.checked)}
-              className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-5 h-5 text-blue-600 bg-white/10 border-white/30 rounded focus:ring-blue-500 focus:ring-2"
             />
-            <label htmlFor="devBuyEnabled" className="text-lg font-semibold text-gray-900">
-              🛒 Dev Buy
+            <label htmlFor="devBuyEnabled" className="text-white font-medium cursor-pointer">
+              Enable Dev Buy
             </label>
           </div>
-          <p className="text-sm text-gray-600 mb-4">Automatically buy coins after deployment</p>
+
+          <p className="text-white/70 mb-6 leading-relaxed">
+            Automatically purchase coins immediately after deployment to establish initial price action and confidence.
+          </p>
+
           {devBuyEnabled && (
-            <div className="space-y-3">
-              <input
-                type="number"
-                value={devBuyEthAmount}
-                onChange={(e) => setDevBuyEthAmount(parseFloat(e.target.value) || 0)}
-                placeholder="0.0001"
-                className="input w-full text-sm"
-                min="0"
-                step="0.0001"
-              />
-              <div className="text-xs text-gray-500">{devBuyEthAmount} ETH purchase</div>
+            <div className="space-y-4 bg-white/5 backdrop-blur-sm rounded-xl p-4">
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Purchase Amount (ETH)
+                </label>
+                <input
+                  type="number"
+                  value={devBuyEthAmount}
+                  onChange={(e) => setDevBuyEthAmount(parseFloat(e.target.value) || 0)}
+                  placeholder="0.0001"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent font-mono"
+                  min="0"
+                  step="0.0001"
+                />
+                <div className="mt-2 text-xs text-white/60">
+                  Will buy {devBuyEthAmount} ETH worth of coins after deployment
+                </div>
+              </div>
+
+              <div className="bg-blue-500/20 border border-blue-400/30 rounded-lg p-3">
+                <div className="flex items-center space-x-2 mb-2">
+                  <svg className="w-4 h-4 text-blue-300" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-xs font-semibold text-blue-300">Dev Buy Benefits</span>
+                </div>
+                <ul className="text-xs text-blue-200 space-y-1">
+                  <li>• Creates initial trading volume</li>
+                  <li>• Establishes price floor</li>
+                  <li>• Shows developer commitment</li>
+                </ul>
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      <div className="flex justify-between">
-        <button onClick={prevStep} className="btn btn-secondary px-8">
-          <span className="text-xl">←</span>
+      {/* Action Buttons */}
+      <div className="flex justify-between pt-8">
+        <button 
+          onClick={prevStep} 
+          className="px-8 py-4 text-white hover:text-blue-200 font-semibold rounded-xl hover:bg-white/10 transition-all duration-200 flex items-center space-x-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
           <span>Back to Liquidity</span>
         </button>
-        <button onClick={nextStep} className="btn btn-primary px-8">
+        
+        <button 
+          onClick={nextStep} 
+          className="px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg shadow-blue-500/30 flex items-center space-x-2"
+        >
           <span>Continue to Advanced</span>
-          <span className="text-xl">→</span>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
         </button>
       </div>
     </div>
@@ -1294,35 +1500,43 @@ function App() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900">
+      {/* Modern Header */}
+      <header className="bg-white/10 backdrop-blur-md border-b border-white/20 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold">
-                A
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-xl flex items-center justify-center shadow-lg">
+                  <span className="text-white font-bold text-lg">A</span>
+                </div>
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
               </div>
               <div>
-                                 <h1 className="text-xl font-bold text-gray-900">astropad</h1>
-                 <p className="text-xs text-gray-600">Coin Management Platform</p>
+                <h1 className="text-xl font-bold text-white">astropad</h1>
+                <p className="text-xs text-blue-200">Next-Gen Coin Deployment</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-4">
               {isConnected ? (
                 <div className="flex items-center space-x-3">
-                  <div className="text-sm">
-                    <div className="font-medium text-gray-900">
-                      {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Connected'}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {chain?.name || 'Unknown Network'}
+                  <div className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl px-4 py-2">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                      <div className="text-sm">
+                        <div className="font-semibold text-white">
+                          {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Connected'}
+                        </div>
+                        <div className="text-xs text-blue-200">
+                          {chain?.name || 'Unknown Network'}
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <button
                     onClick={() => disconnect()}
-                    className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                    className="px-4 py-2 text-sm text-red-200 hover:text-white hover:bg-red-500/20 rounded-xl transition-all duration-200"
                   >
                     Disconnect
                   </button>
@@ -1330,7 +1544,7 @@ function App() {
               ) : (
                 <button
                   onClick={() => open()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                 >
                   Connect Wallet
                 </button>
@@ -1338,158 +1552,272 @@ function App() {
             </div>
           </div>
         </div>
+      </header>
+
+      {/* Hero Section */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-cyan-600/20"></div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center">
+            <h2 className="text-5xl font-bold text-white mb-6">
+              Deploy & Manage <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">Coins</span>
+            </h2>
+            <p className="text-xl text-blue-100 max-w-3xl mx-auto mb-8">
+              Create professional-grade tokens with advanced features like airdrops, vaults, and liquidity management - all in one intuitive platform.
+            </p>
+            <div className="flex items-center justify-center space-x-8 text-blue-200">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-sm">Audited Contracts</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                <span className="text-sm">Instant Deployment</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
+                <span className="text-sm">Advanced Features</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Deploy & Manage <span className="text-blue-600">Coins</span></h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Create and manage your Clanker coins with our intuitive, Apple-inspired interface. Built for simplicity, designed for power.
-          </p>
-        </div>
-
-        <div className="grid lg:grid-cols-3 gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        <div className="grid lg:grid-cols-4 gap-8">
           {/* Deploy Coin Card */}
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-            {/* Progress Header */}
-            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-xl">
-                    {STEPS[currentStep].icon}
+          <div className="lg:col-span-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
+            {/* Modern Progress Header */}
+            <div className="bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-sm border-b border-white/20 p-8">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center space-x-6">
+                  <div className="relative">
+                    <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
+                      {STEPS[currentStep].icon}
+                    </div>
+                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg">
+                      {currentStep + 1}
+                    </div>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Deploy Coin</h3>
-                    <p className="text-sm text-gray-600">Step {currentStep + 1} of {STEPS.length}: {STEPS[currentStep].title}</p>
+                    <h3 className="text-2xl font-bold text-white mb-2">Deploy Your Coin</h3>
+                    <p className="text-blue-200 font-medium">
+                      {STEPS[currentStep].title} • Step {currentStep + 1} of {STEPS.length}
+                    </p>
+                  </div>
+                </div>
+                <div className="hidden sm:block bg-white/10 backdrop-blur-sm rounded-2xl px-6 py-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-white">{Math.round(((currentStep + 1) / STEPS.length) * 100)}%</div>
+                    <div className="text-xs text-blue-200">Complete</div>
                   </div>
                 </div>
               </div>
 
-              {/* Progress Steps */}
+              {/* Modern Progress Steps */}
               <div className="flex items-center justify-between">
                 {STEPS.map((step, index) => (
-                  <div key={step.id} className="flex items-center">
+                  <div key={step.id} className="flex items-center flex-1">
                     <button
                       onClick={() => setCurrentStep(index)}
                       disabled={index > currentStep && !isStepValid(index - 1)}
                       className={`
-                        flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-medium transition-all
+                        group relative flex items-center justify-center w-12 h-12 rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-110
                         ${index === currentStep 
-                          ? 'bg-blue-100 text-blue-700' 
+                          ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/50' 
                           : isStepValid(index)
-                            ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                            ? 'bg-gradient-to-r from-green-400 to-emerald-400 text-white shadow-lg shadow-green-400/50'
                             : index < currentStep
-                              ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                              : 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                              ? 'bg-white/20 text-white hover:bg-white/30'
+                              : 'bg-white/10 text-white/50 cursor-not-allowed'
                         }
                       `}
                     >
-                      <span className="text-sm">{step.icon}</span>
-                      <span className="hidden sm:inline">{step.title}</span>
-                      {isStepValid(index) && index !== currentStep && (
-                        <span className="text-green-500 text-xs">✓</span>
+                      {isStepValid(index) && index !== currentStep ? (
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <span>{step.icon}</span>
                       )}
+                      <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-xs text-white/80 whitespace-nowrap font-medium">
+                        {step.title}
+                      </div>
                     </button>
                     {index < STEPS.length - 1 && (
-                      <div className="w-2 h-px bg-gray-200 mx-1"></div>
+                      <div className="flex-1 h-1 mx-4 bg-white/20 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full transition-all duration-500 ${
+                            index < currentStep ? 'bg-gradient-to-r from-green-400 to-emerald-400' : 'bg-transparent'
+                          }`}
+                        ></div>
+                      </div>
                     )}
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Step Content */}
-            <div className="p-6">
+            {/* Modern Step Content */}
+            <div className="p-8">
               {renderCurrentStep()}
             </div>
           </div>
 
-          {/* Check Fees Card */}
-          <div className="card animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-            <div className="flex items-center space-x-4 mb-8">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-3xl flex items-center justify-center text-white text-2xl shadow-lg">
+          {/* Modern Sidebar */}
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 shadow-xl">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center text-white text-xl shadow-lg">
                 💰
               </div>
               <div>
-                <h3 className="text-title font-bold text-gray-900">Check Fees</h3>
-                <p className="text-caption">Monitor your coin earnings</p>
+                <h3 className="text-xl font-semibold text-white">Fee Analytics</h3>
+                <p className="text-sm text-blue-200">Monitor your earnings</p>
               </div>
             </div>
             
-            <div className="space-y-8">
+            <div className="space-y-6">
               <div className="space-y-3">
-                <label className="text-label">Clanker Coin Address</label>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Clanker Coin Address
+                </label>
                 <input
                   type="text"
                   value={customClankerTokenAddress}
                   onChange={(e) => setCustomClankerTokenAddress(e.target.value)}
                   placeholder="0x..."
-                  className="input font-mono text-sm"
+                  className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 font-mono text-sm"
                 />
               </div>
               
               <div className="space-y-3">
-                <label className="text-label">Fee Owner Address</label>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Fee Owner Address
+                </label>
                 <input
                   type="text"
                   value={customFeeOwnerAddress}
                   onChange={(e) => setCustomFeeOwnerAddress(e.target.value)}
                   placeholder="0x..."
-                  className="input font-mono text-sm"
+                  className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 font-mono text-sm"
                 />
               </div>
               
               <button
                 onClick={handleCheckFees}
                 disabled={feesLoading || !customClankerTokenAddress || !customFeeOwnerAddress}
-                className="btn btn-primary btn-lg w-full"
+                className={`w-full px-4 py-3 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 ${
+                  feesLoading || !customClankerTokenAddress || !customFeeOwnerAddress
+                    ? 'bg-white/10 text-white/50 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg shadow-blue-500/30'
+                }`}
               >
                 {feesLoading ? (
-                  <>
-                    <div className="spinner"></div>
-                    <span>Checking Fees...</span>
-                  </>
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Analyzing...</span>
+                  </div>
                 ) : (
-                  <>
-                    <span className="btn-icon">🔍</span>
+                  <div className="flex items-center justify-center space-x-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
                     <span>Check Fees</span>
-                  </>
+                  </div>
                 )}
               </button>
               
               {feesResult && (
-                <div className="status-message status-success animate-scale-in">
+                <div className="bg-green-500/20 backdrop-blur-sm border border-green-400/30 rounded-xl p-4">
                   <div className="flex items-start space-x-3">
-                    <span className="text-xl">📊</span>
+                    <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
                     <div>
-                      <h4 className="text-headline font-semibold mb-2">Fee Information</h4>
-                      <p className="text-body font-mono text-sm whitespace-pre-wrap">{feesResult}</p>
+                      <h4 className="text-sm font-semibold text-green-300 mb-2">Fee Analytics</h4>
+                      <p className="text-sm text-green-200 font-mono whitespace-pre-wrap">{feesResult}</p>
                     </div>
                   </div>
                 </div>
               )}
               
               {feesError && (
-                <div className="status-message status-error animate-scale-in">
+                <div className="bg-red-500/20 backdrop-blur-sm border border-red-400/30 rounded-xl p-4">
                   <div className="flex items-start space-x-3">
-                    <span className="text-xl">❌</span>
+                    <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </div>
                     <div>
-                      <h4 className="text-headline font-semibold mb-2">Error</h4>
-                      <p className="text-body text-sm">{feesError}</p>
+                      <h4 className="text-sm font-semibold text-red-300 mb-2">Error</h4>
+                      <p className="text-sm text-red-200">{feesError}</p>
                     </div>
                   </div>
                 </div>
               )}
+
+              {/* Quick Stats */}
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 mt-8">
+                <h4 className="text-sm font-semibold text-white mb-4 flex items-center">
+                  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"/>
+                    <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"/>
+                  </svg>
+                  Platform Stats
+                </h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-white/60">Active Coins</span>
+                    <span className="text-sm font-semibold text-white">1,247</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-white/60">Total Volume</span>
+                    <span className="text-sm font-semibold text-white">$12.4M</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-white/60">Avg. Deploy Time</span>
+                    <span className="text-sm font-semibold text-white">2.3s</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="mt-20 text-center">
-          <p className="text-caption">
-            Built with ❤️ for the Clanker ecosystem
-          </p>
+        <div className="mt-16 text-center">
+          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 max-w-4xl mx-auto">
+            <div className="flex items-center justify-center space-x-8 mb-6">
+              <div className="flex items-center space-x-2 text-blue-200">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium">Audited & Secure</span>
+              </div>
+              <div className="flex items-center space-x-2 text-cyan-200">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium">Lightning Fast</span>
+              </div>
+              <div className="flex items-center space-x-2 text-green-200">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span className="text-sm font-medium">Gas Optimized</span>
+              </div>
+            </div>
+            <p className="text-white/80 mb-4">
+              Built with ❤️ for the <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 font-semibold">Clanker ecosystem</span>
+            </p>
+            <p className="text-white/60 text-sm">
+              Empowering creators to launch professional tokens with enterprise-grade features
+            </p>
+          </div>
         </div>
       </div>
     </div>

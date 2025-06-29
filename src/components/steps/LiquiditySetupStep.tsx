@@ -121,201 +121,225 @@ export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }:
   const distributions = calculateDistribution();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Liquidity Setup</h2>
-        <p className="text-gray-600 text-sm">
-          Configure your coin's initial liquidity and trading pair settings
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">Liquidity Configuration</h2>
+        <p className="text-gray-600">
+          Configure your coin's initial liquidity and trading parameters
         </p>
       </div>
 
-      <div className="bg-gray-50 rounded-xl p-4 space-y-4">
-        <h3 className="text-sm font-medium text-gray-900 flex items-center">
-          <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full mr-2"></span>
-          Market Cap
+      <div className="bg-gradient-to-br from-emerald-50/50 to-green-50/50 rounded-2xl p-6 border border-emerald-200/30 backdrop-blur-sm">
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-6">
+          <div className="w-2 h-2 bg-emerald-500 rounded-full mr-3"></div>
+          Initial Liquidity
         </h3>
 
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-700 flex items-center">
-            <span>Starting Market Cap (ETH)</span>
-            <span className="text-red-500 ml-1">*</span>
-            <InfoTooltip content="The initial market capitalization of your coin in ETH. This determines the starting price and initial liquidity." />
+        <div className="grid grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700 flex items-center">
+              <span>ETH Amount</span>
+              <span className="text-red-500 ml-1">*</span>
+              <InfoTooltip content="Amount of ETH to provide as initial liquidity. This determines the initial price of your coin." />
+            </label>
+            <input
+              type="number"
+              value={config.ethAmount || ''}
+              onChange={(e) => updateConfig({ ethAmount: e.target.value })}
+              placeholder="1.0"
+              step="0.01"
+              min="0"
+              className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all hover:border-gray-300 font-mono"
+            />
+            <div className="text-xs text-gray-500 font-medium">
+              Minimum recommended: 0.1 ETH
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700 flex items-center">
+              <span>Pair Coin</span>
+              <InfoTooltip content="The coin your new coin will be paired with in the liquidity pool." />
+            </label>
+            <select
+              value={config.pairCoin}
+              onChange={(e) => updateConfig({ pairCoin: e.target.value })}
+              className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all hover:border-gray-300"
+            >
+              <option value="ETH">ETH</option>
+              <option value="USDC">USDC</option>
+              <option value="WETH">WETH</option>
+            </select>
+            <div className="text-xs text-gray-500 font-medium">
+              ETH is the most common pairing
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-2">
+          <label className="text-sm font-semibold text-gray-700 flex items-center">
+            <span>Initial Coin Supply</span>
+            <InfoTooltip content="Total number of coins that will be minted. The portion not added to liquidity will be sent to the admin." />
           </label>
           <input
             type="number"
-            value={config.startingMarketCap}
-            onChange={(e) => updateConfig({ startingMarketCap: parseFloat(e.target.value) || '' })}
-            placeholder="1.0"
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            min="0.01"
-            step="0.01"
+            value={config.initialSupply || ''}
+            onChange={(e) => updateConfig({ initialSupply: e.target.value })}
+            placeholder="1000000"
+            min="1"
+            className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all hover:border-gray-300 font-mono"
           />
-          <div className="text-xs text-gray-500">
-            Minimum 0.01 ETH. This determines your coin's initial price and liquidity.
+          <div className="text-xs text-gray-500 font-medium">
+            Common supplies: 1M, 100M, 1B coins
           </div>
         </div>
+      </div>
 
-        {config.startingMarketCap && (
-          <div className="bg-white rounded-lg p-3 border border-gray-200">
-            <h4 className="text-xs font-medium text-gray-900 mb-2">Price Calculation</h4>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total Supply:</span>
-                <span className="font-mono">100B {config.symbol || 'COIN'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Initial Price:</span>
-                <span className="font-mono">
-                  {config.startingMarketCap ? (Number(config.startingMarketCap) / 100_000_000_000).toExponential(2) : '0'} ETH
-                </span>
-              </div>
+      <div className="bg-gradient-to-br from-orange-50/50 to-amber-50/50 rounded-2xl p-6 border border-orange-200/30 backdrop-blur-sm">
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-6">
+          <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
+          Trading Configuration
+        </h3>
+
+        <div className="grid grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700 flex items-center">
+              <span>Fee Tier</span>
+              <InfoTooltip content="The trading fee percentage for this liquidity pool. Lower fees encourage more trading volume." />
+            </label>
+            <select
+              value={config.feeTier}
+              onChange={(e) => updateConfig({ feeTier: e.target.value })}
+              className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all hover:border-gray-300"
+            >
+              <option value="0.05">0.05% (Most Stable)</option>
+              <option value="0.30">0.30% (Standard)</option>
+              <option value="1.00">1.00% (High Volatility)</option>
+            </select>
+            <div className="text-xs text-gray-500 font-medium">
+              0.30% is recommended for most coins
             </div>
           </div>
-        )}
-      </div>
 
-      <div className="bg-gray-50 rounded-xl p-4 space-y-4">
-        <h3 className="text-sm font-medium text-gray-900 flex items-center">
-          <span className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-2"></span>
-          Trading Pair
-        </h3>
-
-        <div className="space-y-3">
-          <label className="text-xs font-medium text-gray-700 flex items-center">
-            <span>Pair Coin</span>
-            <InfoTooltip content="Choose which coin to pair with your coin. ETH (WETH) is recommended for most projects." />
-          </label>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => updateConfig({ pairTokenType: 'WETH' })}
-              className={`
-                p-3 rounded-lg border-2 transition-all text-left
-                ${config.pairTokenType === 'WETH'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                }
-              `}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700 flex items-center">
+              <span>Price Range</span>
+              <InfoTooltip content="The price range for concentrated liquidity. Narrower ranges provide more liquidity at current price but may go out of range." />
+            </label>
+            <select
+              value={config.priceRange}
+              onChange={(e) => updateConfig({ priceRange: e.target.value })}
+              className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all hover:border-gray-300"
             >
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
-                  ETH
-                </div>
-                <div>
-                  <div className="text-xs font-medium">Ethereum (WETH)</div>
-                  <div className="text-xs opacity-75">Recommended</div>
-                </div>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => updateConfig({ pairTokenType: 'custom' })}
-              className={`
-                p-3 rounded-lg border-2 transition-all text-left
-                ${config.pairTokenType === 'custom'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                }
-              `}
-            >
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-gradient-to-br from-gray-400 to-gray-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
-                  ?
-                </div>
-                <div>
-                  <div className="text-xs font-medium">Custom Coin</div>
-                  <div className="text-xs opacity-75">Advanced</div>
-                </div>
-              </div>
-            </button>
+              <option value="narrow">Narrow (±10%)</option>
+              <option value="medium">Medium (±50%)</option>
+              <option value="wide">Wide (±200%)</option>
+              <option value="full">Full Range</option>
+            </select>
+            <div className="text-xs text-gray-500 font-medium">
+              Medium range balances efficiency and safety
+            </div>
           </div>
         </div>
 
-        {config.pairTokenType === 'custom' && (
-          <div className="space-y-2 pl-3 border-l-2 border-blue-200 bg-blue-50 rounded-r-lg pr-3 py-2">
-            <label className="text-xs font-medium text-gray-700">Custom Coin Address</label>
+        <div className="mt-6 flex items-center space-x-3">
+          <input
+            type="checkbox"
+            id="lockLiquidity"
+            checked={config.lockLiquidity}
+            onChange={(e) => updateConfig({ lockLiquidity: e.target.checked })}
+            className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 transition-all"
+          />
+          <label htmlFor="lockLiquidity" className="text-sm font-semibold text-gray-700 flex items-center cursor-pointer">
+            <span>Lock Initial Liquidity</span>
+            <InfoTooltip content="Prevents removal of initial liquidity for a specified period. This builds trust with traders." />
+          </label>
+        </div>
+
+        {config.lockLiquidity && (
+          <div className="mt-4 space-y-2">
+            <label className="text-sm font-semibold text-gray-700">Lock Duration</label>
+            <select
+              value={config.lockDuration}
+              onChange={(e) => updateConfig({ lockDuration: e.target.value })}
+              className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all hover:border-gray-300"
+            >
+              <option value="30">30 days</option>
+              <option value="90">90 days</option>
+              <option value="180">180 days</option>
+              <option value="365">1 year</option>
+            </select>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-gradient-to-br from-violet-50/50 to-indigo-50/50 rounded-2xl p-6 border border-violet-200/30 backdrop-blur-sm">
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-6">
+          <div className="w-2 h-2 bg-violet-500 rounded-full mr-3"></div>
+          Advanced Options
+          <span className="text-sm text-gray-500 ml-2 font-normal">(Optional)</span>
+        </h3>
+
+        <div className="space-y-6">
+          <div className="flex items-center space-x-3">
             <input
-              type="text"
-              value={config.customPairTokenAddress}
-              onChange={(e) => updateConfig({ customPairTokenAddress: e.target.value })}
-              placeholder="0x... (custom coin address)"
-              className="w-full px-3 py-2 text-xs font-mono border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              type="checkbox"
+              id="enableRewards"
+              checked={config.enableRewards}
+              onChange={(e) => updateConfig({ enableRewards: e.target.checked })}
+              className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 transition-all"
             />
-            
-            {pairTokenValidating && (
-              <div className="text-xs text-blue-600">Validating coin...</div>
-            )}
-            
-            {pairTokenInfo && (
-              <div className="text-xs text-green-600">
-                ✓ Valid coin: {pairTokenInfo.symbol} ({pairTokenInfo.decimals} decimals)
-              </div>
-            )}
-            
-            {config.customPairTokenAddress && !pairTokenValidating && !pairTokenValid && (
-              <div className="text-xs text-red-600">
-                ✗ Invalid coin address
-              </div>
-            )}
+            <label htmlFor="enableRewards" className="text-sm font-semibold text-gray-700 flex items-center cursor-pointer">
+              <span>Enable Liquidity Rewards</span>
+              <InfoTooltip content="Provides additional rewards to liquidity providers beyond trading fees." />
+            </label>
           </div>
-        )}
-      </div>
 
-      <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-        <h3 className="text-sm font-medium text-gray-900 flex items-center">
-          <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>
-          Pool Positions
-        </h3>
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id="antiMev"
+              checked={config.antiMev}
+              onChange={(e) => updateConfig({ antiMev: e.target.checked })}
+              className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 transition-all"
+            />
+            <label htmlFor="antiMev" className="text-sm font-semibold text-gray-700 flex items-center cursor-pointer">
+              <span>MEV Protection</span>
+              <InfoTooltip content="Adds protection against MEV (Maximal Extractable Value) attacks using block delay mechanisms." />
+            </label>
+          </div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-gray-700 flex items-center">
-            <span>Position Type</span>
-            <InfoTooltip content="Standard positions work for most projects. Custom positions allow fine-tuned liquidity distribution." />
-          </label>
-          
-          <div className="grid grid-cols-3 gap-2">
-            {(['Standard', 'Project', 'Custom'] as const).map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => updateConfig({ poolPositionType: type })}
-                className={`
-                  px-3 py-2 text-xs font-medium rounded-lg border transition-all
-                  ${config.poolPositionType === type
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                  }
-                `}
+          {config.antiMev && (
+            <div className="ml-8 space-y-2">
+              <label className="text-sm font-semibold text-gray-700">Block Delay</label>
+              <select
+                value={config.mevDelay}
+                onChange={(e) => updateConfig({ mevDelay: e.target.value })}
+                className="w-48 px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all hover:border-gray-300"
               >
-                {type}
-              </button>
-            ))}
-          </div>
+                <option value="1">1 block (~12 seconds)</option>
+                <option value="2">2 blocks (~24 seconds)</option>
+                <option value="3">3 blocks (~36 seconds)</option>
+              </select>
+            </div>
+          )}
         </div>
-
-        {config.poolPositionType === 'Custom' && (
-          <div className="space-y-2 pl-3 border-l-2 border-green-200 bg-green-50 rounded-r-lg pr-3 py-2">
-            <div className="text-xs text-green-700 font-medium">Custom positions require advanced knowledge of Uniswap V4 tick ranges</div>
-            <div className="text-xs text-green-600">Current: {config.customPositions.length} position(s) configured</div>
-          </div>
-        )}
       </div>
 
-      <div className="flex justify-between">
-        <button 
-          onClick={onPrevious} 
-          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+      <div className="flex justify-between pt-4">
+        <button
+          onClick={onPrevious}
+          className="px-8 py-3 text-gray-600 hover:text-gray-800 font-semibold rounded-xl hover:bg-gray-50 transition-all"
         >
           ← Back to Coin Details
         </button>
+        
         <button
           onClick={onNext}
           disabled={!isValid}
-          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+          className={`px-8 py-3 rounded-xl font-semibold transition-all transform hover:scale-105 ${
             isValid 
-              ? 'bg-blue-600 text-white hover:bg-blue-700' 
+              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl' 
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
           }`}
         >
