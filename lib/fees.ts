@@ -1,6 +1,5 @@
-import { createPublicClient, http, formatUnits, PublicClient } from "viem";
-import { base } from "viem/chains";
-import { availableFees, WETH_ADDRESS } from "clanker-sdk";
+import { formatUnits, type PublicClient } from "viem";
+import { Clanker, WETH_ADDRESS } from "clanker-sdk";
 
 // Generic ERC20 ABI for fetching decimals
 const ERC20_ABI = [
@@ -51,12 +50,9 @@ async function getTokenSymbol(
       functionName: "symbol",
     });
     return symbol;
-  } catch (error) {
-    console.warn(
-      `Could not fetch symbol for ${tokenAddress}, assuming 'UNKNOWN'. Error:`,
-      error,
-    );
-    return "UNKNOWN";
+  } catch (error: any) {
+    console.error(`Error fetching symbol for ${tokenAddress}:`, error);
+    return 'UNKNOWN';
   }
 }
 
@@ -65,11 +61,11 @@ export async function getAvailableFees(
   feeOwnerAddress: `0x${string}`,
   clankerTokenAddress: `0x${string}`,
 ) {
+  const clanker = new Clanker({ publicClient });
   const wethTokenAddress = WETH_ADDRESS;
 
   // Get fees for Clanker Token
-  const clankerRawFees = await availableFees(
-    publicClient,
+  const clankerRawFees = await clanker.availableRewards(
     feeOwnerAddress,
     clankerTokenAddress,
   );
@@ -84,8 +80,7 @@ export async function getAvailableFees(
   const clankerFormattedFees = formatUnits(clankerRawFees, clankerDecimals);
 
   // Get fees for WETH
-  const wethRawFees = await availableFees(
-    publicClient,
+  const wethRawFees = await clanker.availableRewards(
     feeOwnerAddress,
     wethTokenAddress,
   );

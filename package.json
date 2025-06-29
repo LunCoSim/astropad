@@ -9,7 +9,7 @@
     "start-api": "node --loader ts-node/esm api/index.ts",
     "dev": "concurrently \"pnpm start-vite\" \"pnpm start-api\"",
     "cli:check-fees": "ts-node cli/check-fees.ts",
-    "build": "tsc && vite build && tsc -p tsconfig.api.json",
+    "build": "vite build && tsc -p tsconfig.api.json",
     "start": "node dist-api/api/index.js",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",

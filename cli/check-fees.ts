@@ -1,6 +1,6 @@
 import { createPublicClient, http } from "viem";
 import { base } from "viem/chains";
-import { getAvailableFees } from "@lib/fees";
+import { getAvailableFees } from "../lib/fees.js";
 
 async function main() {
   const publicClient = createPublicClient({

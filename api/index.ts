@@ -1,16 +1,17 @@
 import express from 'express';
-import { createPublicClient, http } from 'viem';
+import { type Request, type Response } from 'express';
+import { createPublicClient, http, type PublicClient } from 'viem';
 import { base } from 'viem/chains';
-import { getAvailableFees } from '@lib/fees';
+import { getAvailableFees } from '../lib/fees.js';
 
 const app = express();
 const port = 3001;
 
-app.get('/api/check-fees', async (req, res) => {
+app.get('/api/check-fees', async (req: any, res: any) => {
   const publicClient = createPublicClient({
     chain: base,
     transport: http(),
-  });
+  }) as PublicClient;
 
   const { feeOwnerAddress, clankerTokenAddress } = req.query;
 
@@ -25,9 +26,9 @@ app.get('/api/check-fees', async (req, res) => {
       clankerTokenAddress as `0x${string}`,
     );
     res.status(200).json(fees);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error checking fees:', error);
-    res.status(500).json({ error: 'Error checking fees' });
+    res.status(500).json({ error: error.message || 'Error checking fees' });
   }
 });
 

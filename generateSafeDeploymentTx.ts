@@ -1,11 +1,11 @@
-import { createPublicClient, http, parseEther } from "viem";
+import { createPublicClient, http, parseEther, type Account } from "viem";
 import fs from "fs";
 import path from "path";
 import { base } from "viem/chains";
 import {
   TokenConfigV4Builder,
   WETH_ADDRESS,
-  simulateDeploy,
+  Clanker,
 } from "clanker-sdk";
 
 // Your Gnosis Safe Multisig address
@@ -52,14 +52,19 @@ async function generateClankerTokenDeploymentTransaction() {
   try {
     // For simulation, you need an 'account' but it doesn't have to be the Safe's account.
     // Any valid address will do as we are not sending the transaction here.
-    const dummyAccount = {
+    const dummyAccount: Account = {
       address: "0x0000000000000000000000000000000000000001" as `0x${string}`,
+      type: "json-rpc",
+      signMessage: async () => "0x",
+      signTransaction: async () => "0x",
+      signTypedData: async () => "0x",
     }; // Example dummy address
 
-    const simulationResult = await simulateDeploy(
+    const clanker = new Clanker({ publicClient });
+
+    const simulationResult = await clanker.simulateDeployToken(
       tokenConfig,
       dummyAccount,
-      publicClient,
     );
 
     if ("error" in simulationResult) {

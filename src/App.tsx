@@ -23,7 +23,8 @@ const ERC20_ABI = [
   },
 ];
 
-async function getTokenDecimals(publicClient: ReturnType<typeof usePublicClient>, tokenAddress: `0x${string}`) {
+async function getTokenDecimals(publicClient: ReturnType<typeof usePublicClient> | undefined, tokenAddress: `0x${string}`) {
+  if (!publicClient) return 18; // Default if publicClient is not available
   try {
     const decimals = await publicClient.readContract({
       address: tokenAddress,
@@ -31,13 +32,14 @@ async function getTokenDecimals(publicClient: ReturnType<typeof usePublicClient>
       functionName: 'decimals',
     });
     return decimals;
-  } catch (error) {
+  } catch (error: any) {
     console.warn(`Could not fetch decimals for ${tokenAddress}, assuming 18. Error:`, error);
     return 18; // Default to 18 if decimals cannot be fetched
   }
 }
 
-async function getTokenSymbol(publicClient: ReturnType<typeof usePublicClient>, tokenAddress: `0x${string}`) {
+async function getTokenSymbol(publicClient: ReturnType<typeof usePublicClient> | undefined, tokenAddress: `0x${string}`) {
+  if (!publicClient) return 'UNKNOWN'; // Default if publicClient is not available
   try {
     const symbol = await publicClient.readContract({
       address: tokenAddress,
@@ -45,7 +47,7 @@ async function getTokenSymbol(publicClient: ReturnType<typeof usePublicClient>, 
       functionName: 'symbol',
     });
     return symbol;
-  } catch (error) {
+  } catch (error: any) {
     console.warn(`Could not fetch symbol for ${tokenAddress}, assuming 'UNKNOWN'. Error:`, error);
     return 'UNKNOWN';
   }
@@ -56,6 +58,8 @@ function App() {
   const [tokenSymbol, setTokenSymbol] = useState('MPC');
   const [devBuyEthAmount, setDevBuyEthAmount] = useState(0.0001);
   const [deployedTokenAddress, setDeployedTokenAddress] = useState('');
+  const [customClankerTokenAddress, setCustomClankerTokenAddress] = useState('0x699E27a42095D3cb9A6a23097E5C201E33E314B4');
+  const [customFeeOwnerAddress, setCustomFeeOwnerAddress] = useState('0xCd2a99C6d6b27976537fC3737b0ef243E7C49946');
 
   const [deployLoading, setDeployLoading] = useState(false);
   const [deployResult, setDeployResult] = useState('');
@@ -106,7 +110,7 @@ function App() {
       return;
     }
 
-    if (!publicClient || !walletClient || !clanker) {
+    if (!publicClient || !walletClient || !clanker || !chain) {
       setDeployError('Viem clients or Clanker instance not available.');
       setDeployLoading(false);
       return;
@@ -172,14 +176,14 @@ function App() {
     setFeesResult('');
     setFeesError('');
 
-    if (!address || !deployedTokenAddress) {
-      setFeesError('Fee Owner Address (your connected wallet) and a deployed Token Address are required.');
+    if (!customFeeOwnerAddress || !customClankerTokenAddress) {
+      setFeesError('Fee Owner Address and Clanker Token Address are required.');
       setFeesLoading(false);
       return;
     }
 
     try {
-      const response = await fetch(`/api/check-fees?feeOwnerAddress=${address}&clankerTokenAddress=${deployedTokenAddress}`);
+      const response = await fetch(`/api/check-fees?feeOwnerAddress=${customFeeOwnerAddress}&clankerTokenAddress=${customClankerTokenAddress}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -251,8 +255,22 @@ function App() {
 
       <div className="section">
         <h2>Check Fees</h2>
-        <button onClick={handleCheckFees} disabled={!deployedTokenAddress || feesLoading}>
-          {feesLoading ? 'Checking...' : 'Check Fees for Deployed Token'}
+        <label htmlFor="customClankerTokenAddress">Clanker Token Address:</label>
+        <input
+          type="text"
+          id="customClankerTokenAddress"
+          value={customClankerTokenAddress}
+          onChange={(e) => setCustomClankerTokenAddress(e.target.value)}
+        />
+        <label htmlFor="customFeeOwnerAddress">Fee Owner Address:</label>
+        <input
+          type="text"
+          id="customFeeOwnerAddress"
+          value={customFeeOwnerAddress}
+          onChange={(e) => setCustomFeeOwnerAddress(e.target.value)}
+        />
+        <button onClick={handleCheckFees} disabled={feesLoading || !customClankerTokenAddress || !customFeeOwnerAddress}>
+          {feesLoading ? 'Checking...' : 'Check Fees for Custom Token'}
         </button>
         {feesResult && <div id="feesResult" className="result" style={{ whiteSpace: 'pre-wrap' }}>{feesResult}</div>}
         {feesError && <div id="feesError" className="error">{feesError}</div>}
