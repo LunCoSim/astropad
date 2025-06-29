@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAccount, useDisconnect, usePublicClient, useWalletClient } from 'wagmi';
 import { useWeb3Modal } from '@web3modal/wagmi/react';
 import { TokenConfigV4Builder, WETH_ADDRESS, Clanker, POOL_POSITIONS } from 'clanker-sdk';
@@ -53,11 +53,68 @@ async function getTokenSymbol(publicClient: ReturnType<typeof usePublicClient> |
   }
 }
 
+// AMM calculation function using constant product formula (x * y = k)
+function calculateDevBuyTokens(
+  devBuyEthAmount: number,
+  marketCapEth: number,
+  totalTokenSupply: number = 100_000_000_000 // 100 billion default supply
+): { tokensReceived: number; priceImpact: number; newPrice: number; effectivePrice: number } {
+  if (devBuyEthAmount <= 0 || marketCapEth <= 0) {
+    return { tokensReceived: 0, priceImpact: 0, newPrice: 0, effectivePrice: 0 };
+  }
+
+  // In Clanker v4, the dev buy is a normal swap that happens AFTER liquidity is created
+  // Initial liquidity pool setup (assuming no vault/airdrop extensions for simplicity)
+  // Market cap = pool_eth_reserve * total_token_supply / pool_token_reserve
+  // For simplicity, assume the full token supply goes to the pool initially
+  const initialTokenReserve = totalTokenSupply;
+  const initialEthReserve = marketCapEth;
+  
+  // Constant product: k = x * y
+  const k = initialEthReserve * initialTokenReserve;
+  
+  // Dev buy swaps ETH for tokens: (eth_reserve + eth_in) * (token_reserve - token_out) = k
+  // Solving for token_out: token_out = token_reserve - k / (eth_reserve + eth_in)
+  const newEthReserve = initialEthReserve + devBuyEthAmount;
+  const newTokenReserve = k / newEthReserve;
+  const tokensReceived = initialTokenReserve - newTokenReserve;
+  
+  // Calculate prices and impact
+  const initialPrice = initialEthReserve / initialTokenReserve; // ETH per token
+  const newPrice = newEthReserve / newTokenReserve; // ETH per token after swap
+  const priceImpact = ((newPrice - initialPrice) / initialPrice) * 100;
+  
+  // Effective price paid by dev buyer
+  const effectivePrice = devBuyEthAmount / tokensReceived; // ETH per token
+  
+  return {
+    tokensReceived,
+    priceImpact,
+    newPrice,
+    effectivePrice
+  };
+}
+
 function App() {
   const [tokenName, setTokenName] = useState('My Project Coin');
   const [tokenSymbol, setTokenSymbol] = useState('MPC');
   const [devBuyEthAmount, setDevBuyEthAmount] = useState(0.0001);
   const [deployedTokenAddress, setDeployedTokenAddress] = useState('');
+  
+  // Pair token configuration
+  const [pairTokenType, setPairTokenType] = useState<'WETH' | 'custom'>('WETH');
+  const [customPairTokenAddress, setCustomPairTokenAddress] = useState('');
+  const [pairTokenValid, setPairTokenValid] = useState(false);
+  const [pairTokenValidating, setPairTokenValidating] = useState(false);
+  const [pairTokenInfo, setPairTokenInfo] = useState<{symbol: string, decimals: number} | null>(null);
+  
+  // Fee configuration (BPS = Basis Points, 100 BPS = 1%)
+  const [clankerFeeBps, setClankerFeeBps] = useState(100); // 1% default
+  const [pairedFeeBps, setPairedFeeBps] = useState(100); // 1% default
+  
+  // Market cap configuration
+  const [startingMarketCap, setStartingMarketCap] = useState<number | ''>(''); // in ETH
+  
   const [customClankerTokenAddress, setCustomClankerTokenAddress] = useState('0x699E27a42095D3cb9A6a23097E5C201E33E314B4');
   const [customFeeOwnerAddress, setCustomFeeOwnerAddress] = useState('0xCd2a99C6d6b27976537fC3737b0ef243E7C49946');
 
@@ -89,6 +146,57 @@ function App() {
     return null;
   }, [publicClient, walletClient]);
 
+  // Validate ERC-20 token
+  const validatePairToken = async (tokenAddress: string) => {
+    if (!publicClient || !tokenAddress || tokenAddress.length !== 42) {
+      setPairTokenValid(false);
+      setPairTokenInfo(null);
+      return;
+    }
+
+    setPairTokenValidating(true);
+    try {
+      const [symbol, decimals] = await Promise.all([
+        getTokenSymbol(publicClient, tokenAddress as `0x${string}`),
+        getTokenDecimals(publicClient, tokenAddress as `0x${string}`)
+      ]);
+
+      if (symbol !== 'UNKNOWN') {
+        setPairTokenValid(true);
+        setPairTokenInfo({ symbol, decimals });
+      } else {
+        setPairTokenValid(false);
+        setPairTokenInfo(null);
+      }
+    } catch (error) {
+      console.error('Token validation failed:', error);
+      setPairTokenValid(false);
+      setPairTokenInfo(null);
+    } finally {
+      setPairTokenValidating(false);
+    }
+  };
+
+  // Effect to validate custom pair token when address changes
+  useEffect(() => {
+    if (pairTokenType === 'custom' && customPairTokenAddress) {
+      const timeoutId = setTimeout(() => {
+        validatePairToken(customPairTokenAddress);
+      }, 500); // Debounce validation
+      return () => clearTimeout(timeoutId);
+    } else {
+      setPairTokenValid(false);
+      setPairTokenInfo(null);
+    }
+  }, [customPairTokenAddress, pairTokenType, publicClient]);
+
+  // Clear starting market cap when switching away from WETH
+  useEffect(() => {
+    if (pairTokenType !== 'WETH' && startingMarketCap) {
+      setStartingMarketCap('');
+    }
+  }, [pairTokenType]);
+
   const handleSimulateToken = async () => {
     setSimulateLoading(true);
     setSimulationResult(null);
@@ -112,6 +220,24 @@ function App() {
     }
     if (isNaN(devBuyEthAmount) || devBuyEthAmount < 0) {
       setSimulationError('Invalid Dev Buy ETH Amount.');
+      setSimulateLoading(false);
+      return;
+    }
+
+    if (pairTokenType === 'custom' && (!customPairTokenAddress || !pairTokenValid)) {
+      setSimulationError('Please enter a valid ERC-20 token address for the pair token.');
+      setSimulateLoading(false);
+      return;
+    }
+
+    if (startingMarketCap && pairTokenType === 'WETH' && (startingMarketCap < 0.1 || startingMarketCap > 1000)) {
+      setSimulationError('Starting market cap must be between 0.1 and 1000 ETH.');
+      setSimulateLoading(false);
+      return;
+    }
+
+    if (startingMarketCap && pairTokenType !== 'WETH') {
+      setSimulationError('Starting market cap is only supported with WETH pair token.');
       setSimulateLoading(false);
       return;
     }
@@ -159,18 +285,34 @@ function App() {
     try {
       const SAFE_MULTISIG_ADDRESS = address;
 
+      // Determine pair token address
+      const pairTokenAddress = pairTokenType === 'WETH' ? WETH_ADDRESS : customPairTokenAddress as `0x${string}`;
+      const pairTokenDecimals = pairTokenType === 'WETH' ? 18 : (pairTokenInfo?.decimals || 18);
+
+      const poolConfig: any = {
+        pairedToken: pairTokenAddress,
+        pairedTokenDecimals: pairTokenDecimals,
+        positions: POOL_POSITIONS.Standard,
+      };
+
+      // Only add starting market cap if it's reasonable and using WETH
+      // Custom market caps with custom tokens can cause tick incompatibilities
+      if (startingMarketCap && startingMarketCap > 0 && pairTokenType === 'WETH') {
+        // Only allow market caps that work with standard positions (roughly $10K to $10M range)
+        if (startingMarketCap >= 0.1 && startingMarketCap <= 1000) {
+          poolConfig.startingMarketCapInPairedToken = startingMarketCap;
+        }
+      }
+
       const builder = new TokenConfigV4Builder()
         .withName(tokenName)
         .withSymbol(tokenSymbol)
         .withTokenAdmin(SAFE_MULTISIG_ADDRESS)
         .withStaticFeeConfig({
-          clankerFeeBps: 100,
-          pairedFeeBps: 100,
+          clankerFeeBps: clankerFeeBps,
+          pairedFeeBps: pairedFeeBps,
         })
-        .withPoolConfig({
-          pairedToken: WETH_ADDRESS,
-          positions: POOL_POSITIONS.Standard,
-        })
+        .withPoolConfig(poolConfig)
         .withDevBuy({
           ethAmount: devBuyEthAmount,
         })
@@ -334,10 +476,10 @@ function App() {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-5xl mx-auto px-8 pb-16">
-        <div className="grid lg:grid-cols-2 gap-12">
+      <main className="max-w-7xl mx-auto px-8 pb-16">
+        <div className="grid lg:grid-cols-3 gap-12">
           {/* Deploy Token Card */}
-          <div className="card animate-fade-in-up">
+          <div className="card animate-fade-in-up lg:col-span-2">
             <div className="flex items-center space-x-4 mb-8">
               <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-3xl flex items-center justify-center text-white text-2xl shadow-lg">
                 🎯
@@ -375,12 +517,169 @@ function App() {
                 <label className="text-label">Dev Buy ETH Amount</label>
                 <input
                   type="number"
+                  step="0.01"
+                  min="0"
                   value={devBuyEthAmount}
-                  onChange={(e) => setDevBuyEthAmount(parseFloat(e.target.value))}
-                  step="0.0001"
-                  placeholder="0.0001"
+                  onChange={(e) => setDevBuyEthAmount(parseFloat(e.target.value) || 0)}
+                  placeholder="e.g., 0.1"
                   className="input"
                 />
+                <div className="text-xs text-gray-600 bg-blue-50 p-3 rounded-lg space-y-2">
+                  <div className="flex items-start space-x-2">
+                    <span>💡</span>
+                    <div>
+                      <div className="font-medium">About Dev Buy</div>
+                      <div>The dev buy is a swap that happens immediately after liquidity is created, using the constant product formula (x × y = k).</div>
+                    </div>
+                  </div>
+                  <div className="text-xs">
+                    • <strong>Swap Mechanics:</strong> Your ETH swaps against the initial pool liquidity to get tokens<br/>
+                    • <strong>Price Impact:</strong> Larger purchases cause exponentially higher price increases<br/>
+                    • <strong>Effective Price:</strong> The actual ETH-per-token rate you pay (higher than initial price due to slippage)
+                  </div>
+                </div>
+              </div>
+
+              {/* Pair Token Configuration */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <label className="text-label">Pair Token</label>
+                  <span className="text-xs text-gray-500">Token to pair with in liquidity pool</span>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => setPairTokenType('WETH')}
+                      className={`flex-1 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                        pairTokenType === 'WETH' 
+                          ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      WETH (Recommended)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPairTokenType('custom')}
+                      className={`flex-1 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                        pairTokenType === 'custom' 
+                          ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Custom Token
+                    </button>
+                  </div>
+
+                  {pairTokenType === 'custom' && (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={customPairTokenAddress}
+                        onChange={(e) => setCustomPairTokenAddress(e.target.value)}
+                        placeholder="0x... (ERC-20 token address)"
+                        className="input font-mono text-sm"
+                      />
+                      {pairTokenValidating && (
+                        <div className="flex items-center space-x-2 text-sm text-gray-500">
+                          <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+                          <span>Validating token...</span>
+                        </div>
+                      )}
+                      {pairTokenInfo && pairTokenValid && (
+                        <div className="flex items-center space-x-2 text-sm text-green-600">
+                          <span>✅</span>
+                          <span>Valid ERC-20: {pairTokenInfo.symbol} ({pairTokenInfo.decimals} decimals)</span>
+                        </div>
+                      )}
+                      {customPairTokenAddress && !pairTokenValid && !pairTokenValidating && (
+                        <div className="flex items-center space-x-2 text-sm text-red-600">
+                          <span>❌</span>
+                          <span>Invalid or non-ERC-20 token</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Fee Configuration */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <label className="text-label">Fee Configuration</label>
+                  <span className="text-xs text-gray-500">BPS = Basis Points (100 BPS = 1%)</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Clanker Fee (BPS)</label>
+                    <input
+                      type="number"
+                      value={clankerFeeBps}
+                      onChange={(e) => setClankerFeeBps(parseInt(e.target.value) || 0)}
+                      min="0"
+                      max="10000"
+                      className="input text-sm"
+                      placeholder="100"
+                    />
+                    <span className="text-xs text-gray-500">Current: {(clankerFeeBps / 100).toFixed(2)}%</span>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Paired Token Fee (BPS)</label>
+                    <input
+                      type="number"
+                      value={pairedFeeBps}
+                      onChange={(e) => setPairedFeeBps(parseInt(e.target.value) || 0)}
+                      min="0"
+                      max="10000"
+                      className="input text-sm"
+                      placeholder="100"
+                    />
+                    <span className="text-xs text-gray-500">Current: {(pairedFeeBps / 100).toFixed(2)}%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Starting Market Cap Configuration */}
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <label className="text-label">Starting Market Cap (Optional)</label>
+                  <span className="text-xs text-gray-500">In ETH only</span>
+                </div>
+                <input
+                  type="number"
+                  value={startingMarketCap}
+                  onChange={(e) => setStartingMarketCap(e.target.value ? parseFloat(e.target.value) : '')}
+                  step="0.001"
+                  min="0.1"
+                  max="1000"
+                  placeholder="0.1 - 1000 ETH (leave empty for default)"
+                  className="input"
+                  disabled={pairTokenType !== 'WETH'}
+                />
+                
+                {pairTokenType !== 'WETH' && (
+                  <div className="flex items-center space-x-2 text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
+                    <span>⚠️</span>
+                    <span>Starting market cap is only available when using WETH as the pair token.</span>
+                  </div>
+                )}
+                
+                {pairTokenType === 'WETH' && (
+                  <span className="text-xs text-gray-500">
+                    Sets initial token price (0.1 - 1000 ETH range). Leave empty for default pricing (~$27K market cap).
+                  </span>
+                )}
+                
+                {startingMarketCap && (startingMarketCap < 0.1 || startingMarketCap > 1000) && pairTokenType === 'WETH' && (
+                  <div className="flex items-center space-x-2 text-sm text-red-600">
+                    <span>❌</span>
+                    <span>Market cap must be between 0.1 and 1000 ETH for compatibility with liquidity positions.</span>
+                  </div>
+                )}
               </div>
               
               {/* Step 1: Simulate Deploy */}
@@ -423,7 +722,74 @@ function App() {
                           <span className="font-mono text-xs block mt-1">{simulationResult.simulatedAddress}</span>
                         </div>
                         <div>
+                          <span className="font-semibold">Pair Token:</span> {pairTokenType === 'WETH' ? 'WETH' : `${pairTokenInfo?.symbol} (${customPairTokenAddress.slice(0, 6)}...${customPairTokenAddress.slice(-4)})`}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Fees:</span> {(clankerFeeBps / 100).toFixed(2)}% Clanker, {(pairedFeeBps / 100).toFixed(2)}% Paired
+                        </div>
+                        <div>
+                          <span className="font-semibold">Initial Market Cap:</span> {
+                            startingMarketCap && pairTokenType === 'WETH' 
+                              ? `${startingMarketCap} ETH (Custom)` 
+                              : pairTokenType === 'WETH' 
+                                ? '~10 ETH (Default)'
+                                : 'Default pricing'
+                          }
+                        </div>
+                        <div>
                           <span className="font-semibold">Dev Buy Amount:</span> {devBuyEthAmount} ETH
+                        </div>
+                        <div>
+                          <span className="font-semibold">Dev Buy Analysis:</span> {
+                            (() => {
+                              if (pairTokenType !== 'WETH') {
+                                return 'Variable (depends on pair token liquidity)';
+                              }
+                              
+                              const marketCap = startingMarketCap || 10; // Default ~10 ETH
+                              const ammResult = calculateDevBuyTokens(devBuyEthAmount, marketCap);
+                              
+                              if (ammResult.tokensReceived === 0) {
+                                return 'No tokens (invalid parameters)';
+                              }
+                              
+                              const tokensInBillions = (ammResult.tokensReceived / 1_000_000_000).toFixed(2);
+                              const supplyPercentage = ((ammResult.tokensReceived / 100_000_000_000) * 100).toFixed(2);
+                              
+                              // Risk assessment based on price impact
+                              let riskLevel = '';
+                              if (ammResult.priceImpact >= 100) {
+                                riskLevel = ' (⚠️ Extreme price impact!)';
+                              } else if (ammResult.priceImpact >= 50) {
+                                riskLevel = ' (⚠️ Very high price impact!)';
+                              } else if (ammResult.priceImpact >= 20) {
+                                riskLevel = ' (High price impact)';
+                              } else if (ammResult.priceImpact >= 5) {
+                                riskLevel = ' (Moderate price impact)';
+                              }
+                              
+                              return `${tokensInBillions}B tokens (${supplyPercentage}% of supply)${riskLevel}`;
+                            })()
+                          }
+                        </div>
+                        <div>
+                          <span className="font-semibold">Price Impact:</span> {
+                            (() => {
+                              if (pairTokenType !== 'WETH') {
+                                return 'Variable (depends on pair token)';
+                              }
+                              
+                              const marketCap = startingMarketCap || 10;
+                              const ammResult = calculateDevBuyTokens(devBuyEthAmount, marketCap);
+                              
+                              if (ammResult.priceImpact === 0) {
+                                return 'N/A';
+                              }
+                              
+                              const effectivePriceFormatted = (ammResult.effectivePrice * 1e12).toFixed(8);
+                              return `+${ammResult.priceImpact.toFixed(2)}% (effective price: ${effectivePriceFormatted} ETH per token)`;
+                            })()
+                          }
                         </div>
                         <div>
                           <span className="font-semibold">Transaction Value:</span> {(Number(simulationResult.transaction.value) / 1e18).toFixed(6)} ETH
