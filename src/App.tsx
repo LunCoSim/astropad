@@ -96,19 +96,19 @@ function calculateDevBuyTokens(
 }
 
 function App() {
-  // ========== CORE TOKEN SETTINGS ==========
-  const [tokenName, setTokenName] = useState('My Project Coin');
-  const [tokenSymbol, setTokenSymbol] = useState('MPC');
-  const [tokenAdmin, setTokenAdmin] = useState(''); // Will be set to connected address
-  const [tokenImage, setTokenImage] = useState('');
+  // ========== CORE COIN SETTINGS ==========
+  const [coinName, setCoinName] = useState('My Project Coin');
+  const [coinSymbol, setCoinSymbol] = useState('MPC');
+  const [coinAdmin, setCoinAdmin] = useState(''); // Will be set to connected address
+  const [coinImage, setCoinImage] = useState('');
   
-  // ========== TOKEN METADATA ==========
-  const [tokenDescription, setTokenDescription] = useState('');
+  // ========== COIN METADATA ==========
+  const [coinDescription, setCoinDescription] = useState('');
   const [socialMediaUrls, setSocialMediaUrls] = useState<string[]>(['']);
   const [auditUrls, setAuditUrls] = useState<string[]>(['']);
   
   // ========== SOCIAL CONTEXT ==========
-  const [interfaceName, setInterfaceName] = useState('Astropad');
+  const [interfaceName, setInterfaceName] = useState('astropad');
   const [platform, setPlatform] = useState('');
   const [messageId, setMessageId] = useState('');
   const [socialId, setSocialId] = useState('');
@@ -134,7 +134,7 @@ function App() {
     admin: string;
     bps: number;
   }[]>([
-    { recipient: '', admin: '', bps: 10000 } // Default: 100% to token admin
+            { recipient: '', admin: '', bps: 10000 } // Default: 100% to coin admin
   ]);
   
   // ========== POOL CONFIGURATION ==========
@@ -174,7 +174,7 @@ function App() {
   // ========== DEV BUY CONFIGURATION ==========
   const [devBuyEnabled, setDevBuyEnabled] = useState(true);
   const [devBuyEthAmount, setDevBuyEthAmount] = useState(0.0001);
-  const [devBuyRecipient, setDevBuyRecipient] = useState(''); // Will default to token admin
+  const [devBuyRecipient, setDevBuyRecipient] = useState(''); // Will default to coin admin
   const [devBuyAmountOutMin, setDevBuyAmountOutMin] = useState(0); // Slippage protection
   
   // ========== ADVANCED OPTIONS ==========
@@ -188,9 +188,9 @@ function App() {
 
   // Step configuration
   const STEPS = [
-    { id: 'basics', title: 'Token Details', icon: '🎯', description: 'Name, symbol, and branding' },
+    { id: 'basics', title: 'Coin Details', icon: '🪙', description: 'Name, symbol, and branding' },
     { id: 'liquidity', title: 'Liquidity Setup', icon: '💧', description: 'Market cap and trading pair' },
-    { id: 'features', title: 'Token Features', icon: '⚡', description: 'Vault, airdrops, and dev buy' },
+    { id: 'features', title: 'Coin Features', icon: '⚡', description: 'Vault, airdrops, and dev buy' },
     { id: 'advanced', title: 'Advanced Config', icon: '⚙️', description: 'Fees and rewards' },
     { id: 'deploy', title: 'Deploy', icon: '🚀', description: 'Review and launch' }
   ];
@@ -256,7 +256,7 @@ function App() {
     }
   };
 
-  // Effect to validate custom pair token when address changes
+  // Effect to validate custom pair coin when address changes
   useEffect(() => {
     if (pairTokenType === 'custom' && customPairTokenAddress) {
       const timeoutId = setTimeout(() => {
@@ -269,13 +269,13 @@ function App() {
     }
   }, [customPairTokenAddress, pairTokenType, publicClient]);
 
-  // Set token admin to connected address
+  // Set coin admin to connected address
   useEffect(() => {
-    if (address && !tokenAdmin) {
-      setTokenAdmin(address);
+    if (address && !coinAdmin) {
+      setCoinAdmin(address);
     }
     
-    // Set dev buy recipient to token admin if not set
+    // Set dev buy recipient to coin admin if not set
     if (address && !devBuyRecipient) {
       setDevBuyRecipient(address);
     }
@@ -284,7 +284,7 @@ function App() {
     if (address && rewardRecipients[0].recipient === '') {
       setRewardRecipients([{ recipient: address, admin: address, bps: 10000 }]);
     }
-  }, [address, tokenAdmin, devBuyRecipient, rewardRecipients]);
+  }, [address, coinAdmin, devBuyRecipient, rewardRecipients]);
 
   // Clear starting market cap when switching away from WETH
   useEffect(() => {
@@ -297,14 +297,15 @@ function App() {
   // Step validation and navigation
   const isStepValid = (stepIndex: number): boolean => {
     switch (stepIndex) {
-      case 0: // basics
-        return !!(tokenName && tokenSymbol && tokenAdmin);
-      case 1: // liquidity
+      case 0: // Basics
+        return !!(coinName && coinSymbol && coinAdmin);
+      case 1: // Liquidity
         return !!(startingMarketCap && startingMarketCap > 0);
-      case 2: // features
-      case 3: // advanced
-        return true; // Optional steps
-      case 4: // deploy
+      case 2: // Features
+        return true; // Optional features
+      case 3: // Advanced
+        return true; // Has defaults
+      case 4: // Deploy
         return isConnected;
       default:
         return false;
@@ -426,8 +427,8 @@ function App() {
       return;
     }
 
-    if (!tokenName || !tokenSymbol) {
-      setSimulationError('Token Name and Symbol are required.');
+    if (!coinName || !coinSymbol) {
+      setSimulationError('Coin Name and Symbol are required.');
       setSimulationLoading(false);
       return;
     }
@@ -438,7 +439,7 @@ function App() {
     }
 
     if (pairTokenType === 'custom' && (!customPairTokenAddress || !pairTokenValid)) {
-      setSimulationError('Please enter a valid ERC-20 token address for the pair token.');
+              setSimulationError('Please enter a valid ERC-20 coin address for the pair coin.');
       setSimulationLoading(false);
       return;
     }
@@ -450,7 +451,7 @@ function App() {
     }
 
     if (startingMarketCap && pairTokenType !== 'WETH') {
-      setSimulationError('Starting market cap is only supported with WETH pair token.');
+              setSimulationError('Starting market cap is only supported with WETH pair coin.');
       setSimulationLoading(false);
       return;
     }
@@ -498,7 +499,7 @@ function App() {
     try {
       const SAFE_MULTISIG_ADDRESS = address;
 
-      // Determine pair token address
+      // Determine pair coin address
       const pairTokenAddress = pairTokenType === 'WETH' ? WETH_ADDRESS : customPairTokenAddress as `0x${string}`;
       const pairTokenDecimals = pairTokenType === 'WETH' ? 18 : (pairTokenInfo?.decimals || 18);
 
@@ -519,7 +520,7 @@ function App() {
       };
 
       // Only add starting market cap if it's reasonable and using WETH
-      // Custom market caps with custom tokens can cause tick incompatibilities
+      // Custom market caps with custom coins can cause tick incompatibilities
       if (startingMarketCap && startingMarketCap > 0 && pairTokenType === 'WETH') {
         // Only allow market caps that work with standard positions (roughly $10K to $10M range)
         if (startingMarketCap >= 0.1 && startingMarketCap <= 1000) {
@@ -528,20 +529,20 @@ function App() {
       }
 
       let builder = new TokenConfigV4Builder()
-        .withName(tokenName)
-        .withSymbol(tokenSymbol)
-        .withTokenAdmin((tokenAdmin || SAFE_MULTISIG_ADDRESS) as `0x${string}`);
+        .withName(coinName)
+        .withSymbol(coinSymbol)
+        .withTokenAdmin((coinAdmin || SAFE_MULTISIG_ADDRESS) as `0x${string}`);
 
       // Add image if provided
-      if (tokenImage) {
-        builder = builder.withImage(tokenImage);
+      if (coinImage) {
+        builder = builder.withImage(coinImage);
       }
 
       // Add metadata if provided
-      const hasMetadata = tokenDescription || socialMediaUrls.some(url => url) || auditUrls.some(url => url);
+      const hasMetadata = coinDescription || socialMediaUrls.some(url => url) || auditUrls.some(url => url);
       if (hasMetadata) {
         builder = builder.withMetadata({
-          description: tokenDescription,
+          description: coinDescription,
           socialMediaUrls: socialMediaUrls.filter(url => url),
           auditUrls: auditUrls.filter(url => url),
         });
@@ -714,79 +715,75 @@ function App() {
 
   // Step rendering functions
   const renderBasicsStep = () => (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Token Details</h2>
-        <p className="text-gray-600 max-w-lg mx-auto">
-          Set up your token's basic information. This will be visible to traders and investors.
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Coin Details</h2>
+        <p className="text-gray-600 text-sm">
+          Set up your coin's basic information and branding
         </p>
       </div>
 
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
-          Core Information
+      <div className="bg-gray-50 rounded-xl p-4 space-y-4">
+        <h3 className="text-sm font-medium text-gray-900 flex items-center">
+          <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
+          Basic Information
         </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-label flex items-center space-x-2">
-              <span>Token Name</span>
-              <span className="text-red-500">*</span>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-700 flex items-center">
+              <span>Coin Name</span>
+              <span className="text-red-500 ml-1">*</span>
             </label>
             <input
               type="text"
-              value={tokenName}
-              onChange={(e) => setTokenName(e.target.value)}
-              placeholder="My Awesome Token"
-              className="input w-full"
-              maxLength={50}
+              value={coinName}
+              onChange={(e) => setCoinName(e.target.value)}
+              placeholder="My Project Coin"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            <div className="text-xs text-gray-500">{tokenName.length}/50 characters</div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-label flex items-center space-x-2">
-              <span>Token Symbol</span>
-              <span className="text-red-500">*</span>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-700 flex items-center">
+              <span>Symbol</span>
+              <span className="text-red-500 ml-1">*</span>
             </label>
             <input
               type="text"
-              value={tokenSymbol}
-              onChange={(e) => setTokenSymbol(e.target.value.toUpperCase())}
-              placeholder="MAT"
-              className="input w-full uppercase"
-              maxLength={10}
+              value={coinSymbol}
+              onChange={(e) => setCoinSymbol(e.target.value.toUpperCase())}
+              placeholder="MPC"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            <div className="text-xs text-gray-500">{tokenSymbol.length}/10 characters</div>
           </div>
         </div>
 
-        <div className="mt-6 space-y-2">
-          <label className="text-label flex items-center space-x-2">
-            <span>Token Admin</span>
-            <span className="text-red-500">*</span>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-700 flex items-center">
+            <span>Coin Admin</span>
+            <span className="text-red-500 ml-1">*</span>
           </label>
           <input
             type="text"
-            value={tokenAdmin}
-            onChange={(e) => setTokenAdmin(e.target.value)}
+            value={coinAdmin}
+            onChange={(e) => setCoinAdmin(e.target.value)}
             placeholder={address ? `${address} (connected wallet)` : "0x... (defaults to connected wallet)"}
-            className="input w-full font-mono text-sm"
+            className="w-full px-3 py-2 text-xs font-mono border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <div className="text-xs text-gray-500">
-            This address will have admin privileges for the token contract
+            This address will have admin privileges for the coin contract
           </div>
         </div>
 
-        <div className="mt-6 space-y-2">
-          <label className="text-label">Token Image (IPFS)</label>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-700">Coin Image (IPFS)</label>
           <input
             type="text"
-            value={tokenImage}
-            onChange={(e) => setTokenImage(e.target.value)}
+            value={coinImage}
+            onChange={(e) => setCoinImage(e.target.value)}
             placeholder="ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
-            className="input w-full text-sm"
+            className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <div className="text-xs text-gray-500">
             Upload your image to IPFS and paste the URL here
@@ -794,30 +791,97 @@ function App() {
         </div>
       </div>
 
+      <div className="bg-gray-50 rounded-xl p-4 space-y-4">
+        <h3 className="text-sm font-medium text-gray-900 flex items-center">
+          <span className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-2"></span>
+          Description & Social Links
+        </h3>
+
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-700">Project Description</label>
+          <textarea
+            value={coinDescription}
+            onChange={(e) => setCoinDescription(e.target.value)}
+            placeholder="Describe your coin project, its purpose, and key features..."
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            rows={3}
+            maxLength={300}
+          />
+          <div className="text-xs text-gray-500">{coinDescription.length}/300 characters</div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-gray-700">Social Media URLs</label>
+          {socialMediaUrls.map((url, index) => (
+            <div key={index} className="flex gap-2">
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => updateSocialMediaUrl(index, e.target.value)}
+                placeholder="https://twitter.com/yourproject"
+                className="flex-1 px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {socialMediaUrls.length > 1 && (
+                <button
+                  onClick={() => removeSocialMediaUrl(index)}
+                  className="px-2 py-1 text-red-600 hover:bg-red-50 rounded text-xs"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            onClick={addSocialMediaUrl}
+            className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+          >
+            + Add URL
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-gray-700">Audit URLs</label>
+          {auditUrls.map((url, index) => (
+            <div key={index} className="flex gap-2">
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => updateAuditUrl(index, e.target.value)}
+                placeholder="https://audit.example.com/report"
+                className="flex-1 px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {auditUrls.length > 1 && (
+                <button
+                  onClick={() => removeAuditUrl(index)}
+                  className="px-2 py-1 text-red-600 hover:bg-red-50 rounded text-xs"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            onClick={addAuditUrl}
+            className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+          >
+            + Add URL
+          </button>
+        </div>
+      </div>
+
       <div className="flex justify-end">
         <button
           onClick={nextStep}
           disabled={!isStepValid(0)}
-          className={`btn btn-lg ${isStepValid(0) ? 'btn-primary' : 'btn-secondary'} px-8`}
+          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+            isStepValid(0) 
+              ? 'bg-blue-600 text-white hover:bg-blue-700' 
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+          }`}
         >
-          <span>Continue to Liquidity Setup</span>
-          <span className="text-xl">→</span>
+          Continue to Liquidity Setup →
         </button>
       </div>
-
-      {!isStepValid(0) && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <div className="flex items-center space-x-3">
-            <span className="text-amber-600 text-xl">⚠️</span>
-            <div>
-              <p className="text-sm font-medium text-amber-800">Required fields missing</p>
-              <p className="text-sm text-amber-700">
-                Please fill in the token name, symbol, and admin address to continue.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 
@@ -826,7 +890,7 @@ function App() {
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Liquidity Setup</h2>
         <p className="text-gray-600 max-w-lg mx-auto">
-          Configure your token's initial liquidity and trading pair settings.
+          Configure your coin's initial liquidity and trading pair settings.
         </p>
       </div>
 
@@ -852,7 +916,7 @@ function App() {
               step="0.01"
             />
             <div className="text-xs text-gray-500">
-              Minimum 0.01 ETH. This determines your token's initial price and liquidity.
+              Minimum 0.01 ETH. This determines your coin's initial price and liquidity.
             </div>
           </div>
 
@@ -891,7 +955,7 @@ function App() {
                   ?
                 </div>
                 <div className="text-left">
-                  <div className="font-semibold">Custom Token</div>
+                                      <div className="font-semibold">Custom Coin</div>
                   <div className="text-sm opacity-75">Advanced</div>
                 </div>
               </div>
@@ -903,7 +967,7 @@ function App() {
       <div className="flex justify-between">
         <button onClick={prevStep} className="btn btn-secondary px-8">
           <span className="text-xl">←</span>
-          <span>Back to Token Details</span>
+          <span>Back to Coin Details</span>
         </button>
         <button
           onClick={nextStep}
@@ -920,7 +984,7 @@ function App() {
   const renderFeaturesStep = () => (
     <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Token Features</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Coin Features</h2>
         <p className="text-gray-600 max-w-lg mx-auto">
           Configure optional features like vault, airdrops, and dev buy.
         </p>
@@ -942,7 +1006,7 @@ function App() {
               🔒 Vault
             </label>
           </div>
-          <p className="text-sm text-gray-600 mb-4">Lock tokens with vesting schedule for team allocation</p>
+          <p className="text-sm text-gray-600 mb-4">Lock coins with vesting schedule for team allocation</p>
           {vaultEnabled && (
             <div className="space-y-3">
               <input
@@ -974,7 +1038,7 @@ function App() {
               🎁 Airdrop
             </label>
           </div>
-          <p className="text-sm text-gray-600 mb-4">Distribute tokens to specific addresses via merkle tree</p>
+          <p className="text-sm text-gray-600 mb-4">Distribute coins to specific addresses via merkle tree</p>
           {airdropEnabled && (
             <div className="space-y-3">
               <input
@@ -1003,10 +1067,10 @@ function App() {
               className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
             <label htmlFor="devBuyEnabled" className="text-lg font-semibold text-gray-900">
-              💰 Dev Buy
+              🛒 Dev Buy
             </label>
           </div>
-          <p className="text-sm text-gray-600 mb-4">Automatically buy tokens after deployment</p>
+          <p className="text-sm text-gray-600 mb-4">Automatically buy coins after deployment</p>
           {devBuyEnabled && (
             <div className="space-y-3">
               <input
@@ -1125,72 +1189,70 @@ function App() {
   );
 
   const renderDeployStep = () => (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Deploy Your Token</h2>
-        <p className="text-gray-600 max-w-lg mx-auto">
-          Review your configuration and deploy your token to the blockchain.
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Deploy Your Coin</h2>
+        <p className="text-gray-600 text-sm">
+          Review your configuration and deploy your coin to the blockchain.
         </p>
       </div>
 
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+      <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+          <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>
           Configuration Summary
         </h3>
 
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+          <div className="flex justify-between">
             <span className="text-gray-600">Name:</span>
-            <span className="font-semibold ml-2">{tokenName || 'Not set'}</span>
+            <span className="font-medium">{coinName || 'Not set'}</span>
           </div>
-          <div>
+          <div className="flex justify-between">
             <span className="text-gray-600">Symbol:</span>
-            <span className="font-semibold ml-2">{tokenSymbol || 'Not set'}</span>
+            <span className="font-medium">{coinSymbol || 'Not set'}</span>
           </div>
-          <div>
+          <div className="flex justify-between">
             <span className="text-gray-600">Market Cap:</span>
-            <span className="font-semibold ml-2">{startingMarketCap ? `${startingMarketCap} ETH` : 'Not set'}</span>
+            <span className="font-medium">{startingMarketCap ? `${startingMarketCap} ETH` : 'Not set'}</span>
           </div>
-          <div>
-            <span className="text-gray-600">Pair Token:</span>
-            <span className="font-semibold ml-2">{pairTokenType === 'WETH' ? 'ETH (WETH)' : 'Custom'}</span>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Pair Coin:</span>
+            <span className="font-medium">{pairTokenType === 'WETH' ? 'ETH (WETH)' : 'Custom'}</span>
           </div>
         </div>
 
-        {(vaultEnabled || airdropEnabled || devBuyEnabled) && (
-          <div className="mt-4 pt-4 border-t border-green-200">
-            <div className="text-sm text-gray-600 mb-2">Enabled Features:</div>
-            <div className="flex flex-wrap gap-2">
-              {vaultEnabled && (
-                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
-                  🔒 Vault ({vaultPercentage}%)
-                </span>
-              )}
-              {airdropEnabled && (
-                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                  🎁 Airdrop ({airdropPercentage}%)
-                </span>
-              )}
-              {devBuyEnabled && (
-                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                  💰 Dev Buy ({devBuyEthAmount} ETH)
-                </span>
-              )}
-            </div>
+        <div className="mt-3 pt-3 border-t border-green-200">
+          <h4 className="text-xs font-medium text-gray-700 mb-2">Enabled Features:</h4>
+          <div className="flex flex-wrap gap-1">
+            {vaultEnabled && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                🔒 Vault ({vaultPercentage}%)
+              </span>
+            )}
+            {airdropEnabled && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
+                🎁 Airdrop ({airdropPercentage}%)
+              </span>
+            )}
+            {devBuyEnabled && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                🛒 Dev Buy ({devBuyEthAmount} ETH)
+              </span>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         <button
           onClick={handleSimulateToken}
           disabled={simulationLoading || !isStepValid(0) || !isStepValid(1)}
-          className="btn btn-secondary w-full"
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors disabled:opacity-50"
         >
           {simulationLoading ? (
             <>
-              <div className="spinner w-5 h-5"></div>
+              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
               <span>Simulating...</span>
             </>
           ) : (
@@ -1204,146 +1266,145 @@ function App() {
         <button
           onClick={handleConfirmDeploy}
           disabled={deployLoading || !isConnected || !isStepValid(0) || !isStepValid(1)}
-          className="btn btn-primary w-full btn-lg"
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
         >
           {deployLoading ? (
             <>
-              <div className="spinner w-5 h-5"></div>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               <span>Deploying...</span>
             </>
           ) : (
             <>
               <span>🚀</span>
-              <span>Deploy Token</span>
+              <span>Deploy Coin</span>
             </>
           )}
         </button>
       </div>
 
       <div className="flex justify-start">
-        <button onClick={prevStep} className="btn btn-secondary px-8">
-          <span className="text-xl">←</span>
-          <span>Back to Advanced</span>
+        <button 
+          onClick={prevStep} 
+          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+        >
+          ← Back to Advanced
         </button>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen" style={{background: 'var(--apple-gray-light)'}}>
-      {/* Apple-style Header */}
-      <header className="glass-strong sticky top-0 z-50 border-b border-white/10">
-        <div className="max-w-6xl mx-auto px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
-                🚀
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold">
+                A
               </div>
               <div>
-                <h1 className="text-title font-bold text-gray-900">
-                  ClankerTools
-                </h1>
-                <p className="text-caption">Token Management Platform</p>
+                                 <h1 className="text-xl font-bold text-gray-900">astropad</h1>
+                 <p className="text-xs text-gray-600">Coin Management Platform</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-4">
-              {!isConnected ? (
-                <button
-                  onClick={() => open()}
-                  className="btn btn-primary"
-                >
-                  <span className="btn-icon">🔗</span>
-                  <span>Connect Wallet</span>
-                </button>
-              ) : (
-                <div className="flex items-center space-x-4">
-                  <div className="glass px-4 py-3 rounded-2xl flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-body font-mono text-sm">
+              {isConnected ? (
+                <div className="flex items-center space-x-3">
+                  <div className="text-sm">
+                    <div className="font-medium text-gray-900">
                       {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Connected'}
-                    </span>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {chain?.name || 'Unknown Network'}
+                    </div>
                   </div>
                   <button
                     onClick={() => disconnect()}
-                    className="btn btn-secondary"
+                    className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
                   >
                     Disconnect
                   </button>
                 </div>
+              ) : (
+                <button
+                  onClick={() => open()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  Connect Wallet
+                </button>
               )}
             </div>
           </div>
         </div>
-      </header>
-
-      {/* Hero Section */}
-      <div className="pt-16 pb-12 px-8">
-        <div className="max-w-4xl mx-auto text-center animate-fade-in-up">
-          <h2 className="text-display font-bold text-gray-900 mb-6">
-            Deploy & Manage
-            <span style={{background: 'linear-gradient(135deg, var(--apple-blue), var(--apple-purple))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}> Tokens</span>
-          </h2>
-          <p className="text-body text-gray-600 max-w-2xl mx-auto mb-12 leading-relaxed">
-            Create and manage your Clanker tokens with our intuitive, Apple-inspired interface. 
-            Built for simplicity, designed for power.
-          </p>
-        </div>
       </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-8 pb-16">
-        <div className="grid lg:grid-cols-3 gap-12">
-          {/* Deploy Token Card */}
-          <div className="card animate-fade-in-up lg:col-span-2">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Deploy & Manage <span className="text-blue-600">Coins</span></h2>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Create and manage your Clanker coins with our intuitive, Apple-inspired interface. Built for simplicity, designed for power.
+          </p>
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Deploy Coin Card */}
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             {/* Progress Header */}
-            <div className="border-b border-gray-100 pb-6 mb-8">
-              <div className="flex items-center space-x-4 mb-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl flex items-center justify-center text-white text-2xl shadow-lg">
-                  {STEPS[currentStep].icon}
-                </div>
-                <div>
-                  <h3 className="text-title font-bold text-gray-900">Deploy Token</h3>
-                  <p className="text-caption text-gray-600">Step {currentStep + 1} of {STEPS.length}: {STEPS[currentStep].title}</p>
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-xl">
+                    {STEPS[currentStep].icon}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Deploy Coin</h3>
+                    <p className="text-sm text-gray-600">Step {currentStep + 1} of {STEPS.length}: {STEPS[currentStep].title}</p>
+                  </div>
                 </div>
               </div>
 
               {/* Progress Steps */}
-              <div className="flex items-center space-x-2 overflow-x-auto pb-2">
+              <div className="flex items-center justify-between">
                 {STEPS.map((step, index) => (
                   <div key={step.id} className="flex items-center">
                     <button
                       onClick={() => setCurrentStep(index)}
-                      disabled={index > currentStep + 1}
+                      disabled={index > currentStep && !isStepValid(index - 1)}
                       className={`
-                        flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap
+                        flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-medium transition-all
                         ${index === currentStep 
-                          ? 'bg-blue-100 text-blue-700 shadow-sm' 
-                          : index < currentStep
+                          ? 'bg-blue-100 text-blue-700' 
+                          : isStepValid(index)
                             ? 'bg-green-50 text-green-700 hover:bg-green-100'
-                            : 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                            : index < currentStep
+                              ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              : 'bg-gray-50 text-gray-400 cursor-not-allowed'
                         }
                       `}
                     >
-                      <span className="text-base">{step.icon}</span>
-                      <span>{step.title}</span>
-                      {index < currentStep && (
-                        <span className="text-green-500">✓</span>
+                      <span className="text-sm">{step.icon}</span>
+                      <span className="hidden sm:inline">{step.title}</span>
+                      {isStepValid(index) && index !== currentStep && (
+                        <span className="text-green-500 text-xs">✓</span>
                       )}
                     </button>
                     {index < STEPS.length - 1 && (
-                      <div className="w-3 h-px bg-gray-200 mx-1"></div>
+                      <div className="w-2 h-px bg-gray-200 mx-1"></div>
                     )}
                   </div>
                 ))}
               </div>
             </div>
-            
+
             {/* Step Content */}
-            <div className="space-y-8">
+            <div className="p-6">
               {renderCurrentStep()}
             </div>
           </div>
+
           {/* Check Fees Card */}
           <div className="card animate-fade-in-up" style={{animationDelay: '0.2s'}}>
             <div className="flex items-center space-x-4 mb-8">
@@ -1352,13 +1413,13 @@ function App() {
               </div>
               <div>
                 <h3 className="text-title font-bold text-gray-900">Check Fees</h3>
-                <p className="text-caption">Monitor your token earnings</p>
+                <p className="text-caption">Monitor your coin earnings</p>
               </div>
             </div>
             
             <div className="space-y-8">
               <div className="space-y-3">
-                <label className="text-label">Clanker Token Address</label>
+                <label className="text-label">Clanker Coin Address</label>
                 <input
                   type="text"
                   value={customClankerTokenAddress}
@@ -1430,7 +1491,7 @@ function App() {
             Built with ❤️ for the Clanker ecosystem
           </p>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

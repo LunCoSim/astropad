@@ -7,8 +7,8 @@ import { LiquiditySetupStep } from './steps/LiquiditySetupStep';
 // Note: ExtensionsStep, AdvancedConfigStep, and DeploymentStep components are not yet implemented
 
 // Types
-export interface TokenConfig {
-  // Core Token Settings
+export interface CoinConfig {
+  // Core Coin Settings
   name: string;
   symbol: string;
   admin: string;
@@ -89,9 +89,9 @@ export interface TokenConfig {
 const WIZARD_STEPS = [
   {
     id: 'basics',
-    title: 'Token Details',
+    title: 'Coin Details',
     description: 'Name, symbol, and branding',
-    icon: '🎯',
+    icon: '🪙',
     required: true
   },
   {
@@ -118,32 +118,32 @@ const WIZARD_STEPS = [
   {
     id: 'deploy',
     title: 'Deploy',
-    description: 'Review and launch your token',
+    description: 'Review and launch your coin',
     icon: '🚀',
     required: true
   }
 ];
 
-interface TokenDeployWizardProps {
-  onDeploy: (config: TokenConfig) => Promise<void>;
+interface CoinDeployWizardProps {
+  onDeploy: (config: CoinConfig) => Promise<void>;
   isDeploying: boolean;
-  deployedTokenAddress: string;
+  deployedCoinAddress: string;
   connected: boolean;
   address: string | undefined;
 }
 
-export function TokenDeployWizard({ 
+export function CoinDeployWizard({ 
   onDeploy, 
   isDeploying, 
-  deployedTokenAddress,
+  deployedCoinAddress,
   connected,
   address 
-}: TokenDeployWizardProps) {
+}: CoinDeployWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
-  const [config, setConfig] = useState<TokenConfig>({
-    // Core Token Settings
-    name: 'My Project Token',
-    symbol: 'MPT',
+  const [config, setConfig] = useState<CoinConfig>({
+    // Core Coin Settings
+    name: 'My Project Coin',
+    symbol: 'MPC',
     admin: '',
     image: '',
     description: '',
@@ -151,7 +151,7 @@ export function TokenDeployWizard({
     auditUrls: [''],
     
     // Social Context
-    interfaceName: 'Astropad',
+    interfaceName: 'astropad',
     platform: '',
     messageId: '',
     socialId: '',
@@ -222,13 +222,13 @@ export function TokenDeployWizard({
     }
   }, [address, config.admin]);
 
-  const updateConfig = (updates: Partial<TokenConfig>) => {
+  const updateConfig = (updates: Partial<CoinConfig>) => {
     setConfig(prev => ({ ...prev, ...updates }));
   };
 
-  const updateNestedConfig = <T extends keyof TokenConfig>(
+  const updateNestedConfig = <T extends keyof CoinConfig>(
     section: T, 
-    updates: Partial<TokenConfig[T]>
+    updates: Partial<CoinConfig[T]>
   ) => {
     setConfig(prev => ({
       ...prev,
@@ -331,7 +331,7 @@ export function TokenDeployWizard({
             onDeploy={() => onDeploy(config)}
             onPrevious={handlePrevious}
             isDeploying={isDeploying}
-            deployedTokenAddress={deployedTokenAddress}
+            deployedCoinAddress={deployedCoinAddress}
             connected={connected}
           />
         );
@@ -341,49 +341,51 @@ export function TokenDeployWizard({
   };
 
   return (
-    <div className="card animate-fade-in-up">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
       {/* Progress Header */}
-      <div className="border-b border-gray-100 p-6">
-        <div className="flex items-center space-x-4 mb-6">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl flex items-center justify-center text-white text-2xl shadow-lg">
-            🎯
-          </div>
-          <div>
-            <h3 className="text-title font-bold text-gray-900">Deploy Token</h3>
-            <p className="text-caption text-gray-600">Step {currentStep + 1} of {WIZARD_STEPS.length}</p>
+      <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-xl">
+              🪙
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Deploy Coin</h3>
+              <p className="text-sm text-gray-600">Step {currentStep + 1} of {WIZARD_STEPS.length}</p>
+            </div>
           </div>
         </div>
 
         {/* Progress Steps */}
-        <div className="flex items-center space-x-2 overflow-x-auto pb-2">
+        <div className="flex items-center justify-between">
           {WIZARD_STEPS.map((step, index) => (
             <div key={step.id} className="flex items-center">
               <button
                 onClick={() => handleStepClick(index)}
                 disabled={!canProceedToStep(index)}
                 className={`
-                  flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap
+                  flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-medium transition-all
                   ${index === currentStep 
-                    ? 'bg-blue-100 text-blue-700 shadow-sm' 
+                    ? 'bg-blue-100 text-blue-700' 
                     : isStepValid(index)
                       ? 'bg-green-50 text-green-700 hover:bg-green-100'
                       : canProceedToStep(index)
-                        ? 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                        ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         : 'bg-gray-50 text-gray-400 cursor-not-allowed'
                   }
                 `}
               >
-                <span className="text-base">{step.icon}</span>
-                <span>{step.title}</span>
+                <span className="text-sm">{step.icon}</span>
+                <span className="hidden sm:inline">{step.title}</span>
                 {step.required && index > currentStep && !isStepValid(index) && (
                   <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded">Required</span>
                 )}
                 {isStepValid(index) && index !== currentStep && (
-                  <span className="text-green-500">✓</span>
+                  <span className="text-green-500 text-xs">✓</span>
                 )}
               </button>
               {index < WIZARD_STEPS.length - 1 && (
-                <div className="w-3 h-px bg-gray-200 mx-1"></div>
+                <div className="w-2 h-px bg-gray-200 mx-1"></div>
               )}
             </div>
           ))}
@@ -396,4 +398,8 @@ export function TokenDeployWizard({
       </div>
     </div>
   );
-} 
+}
+
+// Export the interface and component with backward compatibility
+export type TokenConfig = CoinConfig;
+export const TokenDeployWizard = CoinDeployWizard; 

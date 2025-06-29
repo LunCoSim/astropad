@@ -1,13 +1,13 @@
 import type { TokenConfig } from '../TokenDeployWizard';
 import { InfoTooltip } from '../ui/InfoTooltip';
 
-interface TokenBasicsStepProps {
+interface CoinBasicsStepProps {
   config: TokenConfig;
   updateConfig: (updates: Partial<TokenConfig>) => void;
   onNext: () => void;
 }
 
-export function TokenBasicsStep({ config, updateConfig, onNext }: TokenBasicsStepProps) {
+export function CoinBasicsStep({ config, updateConfig, onNext }: CoinBasicsStepProps) {
   const isValid = !!(config.name && config.symbol && config.admin);
 
   const addSocialUrl = () => {
@@ -51,90 +51,83 @@ export function TokenBasicsStep({ config, updateConfig, onNext }: TokenBasicsSte
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
+    <div className="space-y-6">
       <div className="text-center">
-        <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-3xl flex items-center justify-center text-white text-3xl mx-auto mb-4 shadow-lg">
-          🎯
-        </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Token Details</h2>
-        <p className="text-gray-600 max-w-lg mx-auto">
-          Set up your token's basic information. This will be visible to traders and investors.
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Coin Details</h2>
+        <p className="text-gray-600 text-sm">
+          Set up your coin's basic information and branding
         </p>
       </div>
 
-      {/* Core Information */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
-          Core Information
+      <div className="bg-gray-50 rounded-xl p-4 space-y-4">
+        <h3 className="text-sm font-medium text-gray-900 flex items-center">
+          <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
+          Basic Information
         </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-label flex items-center space-x-2">
-              <span>Token Name</span>
-              <span className="text-red-500">*</span>
-              <InfoTooltip content="The full name of your token (e.g., 'My Awesome Project')" />
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-700 flex items-center">
+              <span>Coin Name</span>
+              <span className="text-red-500 ml-1">*</span>
             </label>
             <input
               type="text"
               value={config.name}
               onChange={(e) => updateConfig({ name: e.target.value })}
-              placeholder="My Awesome Token"
-              className="input w-full"
+              placeholder="My Project Coin"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               maxLength={50}
             />
             <div className="text-xs text-gray-500">{config.name.length}/50 characters</div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-label flex items-center space-x-2">
-              <span>Token Symbol</span>
-              <span className="text-red-500">*</span>
-              <InfoTooltip content="The ticker symbol for your token (e.g., 'MAT'). Keep it short and memorable." />
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-700 flex items-center">
+              <span>Symbol</span>
+              <span className="text-red-500 ml-1">*</span>
             </label>
             <input
               type="text"
               value={config.symbol}
               onChange={(e) => updateConfig({ symbol: e.target.value.toUpperCase() })}
-              placeholder="MAT"
-              className="input w-full uppercase"
+              placeholder="MPC"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase"
               maxLength={10}
             />
             <div className="text-xs text-gray-500">{config.symbol.length}/10 characters</div>
           </div>
         </div>
 
-        <div className="mt-6 space-y-2">
-          <label className="text-label flex items-center space-x-2">
-            <span>Token Admin</span>
-            <span className="text-red-500">*</span>
-            <InfoTooltip content="The wallet address that will control this token contract. Defaults to your connected wallet." />
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-700 flex items-center">
+            <span>Coin Admin</span>
+            <span className="text-red-500 ml-1">*</span>
+            <InfoTooltip content="The wallet address that will control this coin contract. Defaults to your connected wallet." />
           </label>
           <input
             type="text"
             value={config.admin}
             onChange={(e) => updateConfig({ admin: e.target.value })}
             placeholder="0x... (defaults to connected wallet)"
-            className="input w-full font-mono text-sm"
+            className="w-full px-3 py-2 text-xs font-mono border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <div className="text-xs text-gray-500">
-            This address will have admin privileges for the token contract
+            This address will have admin privileges for the coin contract
           </div>
         </div>
 
-        <div className="mt-6 space-y-2">
-          <label className="text-label flex items-center space-x-2">
-            <span>Token Image</span>
-            <InfoTooltip content="IPFS URL for your token's image. This will appear in wallets and DEX interfaces." />
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-700 flex items-center">
+            <span>Coin Image (IPFS)</span>
+            <InfoTooltip content="IPFS URL for your coin's image. This will appear in wallets and DEX interfaces." />
           </label>
           <input
             type="text"
             value={config.image}
             onChange={(e) => updateConfig({ image: e.target.value })}
             placeholder="ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
-            className="input w-full text-sm"
+            className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <div className="text-xs text-gray-500">
             Upload your image to IPFS and paste the URL here
@@ -142,188 +135,166 @@ export function TokenBasicsStep({ config, updateConfig, onNext }: TokenBasicsSte
         </div>
       </div>
 
-      {/* Description & Metadata */}
-      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-100">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <span className="w-2 h-2 bg-purple-500 rounded-full mr-3"></span>
-          Description & Metadata
+      <div className="bg-gray-50 rounded-xl p-4 space-y-4">
+        <h3 className="text-sm font-medium text-gray-900 flex items-center">
+          <span className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-2"></span>
+          Description & Social Links
         </h3>
 
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-label flex items-center space-x-2">
-              <span>Project Description</span>
-              <InfoTooltip content="Describe your token project. This helps users understand what your token is about." />
-            </label>
-            <textarea
-              value={config.description}
-              onChange={(e) => updateConfig({ description: e.target.value })}
-              placeholder="Describe your token project, its purpose, and key features..."
-              className="input w-full min-h-[100px] resize-y"
-              maxLength={500}
-            />
-            <div className="text-xs text-gray-500">{config.description.length}/500 characters</div>
-          </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-700 flex items-center">
+            <span>Project Description</span>
+            <InfoTooltip content="Describe your coin project. This helps users understand what your coin is about." />
+          </label>
+          <textarea
+            value={config.description}
+            onChange={(e) => updateConfig({ description: e.target.value })}
+            placeholder="Describe your coin project, its purpose, and key features..."
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            rows={3}
+            maxLength={300}
+          />
+          <div className="text-xs text-gray-500">{config.description.length}/300 characters</div>
+        </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-label flex items-center space-x-2">
-                <span>Social Media Links</span>
-                <InfoTooltip content="Add links to your project's social media accounts and website." />
-              </label>
-              <button
-                type="button"
-                onClick={addSocialUrl}
-                className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-              >
-                + Add Link
-              </button>
-            </div>
-            <div className="space-y-3">
-              {config.socialUrls.map((url, index) => (
-                <div key={index} className="flex space-x-2">
-                  <input
-                    type="url"
-                    value={url}
-                    onChange={(e) => updateSocialUrl(index, e.target.value)}
-                    placeholder="https://twitter.com/yourproject"
-                    className="input flex-1 text-sm"
-                  />
-                  {config.socialUrls.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeSocialUrl(index)}
-                      className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-gray-700">Social Media URLs</label>
+            <button
+              type="button"
+              onClick={addSocialUrl}
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+            >
+              + Add URL
+            </button>
           </div>
+          {config.socialUrls.map((url, index) => (
+            <div key={index} className="flex gap-2">
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => updateSocialUrl(index, e.target.value)}
+                placeholder="https://twitter.com/yourproject"
+                className="flex-1 px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {config.socialUrls.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeSocialUrl(index)}
+                  className="px-2 py-1 text-red-600 hover:bg-red-50 rounded text-xs"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-label flex items-center space-x-2">
-                <span>Audit Reports</span>
-                <InfoTooltip content="Links to security audit reports for your project." />
-              </label>
-              <button
-                type="button"
-                onClick={addAuditUrl}
-                className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-              >
-                + Add Report
-              </button>
-            </div>
-            <div className="space-y-3">
-              {config.auditUrls.map((url, index) => (
-                <div key={index} className="flex space-x-2">
-                  <input
-                    type="url"
-                    value={url}
-                    onChange={(e) => updateAuditUrl(index, e.target.value)}
-                    placeholder="https://auditor.com/report.pdf"
-                    className="input flex-1 text-sm"
-                  />
-                  {config.auditUrls.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeAuditUrl(index)}
-                      className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-gray-700">Audit URLs</label>
+            <button
+              type="button"
+              onClick={addAuditUrl}
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+            >
+              + Add Report
+            </button>
           </div>
+          {config.auditUrls.map((url, index) => (
+            <div key={index} className="flex gap-2">
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => updateAuditUrl(index, e.target.value)}
+                placeholder="https://audit.example.com/report"
+                className="flex-1 px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {config.auditUrls.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeAuditUrl(index)}
+                  className="px-2 py-1 text-red-600 hover:bg-red-50 rounded text-xs"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Social Context (Optional) */}
-      <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-2xl p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <span className="w-2 h-2 bg-gray-500 rounded-full mr-3"></span>
-          Social Context
-          <span className="ml-2 text-sm text-gray-500 font-normal">(Optional)</span>
+      <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+        <h3 className="text-sm font-medium text-gray-900 flex items-center">
+          <span className="w-1.5 h-1.5 bg-gray-500 rounded-full mr-2"></span>
+          Social Context <span className="text-xs text-gray-500 ml-2">(Optional)</span>
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-label">Interface Name</label>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-700">Interface Name</label>
             <input
               type="text"
               value={config.interfaceName}
               onChange={(e) => updateConfig({ interfaceName: e.target.value })}
-              placeholder="Astropad"
-              className="input"
+                             placeholder="astropad"
+              className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-label">Platform</label>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-700">Platform</label>
             <input
               type="text"
               value={config.platform}
               onChange={(e) => updateConfig({ platform: e.target.value })}
-              placeholder="farcaster"
-              className="input"
+              placeholder="Farcaster"
+              className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <label className="text-label">Message ID</label>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-700">Message ID</label>
             <input
               type="text"
               value={config.messageId}
               onChange={(e) => updateConfig({ messageId: e.target.value })}
               placeholder="Message identifier"
-              className="input"
+              className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-label">Social ID</label>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-700">Social ID</label>
             <input
               type="text"
               value={config.socialId}
               onChange={(e) => updateConfig({ socialId: e.target.value })}
               placeholder="Social identifier"
-              className="input"
+              className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
       </div>
 
-      {/* Next Button */}
       <div className="flex justify-end">
         <button
           onClick={onNext}
           disabled={!isValid}
-          className={`btn btn-lg ${isValid ? 'btn-primary' : 'btn-secondary'} px-8`}
+          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+            isValid 
+              ? 'bg-blue-600 text-white hover:bg-blue-700' 
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+          }`}
         >
-          <span>Continue to Liquidity Setup</span>
-          <span className="text-xl">→</span>
+          Continue to Liquidity Setup →
         </button>
       </div>
-
-      {/* Validation Message */}
-      {!isValid && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <div className="flex items-center space-x-3">
-            <span className="text-amber-600 text-xl">⚠️</span>
-            <div>
-              <p className="text-sm font-medium text-amber-800">Required fields missing</p>
-              <p className="text-sm text-amber-700">
-                Please fill in the token name, symbol, and admin address to continue.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
-} 
+}
+
+// Export with backward compatibility
+export const TokenBasicsStep = CoinBasicsStep; 
