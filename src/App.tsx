@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useAccount, useDisconnect, usePublicClient, useWalletClient } from 'wagmi';
 import { useWeb3Modal } from '@web3modal/wagmi/react';
-import { TokenConfigV4Builder, WETH_ADDRESS, Clanker } from 'clanker-sdk';
+import { TokenConfigV4Builder, WETH_ADDRESS, Clanker, POOL_POSITIONS } from 'clanker-sdk';
 import { formatUnits } from 'viem';
 import './App.css';
 
@@ -61,6 +61,10 @@ function App() {
   const [customClankerTokenAddress, setCustomClankerTokenAddress] = useState('0x699E27a42095D3cb9A6a23097E5C201E33E314B4');
   const [customFeeOwnerAddress, setCustomFeeOwnerAddress] = useState('0xCd2a99C6d6b27976537fC3737b0ef243E7C49946');
 
+  const [simulateLoading, setSimulateLoading] = useState(false);
+  const [simulationResult, setSimulationResult] = useState<any>(null);
+  const [simulationError, setSimulationError] = useState('');
+  
   const [deployLoading, setDeployLoading] = useState(false);
   const [deployResult, setDeployResult] = useState('');
   const [deployError, setDeployError] = useState('');
@@ -85,8 +89,10 @@ function App() {
     return null;
   }, [publicClient, walletClient]);
 
-  const handleDeployToken = async () => {
-    setDeployLoading(true);
+  const handleSimulateToken = async () => {
+    setSimulateLoading(true);
+    setSimulationResult(null);
+    setSimulationError('');
     setDeployResult('');
     setDeployError('');
     setDeployedTokenAddress('');
@@ -94,25 +100,59 @@ function App() {
     setFeesError('');
 
     if (!isConnected || !address) {
-      setDeployError('Please connect your wallet first.');
-      setDeployLoading(false);
+      setSimulationError('Please connect your wallet first.');
+      setSimulateLoading(false);
       return;
     }
 
     if (!tokenName || !tokenSymbol) {
-      setDeployError('Token Name and Symbol are required.');
-      setDeployLoading(false);
+      setSimulationError('Token Name and Symbol are required.');
+      setSimulateLoading(false);
       return;
     }
     if (isNaN(devBuyEthAmount) || devBuyEthAmount < 0) {
-      setDeployError('Invalid Dev Buy ETH Amount.');
-      setDeployLoading(false);
+      setSimulationError('Invalid Dev Buy ETH Amount.');
+      setSimulateLoading(false);
       return;
     }
 
-    if (!publicClient || !walletClient || !clanker || !chain) {
-      setDeployError('Viem clients or Clanker instance not available.');
-      setDeployLoading(false);
+    // Debug logging
+    console.log('Debug - Clients status:', {
+      publicClient: !!publicClient,
+      walletClient: !!walletClient,
+      clanker: !!clanker,
+      chain: !!chain,
+      isConnected,
+      address
+    });
+
+    if (!publicClient) {
+      setSimulationError('Public client not available. Please try refreshing the page.');
+      setSimulateLoading(false);
+      return;
+    }
+
+    if (!walletClient) {
+      setSimulationError('Wallet client not available. Please disconnect and reconnect your wallet.');
+      setSimulateLoading(false);
+      return;
+    }
+
+    if (!clanker) {
+      setSimulationError('Clanker instance not available. Please try refreshing the page.');
+      setSimulateLoading(false);
+      return;
+    }
+
+    if (!chain) {
+      setSimulationError('Chain information not available. Please ensure you are connected to Base network.');
+      setSimulateLoading(false);
+      return;
+    }
+
+    if (chain.id !== 8453) {
+      setSimulationError(`Wrong network detected. Please switch to Base Mainnet (Chain ID: 8453). Currently on: ${chain.name} (${chain.id})`);
+      setSimulateLoading(false);
       return;
     }
 
@@ -129,6 +169,7 @@ function App() {
         })
         .withPoolConfig({
           pairedToken: WETH_ADDRESS,
+          positions: POOL_POSITIONS.Standard,
         })
         .withDevBuy({
           ethAmount: devBuyEthAmount,
@@ -145,12 +186,36 @@ function App() {
 
       const tokenConfig = builder.build();
 
-      const simulationResult = await clanker.simulateDeployToken(tokenConfig, walletClient.account);
+      const simulateResult = await clanker.simulateDeployToken(tokenConfig, walletClient.account);
 
-      if ('error' in simulationResult) {
-        throw new Error(simulationResult.error);
+      if ('error' in simulateResult) {
+        throw new Error(String(simulateResult.error));
       }
 
+      setSimulationResult({
+        tokenConfig,
+        transaction: simulateResult.transaction,
+        simulatedAddress: simulateResult.simulatedAddress,
+      });
+    } catch (error: any) {
+      console.error('Simulation failed:', error);
+      setSimulationError(`Simulation failed: ${error.message || error}`);
+    } finally {
+      setSimulateLoading(false);
+    }
+  };
+
+  const handleConfirmDeploy = async () => {
+    if (!simulationResult || !walletClient) {
+      setDeployError('No simulation result available.');
+      return;
+    }
+
+    setDeployLoading(true);
+    setDeployResult('');
+    setDeployError('');
+
+    try {
       const { transaction, simulatedAddress } = simulationResult;
 
       const hash = await walletClient.sendTransaction({
@@ -161,7 +226,10 @@ function App() {
       });
 
       setDeployedTokenAddress(simulatedAddress);
-      setDeployResult(`Transaction sent! Hash: ${hash}\nSimulated Token Address: ${simulatedAddress}\nView on BaseScan: https://basescan.org/tx/${hash}`);
+      setDeployResult(`Transaction sent! Hash: ${hash}\nToken Address: ${simulatedAddress}\nView on BaseScan: https://basescan.org/tx/${hash}`);
+      
+      // Clear simulation after successful deployment
+      setSimulationResult(null);
     } catch (error: any) {
       console.error('Deployment failed:', error);
       setDeployError(`Deployment failed: ${error.message || error}`);
@@ -315,24 +383,89 @@ function App() {
                 />
               </div>
               
-              <button
-                onClick={handleDeployToken}
-                disabled={deployLoading}
-                className="btn btn-success btn-lg w-full"
-              >
-                {deployLoading ? (
-                  <>
-                    <div className="spinner"></div>
-                    <span>Deploying Token...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="btn-icon">🚀</span>
-                    <span>Deploy Token</span>
-                  </>
-                )}
-              </button>
+              {/* Step 1: Simulate Deploy */}
+              {!simulationResult && (
+                <button
+                  onClick={handleSimulateToken}
+                  disabled={simulateLoading}
+                  className="btn btn-primary btn-lg w-full"
+                >
+                  {simulateLoading ? (
+                    <>
+                      <div className="spinner"></div>
+                      <span>Simulating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="btn-icon">🔮</span>
+                      <span>Simulate Deploy</span>
+                    </>
+                  )}
+                </button>
+              )}
+
+              {/* Simulation Results */}
+              {simulationResult && (
+                <div className="status-message status-info animate-scale-in">
+                  <div className="flex items-start space-x-3">
+                    <span className="text-xl">🔮</span>
+                    <div className="w-full">
+                      <h4 className="text-headline font-semibold mb-3">Simulation Results</h4>
+                      <div className="space-y-3 text-sm">
+                        <div>
+                          <span className="font-semibold">Token Name:</span> {simulationResult.tokenConfig.name}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Token Symbol:</span> {simulationResult.tokenConfig.symbol}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Predicted Address:</span> 
+                          <span className="font-mono text-xs block mt-1">{simulationResult.simulatedAddress}</span>
+                        </div>
+                        <div>
+                          <span className="font-semibold">Dev Buy Amount:</span> {devBuyEthAmount} ETH
+                        </div>
+                        <div>
+                          <span className="font-semibold">Transaction Value:</span> {(Number(simulationResult.transaction.value) / 1e18).toFixed(6)} ETH
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Confirm Deploy */}
+              {simulationResult && (
+                <div className="space-y-4">
+                  <button
+                    onClick={handleConfirmDeploy}
+                    disabled={deployLoading}
+                    className="btn btn-success btn-lg w-full"
+                  >
+                    {deployLoading ? (
+                      <>
+                        <div className="spinner"></div>
+                        <span>Deploying Token...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="btn-icon">🚀</span>
+                        <span>Confirm Deploy</span>
+                      </>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => setSimulationResult(null)}
+                    disabled={deployLoading}
+                    className="btn btn-secondary btn-sm w-full"
+                  >
+                    ↩️ Back to Edit
+                  </button>
+                </div>
+              )}
               
+              {/* Success Message */}
               {deployResult && (
                 <div className="status-message status-success animate-scale-in">
                   <div className="flex items-start space-x-3">
@@ -340,6 +473,19 @@ function App() {
                     <div>
                       <h4 className="text-headline font-semibold mb-2">Deployment Successful!</h4>
                       <p className="text-body font-mono text-sm whitespace-pre-wrap">{deployResult}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Error Messages */}
+              {simulationError && (
+                <div className="status-message status-error animate-scale-in">
+                  <div className="flex items-start space-x-3">
+                    <span className="text-xl">❌</span>
+                    <div>
+                      <h4 className="text-headline font-semibold mb-2">Simulation Failed</h4>
+                      <p className="text-body text-sm">{simulationError}</p>
                     </div>
                   </div>
                 </div>

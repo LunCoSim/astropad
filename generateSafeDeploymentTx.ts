@@ -6,6 +6,7 @@ import {
   TokenConfigV4Builder,
   WETH_ADDRESS,
   Clanker,
+  POOL_POSITIONS,
 } from "clanker-sdk";
 
 // Your Gnosis Safe Multisig address
@@ -30,6 +31,7 @@ async function generateClankerTokenDeploymentTransaction() {
     })
     .withPoolConfig({
       pairedToken: WETH_ADDRESS,
+      positions: POOL_POSITIONS.Standard,
     })
     .withDevBuy({
       ethAmount: 0.0001, // Initial buy with 0.0001 ETH
@@ -46,7 +48,7 @@ async function generateClankerTokenDeploymentTransaction() {
     });
 
   // 2. Build the token configuration
-  const tokenConfig = await builder.build();
+  const tokenConfig = builder.build();
 
   // 3. Simulate the deployment to get the transaction data
   try {

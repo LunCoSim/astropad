@@ -2,7 +2,7 @@ import { createWeb3Modal, defaultConfig } from '@web3modal/wagmi';
 import { reconnect, getAccount, getPublicClient, getWalletClient, switchChain } from 'wagmi/actions';
 import { base } from 'wagmi/chains';
 import { http, createPublicClient, formatUnits } from 'viem';
-import { TokenConfigV4Builder, WETH_ADDRESS, simulateDeploy, availableFees } from 'clanker-sdk';
+import { TokenConfigV4Builder, WETH_ADDRESS, simulateDeploy, availableFees, POOL_POSITIONS } from 'clanker-sdk';
 
 // 1. Define constants
 const projectId = '03cafb3be79ba7760436a3741199a564';
@@ -149,6 +149,7 @@ deployTokenBtn.addEventListener('click', async () => {
       })
       .withPoolConfig({
         pairedToken: WETH_ADDRESS,
+        positions: POOL_POSITIONS.Standard,
       })
       .withDevBuy({
         ethAmount: devBuyEthAmount,
@@ -163,7 +164,7 @@ deployTokenBtn.addEventListener('click', async () => {
         ],
       });
 
-    const tokenConfig = await builder.build();
+    const tokenConfig = builder.build();
 
     const simulationResult = await simulateDeploy(tokenConfig, walletClient.account, publicClient);
 
