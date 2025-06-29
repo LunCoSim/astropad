@@ -183,26 +183,22 @@ function App() {
   const [vanitySuffix, setVanitySuffix] = useState('');
   
   // ========== UI STATE ==========
-  const [expandedSections, setExpandedSections] = useState<{[key: string]: boolean}>({
-    core: true,
-    metadata: false,
-    social: false,
-    vault: false,
-    airdrop: false,
-    rewards: false,
-    pool: true,
-    fees: false,
-    devbuy: true,
-    advanced: false
-  });
-  
-  // Existing state variables
+  const [currentStep, setCurrentStep] = useState(0);
   const [deployedTokenAddress, setDeployedTokenAddress] = useState('');
+
+  // Step configuration
+  const STEPS = [
+    { id: 'basics', title: 'Token Details', icon: '🎯', description: 'Name, symbol, and branding' },
+    { id: 'liquidity', title: 'Liquidity Setup', icon: '💧', description: 'Market cap and trading pair' },
+    { id: 'features', title: 'Token Features', icon: '⚡', description: 'Vault, airdrops, and dev buy' },
+    { id: 'advanced', title: 'Advanced Config', icon: '⚙️', description: 'Fees and rewards' },
+    { id: 'deploy', title: 'Deploy', icon: '🚀', description: 'Review and launch' }
+  ];
   const [customClankerTokenAddress, setCustomClankerTokenAddress] = useState('0x699E27a42095D3cb9A6a23097E5C201E33E314B4');
   const [customFeeOwnerAddress, setCustomFeeOwnerAddress] = useState('0xCd2a99C6d6b27976537fC3737b0ef243E7C49946');
 
-  const [simulateLoading, setSimulateLoading] = useState(false);
   const [simulationResult, setSimulationResult] = useState<any>(null);
+  const [simulationLoading, setSimulationLoading] = useState(false);
   const [simulationError, setSimulationError] = useState('');
   
   const [deployLoading, setDeployLoading] = useState(false);
@@ -246,7 +242,7 @@ function App() {
 
       if (symbol !== 'UNKNOWN') {
         setPairTokenValid(true);
-        setPairTokenInfo({ symbol, decimals });
+        setPairTokenInfo({ symbol: symbol as string, decimals: decimals as number });
       } else {
         setPairTokenValid(false);
         setPairTokenInfo(null);
@@ -298,8 +294,50 @@ function App() {
   }, [pairTokenType]);
 
   // Utility functions for managing arrays
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  // Step validation and navigation
+  const isStepValid = (stepIndex: number): boolean => {
+    switch (stepIndex) {
+      case 0: // basics
+        return !!(tokenName && tokenSymbol && tokenAdmin);
+      case 1: // liquidity
+        return !!(startingMarketCap && startingMarketCap > 0);
+      case 2: // features
+      case 3: // advanced
+        return true; // Optional steps
+      case 4: // deploy
+        return isConnected;
+      default:
+        return false;
+    }
+  };
+
+  const nextStep = () => {
+    if (currentStep < STEPS.length - 1 && isStepValid(currentStep)) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const renderCurrentStep = () => {
+    switch (currentStep) {
+      case 0:
+        return renderBasicsStep();
+      case 1:
+        return renderLiquidityStep();
+      case 2:
+        return renderFeaturesStep();
+      case 3:
+        return renderAdvancedStep();
+      case 4:
+        return renderDeployStep();
+      default:
+        return null;
+    }
   };
 
   const addSocialMediaUrl = () => {
@@ -373,7 +411,7 @@ function App() {
   };
 
   const handleSimulateToken = async () => {
-    setSimulateLoading(true);
+    setSimulationLoading(true);
     setSimulationResult(null);
     setSimulationError('');
     setDeployResult('');
@@ -384,36 +422,36 @@ function App() {
 
     if (!isConnected || !address) {
       setSimulationError('Please connect your wallet first.');
-      setSimulateLoading(false);
+      setSimulationLoading(false);
       return;
     }
 
     if (!tokenName || !tokenSymbol) {
       setSimulationError('Token Name and Symbol are required.');
-      setSimulateLoading(false);
+      setSimulationLoading(false);
       return;
     }
     if (isNaN(devBuyEthAmount) || devBuyEthAmount < 0) {
       setSimulationError('Invalid Dev Buy ETH Amount.');
-      setSimulateLoading(false);
+      setSimulationLoading(false);
       return;
     }
 
     if (pairTokenType === 'custom' && (!customPairTokenAddress || !pairTokenValid)) {
       setSimulationError('Please enter a valid ERC-20 token address for the pair token.');
-      setSimulateLoading(false);
+      setSimulationLoading(false);
       return;
     }
 
     if (startingMarketCap && pairTokenType === 'WETH' && (startingMarketCap < 0.1 || startingMarketCap > 1000)) {
       setSimulationError('Starting market cap must be between 0.1 and 1000 ETH.');
-      setSimulateLoading(false);
+      setSimulationLoading(false);
       return;
     }
 
     if (startingMarketCap && pairTokenType !== 'WETH') {
       setSimulationError('Starting market cap is only supported with WETH pair token.');
-      setSimulateLoading(false);
+      setSimulationLoading(false);
       return;
     }
 
@@ -429,31 +467,31 @@ function App() {
 
     if (!publicClient) {
       setSimulationError('Public client not available. Please try refreshing the page.');
-      setSimulateLoading(false);
+      setSimulationLoading(false);
       return;
     }
 
     if (!walletClient) {
       setSimulationError('Wallet client not available. Please disconnect and reconnect your wallet.');
-      setSimulateLoading(false);
+      setSimulationLoading(false);
       return;
     }
 
     if (!clanker) {
       setSimulationError('Clanker instance not available. Please try refreshing the page.');
-      setSimulateLoading(false);
+      setSimulationLoading(false);
       return;
     }
 
     if (!chain) {
       setSimulationError('Chain information not available. Please ensure you are connected to Base network.');
-      setSimulateLoading(false);
+      setSimulationLoading(false);
       return;
     }
 
     if (chain.id !== 8453) {
       setSimulationError(`Wrong network detected. Please switch to Base Mainnet (Chain ID: 8453). Currently on: ${chain.name} (${chain.id})`);
-      setSimulateLoading(false);
+      setSimulationLoading(false);
       return;
     }
 
@@ -492,7 +530,7 @@ function App() {
       let builder = new TokenConfigV4Builder()
         .withName(tokenName)
         .withSymbol(tokenSymbol)
-        .withTokenAdmin(tokenAdmin || SAFE_MULTISIG_ADDRESS);
+        .withTokenAdmin((tokenAdmin || SAFE_MULTISIG_ADDRESS) as `0x${string}`);
 
       // Add image if provided
       if (tokenImage) {
@@ -566,7 +604,11 @@ function App() {
       const validRecipients = rewardRecipients.filter(r => r.recipient && r.admin);
       if (validRecipients.length > 0) {
         builder = builder.withRewardsRecipients({
-          recipients: validRecipients,
+          recipients: validRecipients.map(r => ({
+            recipient: r.recipient as `0x${string}`,
+            admin: r.admin as `0x${string}`,
+            bps: r.bps
+          })),
         });
       } else {
         // Default fallback
@@ -581,10 +623,7 @@ function App() {
         });
       }
 
-      // Add vanity address generation if enabled
-      if (vanityEnabled) {
-        builder = builder.withVanity();
-      }
+      // Note: Vanity address generation is not available in the current SDK version
 
       const tokenConfig = builder.build();
 
@@ -603,7 +642,7 @@ function App() {
       console.error('Simulation failed:', error);
       setSimulationError(`Simulation failed: ${error.message || error}`);
     } finally {
-      setSimulateLoading(false);
+      setSimulationLoading(false);
     }
   };
 
@@ -673,6 +712,523 @@ function App() {
     }
   };
 
+  // Step rendering functions
+  const renderBasicsStep = () => (
+    <div className="space-y-8">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Token Details</h2>
+        <p className="text-gray-600 max-w-lg mx-auto">
+          Set up your token's basic information. This will be visible to traders and investors.
+        </p>
+      </div>
+
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+          Core Information
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-label flex items-center space-x-2">
+              <span>Token Name</span>
+              <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={tokenName}
+              onChange={(e) => setTokenName(e.target.value)}
+              placeholder="My Awesome Token"
+              className="input w-full"
+              maxLength={50}
+            />
+            <div className="text-xs text-gray-500">{tokenName.length}/50 characters</div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-label flex items-center space-x-2">
+              <span>Token Symbol</span>
+              <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={tokenSymbol}
+              onChange={(e) => setTokenSymbol(e.target.value.toUpperCase())}
+              placeholder="MAT"
+              className="input w-full uppercase"
+              maxLength={10}
+            />
+            <div className="text-xs text-gray-500">{tokenSymbol.length}/10 characters</div>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-2">
+          <label className="text-label flex items-center space-x-2">
+            <span>Token Admin</span>
+            <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={tokenAdmin}
+            onChange={(e) => setTokenAdmin(e.target.value)}
+            placeholder={address ? `${address} (connected wallet)` : "0x... (defaults to connected wallet)"}
+            className="input w-full font-mono text-sm"
+          />
+          <div className="text-xs text-gray-500">
+            This address will have admin privileges for the token contract
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-2">
+          <label className="text-label">Token Image (IPFS)</label>
+          <input
+            type="text"
+            value={tokenImage}
+            onChange={(e) => setTokenImage(e.target.value)}
+            placeholder="ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+            className="input w-full text-sm"
+          />
+          <div className="text-xs text-gray-500">
+            Upload your image to IPFS and paste the URL here
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={nextStep}
+          disabled={!isStepValid(0)}
+          className={`btn btn-lg ${isStepValid(0) ? 'btn-primary' : 'btn-secondary'} px-8`}
+        >
+          <span>Continue to Liquidity Setup</span>
+          <span className="text-xl">→</span>
+        </button>
+      </div>
+
+      {!isStepValid(0) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div className="flex items-center space-x-3">
+            <span className="text-amber-600 text-xl">⚠️</span>
+            <div>
+              <p className="text-sm font-medium text-amber-800">Required fields missing</p>
+              <p className="text-sm text-amber-700">
+                Please fill in the token name, symbol, and admin address to continue.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderLiquidityStep = () => (
+    <div className="space-y-8">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Liquidity Setup</h2>
+        <p className="text-gray-600 max-w-lg mx-auto">
+          Configure your token's initial liquidity and trading pair settings.
+        </p>
+      </div>
+
+      <div className="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-2xl p-6 border border-blue-100">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <span className="w-2 h-2 bg-cyan-500 rounded-full mr-3"></span>
+          Market Cap & Trading Pair
+        </h3>
+
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-label flex items-center space-x-2">
+              <span>Starting Market Cap (ETH)</span>
+              <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              value={startingMarketCap}
+              onChange={(e) => setStartingMarketCap(parseFloat(e.target.value) || '')}
+              placeholder="1.0"
+              className="input w-full"
+              min="0.01"
+              step="0.01"
+            />
+            <div className="text-xs text-gray-500">
+              Minimum 0.01 ETH. This determines your token's initial price and liquidity.
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() => setPairTokenType('WETH')}
+              className={`p-4 rounded-xl border-2 transition-all ${
+                pairTokenType === 'WETH'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  ETH
+                </div>
+                <div className="text-left">
+                  <div className="font-semibold">Ethereum (WETH)</div>
+                  <div className="text-sm opacity-75">Recommended</div>
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPairTokenType('custom')}
+              className={`p-4 rounded-xl border-2 transition-all ${
+                pairTokenType === 'custom'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-gray-400 to-gray-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  ?
+                </div>
+                <div className="text-left">
+                  <div className="font-semibold">Custom Token</div>
+                  <div className="text-sm opacity-75">Advanced</div>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-between">
+        <button onClick={prevStep} className="btn btn-secondary px-8">
+          <span className="text-xl">←</span>
+          <span>Back to Token Details</span>
+        </button>
+        <button
+          onClick={nextStep}
+          disabled={!isStepValid(1)}
+          className={`btn btn-lg ${isStepValid(1) ? 'btn-primary' : 'btn-secondary'} px-8`}
+        >
+          <span>Continue to Features</span>
+          <span className="text-xl">→</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderFeaturesStep = () => (
+    <div className="space-y-8">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Token Features</h2>
+        <p className="text-gray-600 max-w-lg mx-auto">
+          Configure optional features like vault, airdrops, and dev buy.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className={`p-6 rounded-2xl border-2 transition-all ${
+          vaultEnabled ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white'
+        }`}>
+          <div className="flex items-center space-x-3 mb-4">
+            <input
+              type="checkbox"
+              id="vaultEnabled"
+              checked={vaultEnabled}
+              onChange={(e) => setVaultEnabled(e.target.checked)}
+              className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+            />
+            <label htmlFor="vaultEnabled" className="text-lg font-semibold text-gray-900">
+              🔒 Vault
+            </label>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">Lock tokens with vesting schedule for team allocation</p>
+          {vaultEnabled && (
+            <div className="space-y-3">
+              <input
+                type="number"
+                value={vaultPercentage}
+                onChange={(e) => setVaultPercentage(parseInt(e.target.value) || 0)}
+                placeholder="10"
+                className="input w-full text-sm"
+                min="0"
+                max="90"
+              />
+              <div className="text-xs text-gray-500">{vaultPercentage}% of total supply</div>
+            </div>
+          )}
+        </div>
+
+        <div className={`p-6 rounded-2xl border-2 transition-all ${
+          airdropEnabled ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white'
+        }`}>
+          <div className="flex items-center space-x-3 mb-4">
+            <input
+              type="checkbox"
+              id="airdropEnabled"
+              checked={airdropEnabled}
+              onChange={(e) => setAirdropEnabled(e.target.checked)}
+              className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500"
+            />
+            <label htmlFor="airdropEnabled" className="text-lg font-semibold text-gray-900">
+              🎁 Airdrop
+            </label>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">Distribute tokens to specific addresses via merkle tree</p>
+          {airdropEnabled && (
+            <div className="space-y-3">
+              <input
+                type="number"
+                value={airdropPercentage}
+                onChange={(e) => setAirdropPercentage(parseInt(e.target.value) || 0)}
+                placeholder="5"
+                className="input w-full text-sm"
+                min="0"
+                max="50"
+              />
+              <div className="text-xs text-gray-500">{airdropPercentage}% of total supply</div>
+            </div>
+          )}
+        </div>
+
+        <div className={`p-6 rounded-2xl border-2 transition-all ${
+          devBuyEnabled ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
+        }`}>
+          <div className="flex items-center space-x-3 mb-4">
+            <input
+              type="checkbox"
+              id="devBuyEnabled"
+              checked={devBuyEnabled}
+              onChange={(e) => setDevBuyEnabled(e.target.checked)}
+              className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="devBuyEnabled" className="text-lg font-semibold text-gray-900">
+              💰 Dev Buy
+            </label>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">Automatically buy tokens after deployment</p>
+          {devBuyEnabled && (
+            <div className="space-y-3">
+              <input
+                type="number"
+                value={devBuyEthAmount}
+                onChange={(e) => setDevBuyEthAmount(parseFloat(e.target.value) || 0)}
+                placeholder="0.0001"
+                className="input w-full text-sm"
+                min="0"
+                step="0.0001"
+              />
+              <div className="text-xs text-gray-500">{devBuyEthAmount} ETH purchase</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex justify-between">
+        <button onClick={prevStep} className="btn btn-secondary px-8">
+          <span className="text-xl">←</span>
+          <span>Back to Liquidity</span>
+        </button>
+        <button onClick={nextStep} className="btn btn-primary px-8">
+          <span>Continue to Advanced</span>
+          <span className="text-xl">→</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderAdvancedStep = () => (
+    <div className="space-y-8">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Advanced Configuration</h2>
+        <p className="text-gray-600 max-w-lg mx-auto">
+          Fine-tune fees, rewards, and other advanced settings.
+        </p>
+      </div>
+
+      <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl p-6 border border-orange-100">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <span className="w-2 h-2 bg-orange-500 rounded-full mr-3"></span>
+          Fee Configuration
+        </h3>
+
+        <div className="flex space-x-4 mb-6">
+          <button
+            type="button"
+            onClick={() => setFeeType('static')}
+            className={`flex-1 p-4 rounded-xl border-2 transition-all ${
+              feeType === 'static'
+                ? 'border-orange-500 bg-orange-50 text-orange-700'
+                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+            }`}
+          >
+            <div className="font-semibold mb-1">Static Fees</div>
+            <div className="text-sm opacity-75">Fixed fee percentages</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFeeType('dynamic')}
+            className={`flex-1 p-4 rounded-xl border-2 transition-all ${
+              feeType === 'dynamic'
+                ? 'border-orange-500 bg-orange-50 text-orange-700'
+                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+            }`}
+          >
+            <div className="font-semibold mb-1">Dynamic Fees</div>
+            <div className="text-sm opacity-75">Adjusts based on volatility</div>
+          </button>
+        </div>
+
+        {feeType === 'static' && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-label">Clanker Fee (bps)</label>
+              <input
+                type="number"
+                value={clankerFeeBps}
+                onChange={(e) => setClankerFeeBps(parseInt(e.target.value) || 0)}
+                className="input w-full"
+                min="0"
+                max="10000"
+              />
+              <div className="text-xs text-gray-500">{(clankerFeeBps / 100).toFixed(2)}%</div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-label">Paired Fee (bps)</label>
+              <input
+                type="number"
+                value={pairedFeeBps}
+                onChange={(e) => setPairedFeeBps(parseInt(e.target.value) || 0)}
+                className="input w-full"
+                min="0"
+                max="10000"
+              />
+              <div className="text-xs text-gray-500">{(pairedFeeBps / 100).toFixed(2)}%</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-between">
+        <button onClick={prevStep} className="btn btn-secondary px-8">
+          <span className="text-xl">←</span>
+          <span>Back to Features</span>
+        </button>
+        <button onClick={nextStep} className="btn btn-primary px-8">
+          <span>Continue to Deploy</span>
+          <span className="text-xl">→</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderDeployStep = () => (
+    <div className="space-y-8">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Deploy Your Token</h2>
+        <p className="text-gray-600 max-w-lg mx-auto">
+          Review your configuration and deploy your token to the blockchain.
+        </p>
+      </div>
+
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+          Configuration Summary
+        </h3>
+
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-gray-600">Name:</span>
+            <span className="font-semibold ml-2">{tokenName || 'Not set'}</span>
+          </div>
+          <div>
+            <span className="text-gray-600">Symbol:</span>
+            <span className="font-semibold ml-2">{tokenSymbol || 'Not set'}</span>
+          </div>
+          <div>
+            <span className="text-gray-600">Market Cap:</span>
+            <span className="font-semibold ml-2">{startingMarketCap ? `${startingMarketCap} ETH` : 'Not set'}</span>
+          </div>
+          <div>
+            <span className="text-gray-600">Pair Token:</span>
+            <span className="font-semibold ml-2">{pairTokenType === 'WETH' ? 'ETH (WETH)' : 'Custom'}</span>
+          </div>
+        </div>
+
+        {(vaultEnabled || airdropEnabled || devBuyEnabled) && (
+          <div className="mt-4 pt-4 border-t border-green-200">
+            <div className="text-sm text-gray-600 mb-2">Enabled Features:</div>
+            <div className="flex flex-wrap gap-2">
+              {vaultEnabled && (
+                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                  🔒 Vault ({vaultPercentage}%)
+                </span>
+              )}
+              {airdropEnabled && (
+                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                  🎁 Airdrop ({airdropPercentage}%)
+                </span>
+              )}
+              {devBuyEnabled && (
+                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                  💰 Dev Buy ({devBuyEthAmount} ETH)
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        <button
+          onClick={handleSimulateToken}
+          disabled={simulationLoading || !isStepValid(0) || !isStepValid(1)}
+          className="btn btn-secondary w-full"
+        >
+          {simulationLoading ? (
+            <>
+              <div className="spinner w-5 h-5"></div>
+              <span>Simulating...</span>
+            </>
+          ) : (
+            <>
+              <span>🔍</span>
+              <span>Simulate Deployment</span>
+            </>
+          )}
+        </button>
+
+        <button
+          onClick={handleConfirmDeploy}
+          disabled={deployLoading || !isConnected || !isStepValid(0) || !isStepValid(1)}
+          className="btn btn-primary w-full btn-lg"
+        >
+          {deployLoading ? (
+            <>
+              <div className="spinner w-5 h-5"></div>
+              <span>Deploying...</span>
+            </>
+          ) : (
+            <>
+              <span>🚀</span>
+              <span>Deploy Token</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      <div className="flex justify-start">
+        <button onClick={prevStep} className="btn btn-secondary px-8">
+          <span className="text-xl">←</span>
+          <span>Back to Advanced</span>
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen" style={{background: 'var(--apple-gray-light)'}}>
       {/* Apple-style Header */}
@@ -740,1305 +1296,54 @@ function App() {
         <div className="grid lg:grid-cols-3 gap-12">
           {/* Deploy Token Card */}
           <div className="card animate-fade-in-up lg:col-span-2">
-            <div className="flex items-center space-x-4 mb-8">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-3xl flex items-center justify-center text-white text-2xl shadow-lg">
-                🎯
+            {/* Progress Header */}
+            <div className="border-b border-gray-100 pb-6 mb-8">
+              <div className="flex items-center space-x-4 mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl flex items-center justify-center text-white text-2xl shadow-lg">
+                  {STEPS[currentStep].icon}
+                </div>
+                <div>
+                  <h3 className="text-title font-bold text-gray-900">Deploy Token</h3>
+                  <p className="text-caption text-gray-600">Step {currentStep + 1} of {STEPS.length}: {STEPS[currentStep].title}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-title font-bold text-gray-900">Deploy Token</h3>
-                <p className="text-caption">Create your new token in seconds</p>
+
+              {/* Progress Steps */}
+              <div className="flex items-center space-x-2 overflow-x-auto pb-2">
+                {STEPS.map((step, index) => (
+                  <div key={step.id} className="flex items-center">
+                    <button
+                      onClick={() => setCurrentStep(index)}
+                      disabled={index > currentStep + 1}
+                      className={`
+                        flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap
+                        ${index === currentStep 
+                          ? 'bg-blue-100 text-blue-700 shadow-sm' 
+                          : index < currentStep
+                            ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                            : 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                        }
+                      `}
+                    >
+                      <span className="text-base">{step.icon}</span>
+                      <span>{step.title}</span>
+                      {index < currentStep && (
+                        <span className="text-green-500">✓</span>
+                      )}
+                    </button>
+                    {index < STEPS.length - 1 && (
+                      <div className="w-3 h-px bg-gray-200 mx-1"></div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
             
+            {/* Step Content */}
             <div className="space-y-8">
-              <div className="space-y-6">
-                {/* CORE TOKEN SETTINGS */}
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => toggleSection('core')}
-                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-xl">🎯</span>
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900">Core Token Settings</h4>
-                        <p className="text-sm text-gray-600">Name, symbol, admin, and image</p>
-                      </div>
-                    </div>
-                    <span className={`transform transition-transform ${expandedSections.core ? 'rotate-180' : ''}`}>
-                      ⌄
-                    </span>
-                  </button>
-                  
-                  {expandedSections.core && (
-                    <div className="p-6 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-label">Token Name *</label>
-                          <input
-                            type="text"
-                            value={tokenName}
-                            onChange={(e) => setTokenName(e.target.value)}
-                            placeholder="My Awesome Token"
-                            className="input"
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <label className="text-label">Token Symbol *</label>
-                          <input
-                            type="text"
-                            value={tokenSymbol}
-                            onChange={(e) => setTokenSymbol(e.target.value)}
-                            placeholder="MAT"
-                            className="input"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <label className="text-label">Token Admin</label>
-                        <input
-                          type="text"
-                          value={tokenAdmin}
-                          onChange={(e) => setTokenAdmin(e.target.value)}
-                          placeholder="0x... (defaults to connected wallet)"
-                          className="input font-mono text-sm"
-                        />
-                        <span className="text-xs text-gray-500">Address that will control the token contract</span>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <label className="text-label">Token Image (IPFS)</label>
-                        <input
-                          type="text"
-                          value={tokenImage}
-                          onChange={(e) => setTokenImage(e.target.value)}
-                          placeholder="ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
-                          className="input text-sm"
-                        />
-                        <span className="text-xs text-gray-500">IPFS URL for the token image</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* METADATA */}
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => toggleSection('metadata')}
-                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-xl">📄</span>
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900">Token Metadata</h4>
-                        <p className="text-sm text-gray-600">Description, social links, and audit reports</p>
-                      </div>
-                    </div>
-                    <span className={`transform transition-transform ${expandedSections.metadata ? 'rotate-180' : ''}`}>
-                      ⌄
-                    </span>
-                  </button>
-                  
-                  {expandedSections.metadata && (
-                    <div className="p-6 space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-label">Description</label>
-                        <textarea
-                          value={tokenDescription}
-                          onChange={(e) => setTokenDescription(e.target.value)}
-                          placeholder="Describe your token project..."
-                          className="input min-h-[80px] resize-y"
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-label">Social Media URLs</label>
-                          <button
-                            type="button"
-                            onClick={addSocialMediaUrl}
-                            className="text-blue-600 text-sm hover:underline"
-                          >
-                            + Add URL
-                          </button>
-                        </div>
-                        {socialMediaUrls.map((url, index) => (
-                          <div key={index} className="flex space-x-2">
-                            <input
-                              type="url"
-                              value={url}
-                              onChange={(e) => updateSocialMediaUrl(index, e.target.value)}
-                              placeholder="https://twitter.com/yourproject"
-                              className="input flex-1 text-sm"
-                            />
-                            {socialMediaUrls.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeSocialMediaUrl(index)}
-                                className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
-                              >
-                                ×
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-label">Audit Report URLs</label>
-                          <button
-                            type="button"
-                            onClick={addAuditUrl}
-                            className="text-blue-600 text-sm hover:underline"
-                          >
-                            + Add URL
-                          </button>
-                        </div>
-                        {auditUrls.map((url, index) => (
-                          <div key={index} className="flex space-x-2">
-                            <input
-                              type="url"
-                              value={url}
-                              onChange={(e) => updateAuditUrl(index, e.target.value)}
-                              placeholder="https://auditor.com/report.pdf"
-                              className="input flex-1 text-sm"
-                            />
-                            {auditUrls.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeAuditUrl(index)}
-                                className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
-                              >
-                                ×
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* SOCIAL CONTEXT */}
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => toggleSection('social')}
-                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-xl">🌐</span>
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900">Social Context</h4>
-                        <p className="text-sm text-gray-600">Platform information and identifiers</p>
-                      </div>
-                    </div>
-                    <span className={`transform transition-transform ${expandedSections.social ? 'rotate-180' : ''}`}>
-                      ⌄
-                    </span>
-                  </button>
-                  
-                  {expandedSections.social && (
-                    <div className="p-6 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-label">Interface Name</label>
-                          <input
-                            type="text"
-                            value={interfaceName}
-                            onChange={(e) => setInterfaceName(e.target.value)}
-                            placeholder="Astropad"
-                            className="input"
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <label className="text-label">Platform</label>
-                          <input
-                            type="text"
-                            value={platform}
-                            onChange={(e) => setPlatform(e.target.value)}
-                            placeholder="farcaster, X, discord"
-                            className="input"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-label">Message ID</label>
-                          <input
-                            type="text"
-                            value={messageId}
-                            onChange={(e) => setMessageId(e.target.value)}
-                            placeholder="Cast hash, tweet URL, etc."
-                            className="input"
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <label className="text-label">Social ID</label>
-                          <input
-                            type="text"
-                            value={socialId}
-                            onChange={(e) => setSocialId(e.target.value)}
-                            placeholder="FID, X handle, Discord ID"
-                            className="input"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* VAULT CONFIGURATION */}
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => toggleSection('vault')}
-                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-xl">🔒</span>
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900">Vault Configuration</h4>
-                        <p className="text-sm text-gray-600">Lock tokens with vesting schedule</p>
-                      </div>
-                    </div>
-                    <span className={`transform transition-transform ${expandedSections.vault ? 'rotate-180' : ''}`}>
-                      ⌄
-                    </span>
-                  </button>
-                  
-                  {expandedSections.vault && (
-                    <div className="p-6 space-y-4">
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          id="vaultEnabled"
-                          checked={vaultEnabled}
-                          onChange={(e) => setVaultEnabled(e.target.checked)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor="vaultEnabled" className="text-label">Enable Vault</label>
-                      </div>
-                      
-                      {vaultEnabled && (
-                        <div className="space-y-4 pl-7">
-                          <div className="space-y-2">
-                            <label className="text-label">Vault Percentage (0-90%)</label>
-                            <input
-                              type="number"
-                              value={vaultPercentage}
-                              onChange={(e) => setVaultPercentage(parseInt(e.target.value) || 0)}
-                              min="0"
-                              max="90"
-                              className="input"
-                            />
-                            <span className="text-xs text-gray-500">Percentage of total token supply to lock in vault</span>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <label className="text-label">Lockup Duration (days)</label>
-                              <input
-                                type="number"
-                                value={Math.floor(vaultLockupDuration / (24 * 60 * 60))}
-                                onChange={(e) => setVaultLockupDuration((parseInt(e.target.value) || 7) * 24 * 60 * 60)}
-                                min="7"
-                                className="input"
-                              />
-                              <span className="text-xs text-gray-500">Minimum 7 days before vesting starts</span>
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <label className="text-label">Vesting Duration (days)</label>
-                              <input
-                                type="number"
-                                value={Math.floor(vestingDuration / (24 * 60 * 60))}
-                                onChange={(e) => setVestingDuration((parseInt(e.target.value) || 0) * 24 * 60 * 60)}
-                                min="0"
-                                className="input"
-                              />
-                              <span className="text-xs text-gray-500">Linear vesting period (0 for instant unlock)</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* AIRDROP CONFIGURATION */}
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => toggleSection('airdrop')}
-                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-xl">🎁</span>
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900">Airdrop Configuration</h4>
-                        <p className="text-sm text-gray-600">Distribute tokens via merkle tree</p>
-                      </div>
-                    </div>
-                    <span className={`transform transition-transform ${expandedSections.airdrop ? 'rotate-180' : ''}`}>
-                      ⌄
-                    </span>
-                  </button>
-                  
-                  {expandedSections.airdrop && (
-                    <div className="p-6 space-y-4">
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          id="airdropEnabled"
-                          checked={airdropEnabled}
-                          onChange={(e) => setAirdropEnabled(e.target.checked)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor="airdropEnabled" className="text-label">Enable Airdrop</label>
-                      </div>
-                      
-                      {airdropEnabled && (
-                        <div className="space-y-4 pl-7">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <label className="text-label">Airdrop Percentage</label>
-                              <input
-                                type="number"
-                                value={airdropPercentage}
-                                onChange={(e) => setAirdropPercentage(parseInt(e.target.value) || 0)}
-                                min="0"
-                                max="50"
-                                className="input"
-                              />
-                              <span className="text-xs text-gray-500">% of total supply for airdrop</span>
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <label className="text-label">Lockup Duration (days)</label>
-                              <input
-                                type="number"
-                                value={Math.floor(airdropLockupDuration / (24 * 60 * 60))}
-                                onChange={(e) => setAirdropLockupDuration((parseInt(e.target.value) || 1) * 24 * 60 * 60)}
-                                min="1"
-                                className="input"
-                              />
-                              <span className="text-xs text-gray-500">Minimum 1 day</span>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <label className="text-label">Vesting Duration (days)</label>
-                            <input
-                              type="number"
-                              value={Math.floor(airdropVestingDuration / (24 * 60 * 60))}
-                              onChange={(e) => setAirdropVestingDuration((parseInt(e.target.value) || 0) * 24 * 60 * 60)}
-                              min="0"
-                              className="input"
-                            />
-                            <span className="text-xs text-gray-500">Linear vesting period (0 for instant unlock)</span>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <label className="text-label">Airdrop Recipients</label>
-                              <button
-                                type="button"
-                                onClick={addAirdropEntry}
-                                className="text-blue-600 text-sm hover:underline"
-                              >
-                                + Add Recipient
-                              </button>
-                            </div>
-                            {airdropEntries.map((entry, index) => (
-                              <div key={index} className="flex space-x-2">
-                                <input
-                                  type="text"
-                                  value={entry.address}
-                                  onChange={(e) => updateAirdropEntry(index, 'address', e.target.value)}
-                                  placeholder="0x... (recipient address)"
-                                  className="input flex-1 font-mono text-sm"
-                                />
-                                <input
-                                  type="number"
-                                  value={entry.amount}
-                                  onChange={(e) => updateAirdropEntry(index, 'amount', parseFloat(e.target.value) || 0)}
-                                  placeholder="Amount"
-                                  className="input w-24 text-sm"
-                                  min="0"
-                                  step="0.1"
-                                />
-                                {airdropEntries.length > 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => removeAirdropEntry(index)}
-                                    className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
-                                  >
-                                    ×
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                            <div className="text-xs text-yellow-600 bg-yellow-50 p-3 rounded-lg">
-                              ⚠️ Airdrop requires merkle tree generation - currently for display only
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* REWARD RECIPIENTS */}
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => toggleSection('rewards')}
-                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-xl">💎</span>
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900">Reward Recipients</h4>
-                        <p className="text-sm text-gray-600">Configure fee distribution</p>
-                      </div>
-                    </div>
-                    <span className={`transform transition-transform ${expandedSections.rewards ? 'rotate-180' : ''}`}>
-                      ⌄
-                    </span>
-                  </button>
-                  
-                  {expandedSections.rewards && (
-                    <div className="p-6 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <label className="text-label">Fee Recipients</label>
-                        <button
-                          type="button"
-                          onClick={addRewardRecipient}
-                          className="text-blue-600 text-sm hover:underline"
-                        >
-                          + Add Recipient
-                        </button>
-                      </div>
-                      
-                      {rewardRecipients.map((recipient, index) => (
-                        <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-700">Recipient #{index + 1}</span>
-                            {rewardRecipients.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeRewardRecipient(index)}
-                                className="text-red-600 text-sm hover:underline"
-                              >
-                                Remove
-                              </button>
-                            )}
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-2">
-                              <label className="text-sm text-gray-600">Recipient Address</label>
-                              <input
-                                type="text"
-                                value={recipient.recipient}
-                                onChange={(e) => updateRewardRecipient(index, 'recipient', e.target.value)}
-                                placeholder="0x... (receives fees)"
-                                className="input text-sm font-mono"
-                              />
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <label className="text-sm text-gray-600">Admin Address</label>
-                              <input
-                                type="text"
-                                value={recipient.admin}
-                                onChange={(e) => updateRewardRecipient(index, 'admin', e.target.value)}
-                                placeholder="0x... (can claim fees)"
-                                className="input text-sm font-mono"
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-600">Allocation (BPS)</label>
-                            <input
-                              type="number"
-                              value={recipient.bps}
-                              onChange={(e) => updateRewardRecipient(index, 'bps', parseInt(e.target.value) || 0)}
-                              min="0"
-                              max="10000"
-                              className="input text-sm"
-                            />
-                            <span className="text-xs text-gray-500">
-                              {(recipient.bps / 100).toFixed(2)}% • Total: {(rewardRecipients.reduce((sum, r) => sum + r.bps, 0) / 100).toFixed(2)}%
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                      
-                      <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg">
-                        💡 Total BPS must equal 10000 (100%) for valid configuration
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* POOL CONFIGURATION */}
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => toggleSection('pool')}
-                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-xl">🏊</span>
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900">Pool Configuration</h4>
-                        <p className="text-sm text-gray-600">Liquidity pool and pair token settings</p>
-                      </div>
-                    </div>
-                    <span className={`transform transition-transform ${expandedSections.pool ? 'rotate-180' : ''}`}>
-                      ⌄
-                    </span>
-                  </button>
-                  
-                  {expandedSections.pool && (
-                    <div className="p-6 space-y-4">
-                      {/* Pair Token Selection */}
-                      <div className="space-y-3">
-                        <label className="text-label">Pair Token</label>
-                        <div className="flex space-x-3">
-                          <button
-                            type="button"
-                            onClick={() => setPairTokenType('WETH')}
-                            className={`flex-1 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
-                              pairTokenType === 'WETH' 
-                                ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                            }`}
-                          >
-                            WETH (Recommended)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPairTokenType('custom')}
-                            className={`flex-1 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
-                              pairTokenType === 'custom' 
-                                ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                            }`}
-                          >
-                            Custom Token
-                          </button>
-                        </div>
-
-                        {pairTokenType === 'custom' && (
-                          <div className="space-y-2">
-                            <input
-                              type="text"
-                              value={customPairTokenAddress}
-                              onChange={(e) => setCustomPairTokenAddress(e.target.value)}
-                              placeholder="0x... (ERC-20 token address)"
-                              className="input font-mono text-sm"
-                            />
-                            {pairTokenValidating && (
-                              <div className="flex items-center space-x-2 text-sm text-gray-500">
-                                <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
-                                <span>Validating token...</span>
-                              </div>
-                            )}
-                            {pairTokenInfo && pairTokenValid && (
-                              <div className="flex items-center space-x-2 text-sm text-green-600">
-                                <span>✅</span>
-                                <span>Valid ERC-20: {pairTokenInfo.symbol} ({pairTokenInfo.decimals} decimals)</span>
-                              </div>
-                            )}
-                            {customPairTokenAddress && !pairTokenValid && !pairTokenValidating && (
-                              <div className="flex items-center space-x-2 text-sm text-red-600">
-                                <span>❌</span>
-                                <span>Invalid or non-ERC-20 token</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Starting Market Cap */}
-                      <div className="space-y-2">
-                        <label className="text-label">Starting Market Cap (ETH)</label>
-                        <input
-                          type="number"
-                          value={startingMarketCap}
-                          onChange={(e) => setStartingMarketCap(parseFloat(e.target.value) || '')}
-                          placeholder="Leave empty for default (~10 ETH)"
-                          min="0.1"
-                          max="1000"
-                          step="0.1"
-                          className="input"
-                          disabled={pairTokenType !== 'WETH'}
-                        />
-                        <span className="text-xs text-gray-500">
-                          {pairTokenType === 'WETH' 
-                            ? 'Range: 0.1-1000 ETH (only works with WETH pairs)'
-                            : 'Only available with WETH pair token'
-                          }
-                        </span>
-                      </div>
-
-                      {/* LP Position Type */}
-                      <div className="space-y-3">
-                        <label className="text-label">LP Position Strategy</label>
-                        <div className="space-y-2">
-                          {(['Standard', 'Project', 'Custom'] as const).map((type) => (
-                            <label key={type} className="flex items-center space-x-3">
-                              <input
-                                type="radio"
-                                name="poolPositionType"
-                                value={type}
-                                checked={poolPositionType === type}
-                                onChange={(e) => setPoolPositionType(e.target.value as any)}
-                                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                              />
-                              <span className="text-sm font-medium">{type}</span>
-                              <span className="text-xs text-gray-500">
-                                {type === 'Standard' && '(Recommended for most tokens)'}
-                                {type === 'Project' && '(Wider range for project tokens)'}
-                                {type === 'Custom' && '(Advanced: Define your own ranges)'}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Custom Positions */}
-                      {poolPositionType === 'Custom' && (
-                        <div className="space-y-3 pl-7">
-                          <div className="flex items-center justify-between">
-                            <label className="text-label">Custom LP Positions</label>
-                            <button
-                              type="button"
-                              onClick={addCustomPosition}
-                              className="text-blue-600 text-sm hover:underline"
-                            >
-                              + Add Position
-                            </button>
-                          </div>
-                          {customPositions.map((position, index) => (
-                            <div key={index} className="border border-gray-200 rounded-lg p-3 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-700">Position #{index + 1}</span>
-                                {customPositions.length > 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => removeCustomPosition(index)}
-                                    className="text-red-600 text-sm hover:underline"
-                                  >
-                                    Remove
-                                  </button>
-                                )}
-                              </div>
-                              <div className="grid grid-cols-3 gap-2">
-                                <div>
-                                  <label className="text-xs text-gray-600">Tick Lower</label>
-                                  <input
-                                    type="number"
-                                    value={position.tickLower}
-                                    onChange={(e) => updateCustomPosition(index, 'tickLower', parseInt(e.target.value) || 0)}
-                                    className="input text-sm"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-xs text-gray-600">Tick Upper</label>
-                                  <input
-                                    type="number"
-                                    value={position.tickUpper}
-                                    onChange={(e) => updateCustomPosition(index, 'tickUpper', parseInt(e.target.value) || 0)}
-                                    className="input text-sm"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-xs text-gray-600">BPS</label>
-                                  <input
-                                    type="number"
-                                    value={position.positionBps}
-                                    onChange={(e) => updateCustomPosition(index, 'positionBps', parseInt(e.target.value) || 0)}
-                                    min="0"
-                                    max="10000"
-                                    className="input text-sm"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* FEE CONFIGURATION */}
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => toggleSection('fees')}
-                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-xl">💰</span>
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900">Fee Configuration</h4>
-                        <p className="text-sm text-gray-600">Static or dynamic fee structure</p>
-                      </div>
-                    </div>
-                    <span className={`transform transition-transform ${expandedSections.fees ? 'rotate-180' : ''}`}>
-                      ⌄
-                    </span>
-                  </button>
-                  
-                  {expandedSections.fees && (
-                    <div className="p-6 space-y-4">
-                      {/* Fee Type Selection */}
-                      <div className="space-y-3">
-                        <label className="text-label">Fee Type</label>
-                        <div className="flex space-x-3">
-                          <button
-                            type="button"
-                            onClick={() => setFeeType('static')}
-                            className={`flex-1 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
-                              feeType === 'static' 
-                                ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                            }`}
-                          >
-                            Static Fees
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setFeeType('dynamic')}
-                            className={`flex-1 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
-                              feeType === 'dynamic' 
-                                ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                            }`}
-                          >
-                            Dynamic Fees
-                          </button>
-                        </div>
-                      </div>
-
-                      {feeType === 'static' ? (
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <label className="text-label">Clanker Fee (BPS)</label>
-                              <input
-                                type="number"
-                                value={clankerFeeBps}
-                                onChange={(e) => setClankerFeeBps(parseInt(e.target.value) || 0)}
-                                min="0"
-                                max="10000"
-                                className="input"
-                              />
-                              <span className="text-xs text-gray-500">Current: {(clankerFeeBps / 100).toFixed(2)}%</span>
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <label className="text-label">Paired Token Fee (BPS)</label>
-                              <input
-                                type="number"
-                                value={pairedFeeBps}
-                                onChange={(e) => setPairedFeeBps(parseInt(e.target.value) || 0)}
-                                min="0"
-                                max="10000"
-                                className="input"
-                              />
-                              <span className="text-xs text-gray-500">Current: {(pairedFeeBps / 100).toFixed(2)}%</span>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <label className="text-label">Base Fee (BPS)</label>
-                              <input
-                                type="number"
-                                value={baseFee}
-                                onChange={(e) => setBaseFee(parseInt(e.target.value) || 0)}
-                                min="0"
-                                max="100000"
-                                className="input"
-                              />
-                              <span className="text-xs text-gray-500">Minimum fee: {(baseFee / 100).toFixed(2)}%</span>
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <label className="text-label">Max LP Fee (BPS)</label>
-                              <input
-                                type="number"
-                                value={maxLpFee}
-                                onChange={(e) => setMaxLpFee(parseInt(e.target.value) || 0)}
-                                min="0"
-                                max="100000"
-                                className="input"
-                              />
-                              <span className="text-xs text-gray-500">Maximum fee: {(maxLpFee / 100).toFixed(2)}%</span>
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <label className="text-label">Ref Tick Filter Period (s)</label>
-                              <input
-                                type="number"
-                                value={referenceTickFilterPeriod}
-                                onChange={(e) => setReferenceTickFilterPeriod(parseInt(e.target.value) || 0)}
-                                min="1"
-                                className="input"
-                              />
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <label className="text-label">Reset Period (s)</label>
-                              <input
-                                type="number"
-                                value={resetPeriod}
-                                onChange={(e) => setResetPeriod(parseInt(e.target.value) || 0)}
-                                min="1"
-                                className="input"
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                              <label className="text-label">Reset Tick Filter</label>
-                              <input
-                                type="number"
-                                value={resetTickFilter}
-                                onChange={(e) => setResetTickFilter(parseInt(e.target.value) || 0)}
-                                min="0"
-                                className="input"
-                              />
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <label className="text-label">Fee Control Numerator</label>
-                              <input
-                                type="number"
-                                value={feeControlNumerator}
-                                onChange={(e) => setFeeControlNumerator(parseInt(e.target.value) || 0)}
-                                min="0"
-                                className="input"
-                              />
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <label className="text-label">Decay Filter (BPS)</label>
-                              <input
-                                type="number"
-                                value={decayFilterBps}
-                                onChange={(e) => setDecayFilterBps(parseInt(e.target.value) || 0)}
-                                min="0"
-                                max="10000"
-                                className="input"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* DEV BUY CONFIGURATION */}
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => toggleSection('devbuy')}
-                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-xl">🚀</span>
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900">Dev Buy Configuration</h4>
-                        <p className="text-sm text-gray-600">Immediate token purchase after deployment</p>
-                      </div>
-                    </div>
-                    <span className={`transform transition-transform ${expandedSections.devbuy ? 'rotate-180' : ''}`}>
-                      ⌄
-                    </span>
-                  </button>
-                  
-                  {expandedSections.devbuy && (
-                    <div className="p-6 space-y-4">
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          id="devBuyEnabled"
-                          checked={devBuyEnabled}
-                          onChange={(e) => setDevBuyEnabled(e.target.checked)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor="devBuyEnabled" className="text-label">Enable Dev Buy</label>
-                      </div>
-                      
-                      {devBuyEnabled && (
-                        <div className="space-y-4 pl-7">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <label className="text-label">ETH Amount</label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={devBuyEthAmount}
-                                onChange={(e) => setDevBuyEthAmount(parseFloat(e.target.value) || 0)}
-                                placeholder="e.g., 0.1"
-                                className="input"
-                              />
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <label className="text-label">Recipient Address</label>
-                              <input
-                                type="text"
-                                value={devBuyRecipient}
-                                onChange={(e) => setDevBuyRecipient(e.target.value)}
-                                placeholder="0x... (defaults to token admin)"
-                                className="input font-mono text-sm"
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <label className="text-label">Minimum Amount Out</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={devBuyAmountOutMin}
-                              onChange={(e) => setDevBuyAmountOutMin(parseFloat(e.target.value) || 0)}
-                              placeholder="0 (slippage protection)"
-                              className="input"
-                            />
-                            <span className="text-xs text-gray-500">Minimum tokens to receive (slippage protection)</span>
-                          </div>
-                          
-                          <div className="text-xs text-blue-600 bg-blue-50 p-3 rounded-lg space-y-2">
-                            <div className="flex items-start space-x-2">
-                              <span>💡</span>
-                              <div>
-                                <div className="font-medium">About Dev Buy</div>
-                                <div>The dev buy is a swap that happens immediately after liquidity is created, using the constant product formula (x × y = k).</div>
-                              </div>
-                            </div>
-                            <div className="text-xs">
-                              • <strong>Swap Mechanics:</strong> Your ETH swaps against the initial pool liquidity to get tokens<br/>
-                              • <strong>Price Impact:</strong> Larger purchases cause exponentially higher price increases<br/>
-                              • <strong>Effective Price:</strong> The actual ETH-per-token rate you pay (higher than initial price due to slippage)
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* ADVANCED OPTIONS */}
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => toggleSection('advanced')}
-                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-xl">⚡</span>
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900">Advanced Options</h4>
-                        <p className="text-sm text-gray-600">Vanity addresses and advanced features</p>
-                      </div>
-                    </div>
-                    <span className={`transform transition-transform ${expandedSections.advanced ? 'rotate-180' : ''}`}>
-                      ⌄
-                    </span>
-                  </button>
-                  
-                  {expandedSections.advanced && (
-                    <div className="p-6 space-y-4">
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          id="vanityEnabled"
-                          checked={vanityEnabled}
-                          onChange={(e) => setVanityEnabled(e.target.checked)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor="vanityEnabled" className="text-label">Generate Vanity Address</label>
-                      </div>
-                      
-                      {vanityEnabled && (
-                        <div className="space-y-4 pl-7">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <label className="text-label">Prefix</label>
-                              <input
-                                type="text"
-                                value={vanityPrefix}
-                                onChange={(e) => setVanityPrefix(e.target.value)}
-                                placeholder="e.g., 0x1337"
-                                className="input font-mono text-sm"
-                              />
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <label className="text-label">Suffix</label>
-                              <input
-                                type="text"
-                                value={vanitySuffix}
-                                onChange={(e) => setVanitySuffix(e.target.value)}
-                                placeholder="e.g., cafe"
-                                className="input font-mono text-sm"
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="text-xs text-yellow-600 bg-yellow-50 p-3 rounded-lg">
-                            ⚠️ Vanity address generation may take time and increase gas costs
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Continue with other sections in the next part... */}
-                
-                {/* For now, add a basic dev buy section to maintain functionality */}
-                <div className="border border-blue-200 bg-blue-50 rounded-xl p-6" style={{ display: 'none' }}>
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <span className="text-xl">💰</span>
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900">Dev Buy</h4>
-                        <p className="text-sm text-gray-600">Immediate token purchase after deployment</p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <label className="text-label">Dev Buy ETH Amount</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={devBuyEthAmount}
-                        onChange={(e) => setDevBuyEthAmount(parseFloat(e.target.value) || 0)}
-                        placeholder="e.g., 0.1"
-                        className="input"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Step 1: Simulate Deploy */}
-              {!simulationResult && (
-                <button
-                  onClick={handleSimulateToken}
-                  disabled={simulateLoading}
-                  className="btn btn-primary btn-lg w-full"
-                >
-                  {simulateLoading ? (
-                    <>
-                      <div className="spinner"></div>
-                      <span>Simulating...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="btn-icon">🔮</span>
-                      <span>Simulate Deploy</span>
-                    </>
-                  )}
-                </button>
-              )}
-
-              {/* Simulation Results */}
-              {simulationResult && (
-                <div className="status-message status-info animate-scale-in">
-                  <div className="flex items-start space-x-3">
-                    <span className="text-xl">🔮</span>
-                    <div className="w-full">
-                      <h4 className="text-headline font-semibold mb-3">Simulation Results</h4>
-                      <div className="space-y-3 text-sm">
-                        <div>
-                          <span className="font-semibold">Token Name:</span> {simulationResult.tokenConfig.name}
-                        </div>
-                        <div>
-                          <span className="font-semibold">Token Symbol:</span> {simulationResult.tokenConfig.symbol}
-                        </div>
-                        <div>
-                          <span className="font-semibold">Predicted Address:</span> 
-                          <span className="font-mono text-xs block mt-1">{simulationResult.simulatedAddress}</span>
-                        </div>
-                        <div>
-                          <span className="font-semibold">Pair Token:</span> {pairTokenType === 'WETH' ? 'WETH' : `${pairTokenInfo?.symbol} (${customPairTokenAddress.slice(0, 6)}...${customPairTokenAddress.slice(-4)})`}
-                        </div>
-                        <div>
-                          <span className="font-semibold">Fees:</span> {(clankerFeeBps / 100).toFixed(2)}% Clanker, {(pairedFeeBps / 100).toFixed(2)}% Paired
-                        </div>
-                        <div>
-                          <span className="font-semibold">Initial Market Cap:</span> {
-                            startingMarketCap && pairTokenType === 'WETH' 
-                              ? `${startingMarketCap} ETH (Custom)` 
-                              : pairTokenType === 'WETH' 
-                                ? '~10 ETH (Default)'
-                                : 'Default pricing'
-                          }
-                        </div>
-                        <div>
-                          <span className="font-semibold">Dev Buy Amount:</span> {devBuyEthAmount} ETH
-                        </div>
-                        <div>
-                          <span className="font-semibold">Dev Buy Analysis:</span> {
-                            (() => {
-                              if (pairTokenType !== 'WETH') {
-                                return 'Variable (depends on pair token liquidity)';
-                              }
-                              
-                              const marketCap = startingMarketCap || 10; // Default ~10 ETH
-                              const ammResult = calculateDevBuyTokens(devBuyEthAmount, marketCap);
-                              
-                              if (ammResult.tokensReceived === 0) {
-                                return 'No tokens (invalid parameters)';
-                              }
-                              
-                              const tokensInBillions = (ammResult.tokensReceived / 1_000_000_000).toFixed(2);
-                              const supplyPercentage = ((ammResult.tokensReceived / 100_000_000_000) * 100).toFixed(2);
-                              
-                              // Risk assessment based on price impact
-                              let riskLevel = '';
-                              if (ammResult.priceImpact >= 100) {
-                                riskLevel = ' (⚠️ Extreme price impact!)';
-                              } else if (ammResult.priceImpact >= 50) {
-                                riskLevel = ' (⚠️ Very high price impact!)';
-                              } else if (ammResult.priceImpact >= 20) {
-                                riskLevel = ' (High price impact)';
-                              } else if (ammResult.priceImpact >= 5) {
-                                riskLevel = ' (Moderate price impact)';
-                              }
-                              
-                              return `${tokensInBillions}B tokens (${supplyPercentage}% of supply)${riskLevel}`;
-                            })()
-                          }
-                        </div>
-                        <div>
-                          <span className="font-semibold">Price Impact:</span> {
-                            (() => {
-                              if (pairTokenType !== 'WETH') {
-                                return 'Variable (depends on pair token)';
-                              }
-                              
-                              const marketCap = startingMarketCap || 10;
-                              const ammResult = calculateDevBuyTokens(devBuyEthAmount, marketCap);
-                              
-                              if (ammResult.priceImpact === 0) {
-                                return 'N/A';
-                              }
-                              
-                              const effectivePriceFormatted = (ammResult.effectivePrice * 1e12).toFixed(8);
-                              return `+${ammResult.priceImpact.toFixed(2)}% (effective price: ${effectivePriceFormatted} ETH per token)`;
-                            })()
-                          }
-                        </div>
-                        <div>
-                          <span className="font-semibold">Transaction Value:</span> {(Number(simulationResult.transaction.value) / 1e18).toFixed(6)} ETH
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: Confirm Deploy */}
-              {simulationResult && (
-                <div className="space-y-4">
-                  <button
-                    onClick={handleConfirmDeploy}
-                    disabled={deployLoading}
-                    className="btn btn-success btn-lg w-full"
-                  >
-                    {deployLoading ? (
-                      <>
-                        <div className="spinner"></div>
-                        <span>Deploying Token...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="btn-icon">🚀</span>
-                        <span>Confirm Deploy</span>
-                      </>
-                    )}
-                  </button>
-                  
-                  <button
-                    onClick={() => setSimulationResult(null)}
-                    disabled={deployLoading}
-                    className="btn btn-secondary btn-sm w-full"
-                  >
-                    ↩️ Back to Edit
-                  </button>
-                </div>
-              )}
-              
-              {/* Success Message */}
-              {deployResult && (
-                <div className="status-message status-success animate-scale-in">
-                  <div className="flex items-start space-x-3">
-                    <span className="text-xl">✅</span>
-                    <div>
-                      <h4 className="text-headline font-semibold mb-2">Deployment Successful!</h4>
-                      <p className="text-body font-mono text-sm whitespace-pre-wrap">{deployResult}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Error Messages */}
-              {simulationError && (
-                <div className="status-message status-error animate-scale-in">
-                  <div className="flex items-start space-x-3">
-                    <span className="text-xl">❌</span>
-                    <div>
-                      <h4 className="text-headline font-semibold mb-2">Simulation Failed</h4>
-                      <p className="text-body text-sm">{simulationError}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {deployError && (
-                <div className="status-message status-error animate-scale-in">
-                  <div className="flex items-start space-x-3">
-                    <span className="text-xl">❌</span>
-                    <div>
-                      <h4 className="text-headline font-semibold mb-2">Deployment Failed</h4>
-                      <p className="text-body text-sm">{deployError}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {renderCurrentStep()}
             </div>
           </div>
-
           {/* Check Fees Card */}
           <div className="card animate-fade-in-up" style={{animationDelay: '0.2s'}}>
             <div className="flex items-center space-x-4 mb-8">
