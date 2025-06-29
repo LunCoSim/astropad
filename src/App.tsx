@@ -122,7 +122,6 @@ function App() {
       const builder = new TokenConfigV4Builder()
         .withName(tokenName)
         .withSymbol(tokenSymbol)
-        .withChainId(chain?.id || 8453) // Default to Base Mainnet if chain is undefined
         .withTokenAdmin(SAFE_MULTISIG_ADDRESS)
         .withStaticFeeConfig({
           clankerFeeBps: 100,
@@ -144,7 +143,7 @@ function App() {
           ],
         });
 
-      const tokenConfig = await builder.build();
+      const tokenConfig = builder.build();
 
       const simulationResult = await clanker.simulateDeployToken(tokenConfig, walletClient.account);
 
