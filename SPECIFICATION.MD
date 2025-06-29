@@ -48,7 +48,7 @@
 
 ## 5. Step-by-Step Plan
 
-1. Set up React (or HTML/JS) project in `zenit/`
+1. Set up React (or HTML/JS) project in `astropad/`
 2. Bundle clanker-sdk (v4) for browser use
 3. Create UI for each v4 core feature
 4. Integrate wallet connection

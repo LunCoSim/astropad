@@ -1,6 +1,6 @@
 # Zenit Project Architecture
 
-This document outlines the architecture of the Zenit project, providing a guide for developers and contributors.
+This document outlines the architecture of the Astropad project, providing a guide for developers and contributors.
 
 ## 1. Core Principles
 
