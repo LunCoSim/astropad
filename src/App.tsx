@@ -205,76 +205,94 @@ function App() {
   };
 
   return (
-    <div className="container">
-      <h1>Clanker Token Tools</h1>
-
-      <div className="section">
-        <h2>Wallet Connection</h2>
-        {!isConnected ? (
-          <button onClick={() => open()}>Connect Wallet</button>
-        ) : (
-          <button onClick={() => disconnect()}>Disconnect Wallet</button>
-        )}
-        <p>Connected Account: <span id="connectedAccount">{address || 'None'}</span></p>
-        <p>Connected Chain: <span id="connectedChain">{chain?.name || 'None'}</span></p>
-        <div id="walletStatus" className="result">
-          {isConnected ? 'Wallet Connected!' : 'Wallet Disconnected.'}
+    <div className="app-container">
+      <header className="app-header">
+        <h1>Clanker Token Tools</h1>
+        <div className="wallet-section">
+          {!isConnected ? (
+            <button onClick={() => open()}>Connect Wallet</button>
+          ) : (
+            <>
+              <div className="wallet-info">
+                <p>Account: {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'None'}</p>
+                <p>Chain: {chain?.name || 'None'}</p>
+              </div>
+              <button onClick={() => disconnect()}>Disconnect</button>
+            </>
+          )}
         </div>
-      </div>
+      </header>
 
-      <div className="section">
-        <h2>Deploy Token</h2>
-        <label htmlFor="tokenName">Token Name:</label>
-        <input
-          type="text"
-          id="tokenName"
-          value={tokenName}
-          onChange={(e) => setTokenName(e.target.value)}
-        />
-        <label htmlFor="tokenSymbol">Token Symbol:</label>
-        <input
-          type="text"
-          id="tokenSymbol"
-          value={tokenSymbol}
-          onChange={(e) => setTokenSymbol(e.target.value)}
-        />
-        <label htmlFor="devBuyEthAmount">Dev Buy ETH Amount:</label>
-        <input
-          type="number"
-          id="devBuyEthAmount"
-          value={devBuyEthAmount}
-          onChange={(e) => setDevBuyEthAmount(parseFloat(e.target.value))}
-          step="0.0001"
-        />
-        <button onClick={handleDeployToken} disabled={deployLoading}>
-          {deployLoading ? 'Deploying...' : 'Deploy Token'}
-        </button>
-        {deployResult && <div id="deployResult" className="result" style={{ whiteSpace: 'pre-wrap' }}>{deployResult}</div>}
-        {deployError && <div id="deployError" className="error">{deployError}</div>}
-      </div>
+      <main className="main-content">
+        <section className="card">
+          <h2>Deploy Token</h2>
+          <div className="form-group">
+            <label htmlFor="tokenName">Token Name:</label>
+            <input
+              type="text"
+              id="tokenName"
+              value={tokenName}
+              onChange={(e) => setTokenName(e.target.value)}
+              placeholder="My Project Coin"
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="tokenSymbol">Token Symbol:</label>
+            <input
+              type="text"
+              id="tokenSymbol"
+              value={tokenSymbol}
+              onChange={(e) => setTokenSymbol(e.target.value)}
+              placeholder="MPC"
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="devBuyEthAmount">Dev Buy ETH Amount:</label>
+            <input
+              type="number"
+              id="devBuyEthAmount"
+              value={devBuyEthAmount}
+              onChange={(e) => setDevBuyEthAmount(parseFloat(e.target.value))}
+              step="0.0001"
+              placeholder="0.0001"
+            />
+          </div>
+          <button onClick={handleDeployToken} disabled={deployLoading}>
+            {deployLoading ? 'Deploying...' : 'Deploy Token'}
+          </button>
+          {deployResult && <div className="result-message success" style={{ whiteSpace: 'pre-wrap' }}>{deployResult}</div>}
+          {deployError && <div className="result-message error">{deployError}</div>}
+        </section>
 
-      <div className="section">
-        <h2>Check Fees</h2>
-        <label htmlFor="customClankerTokenAddress">Clanker Token Address:</label>
-        <input
-          type="text"
-          id="customClankerTokenAddress"
-          value={customClankerTokenAddress}
-          onChange={(e) => setCustomClankerTokenAddress(e.target.value)}
-        />
-        <label htmlFor="customFeeOwnerAddress">Fee Owner Address:</label>
-        <input
-          type="text"
-          id="customFeeOwnerAddress"
-          value={customFeeOwnerAddress}
-          onChange={(e) => setCustomFeeOwnerAddress(e.target.value)}
-        />
-        <button onClick={handleCheckFees} disabled={feesLoading || !customClankerTokenAddress || !customFeeOwnerAddress}>
-          {feesLoading ? 'Checking...' : 'Check Fees for Custom Token'}
-        </button>
-        {feesResult && <div id="feesResult" className="result" style={{ whiteSpace: 'pre-wrap' }}>{feesResult}</div>}
-        {feesError && <div id="feesError" className="error">{feesError}</div>}
-      </div>
+        <section className="card">
+          <h2>Check Fees</h2>
+          <div className="form-group">
+            <label htmlFor="customClankerTokenAddress">Clanker Token Address:</label>
+            <input
+              type="text"
+              id="customClankerTokenAddress"
+              value={customClankerTokenAddress}
+              onChange={(e) => setCustomClankerTokenAddress(e.target.value)}
+              placeholder="0x..."
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="customFeeOwnerAddress">Fee Owner Address:</label>
+            <input
+              type="text"
+              id="customFeeOwnerAddress"
+              value={customFeeOwnerAddress}
+              onChange={(e) => setCustomFeeOwnerAddress(e.target.value)}
+              placeholder="0x..."
+            />
+          </div>
+          <button onClick={handleCheckFees} disabled={feesLoading || !customClankerTokenAddress || !customFeeOwnerAddress}>
+            {feesLoading ? 'Checking...' : 'Check Fees for Custom Token'}
+          </button>
+          {feesResult && <div className="result-message success" style={{ whiteSpace: 'pre-wrap' }}>{feesResult}</div>}
+          {feesError && <div className="result-message error">{feesError}</div>}
+        </section>
+      </main>
     </div>
   );
 }

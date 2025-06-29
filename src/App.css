@@ -1,56 +1,162 @@
 body {
-    font-family: Arial, sans-serif;
-    margin: 20px;
-    background-color: #f4f4f4;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    background-color: #f0f2f5;
     color: #333;
+    line-height: 1.6;
 }
-.container {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    max-width: 800px;
-    margin: 0 auto;
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
-h1, h2 {
+
+.app-header {
+    background-color: #ffffff;
+    padding: 15px 30px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.app-header h1 {
     color: #0056b3;
+    margin: 0;
+    font-size: 24px;
 }
-button {
-    background-color: #007bff;
-    color: white;
-    padding: 10px 15px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
+
+.wallet-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.wallet-info p {
+    margin: 0;
+    font-size: 14px;
+    color: #555;
+}
+
+.main-content {
+    flex-grow: 1;
+    padding: 30px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+    max-width: 900px;
+    margin: 30px auto;
+}
+
+.card {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card h2 {
+    color: #0056b3;
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 22px;
+    border-bottom: 2px solid #f0f2f5;
+    padding-bottom: 10px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #555;
+}
+
+input[type="text"],
+input[type="number"] {
+    width: calc(100% - 24px); /* Account for padding and border */
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
     font-size: 16px;
-    margin-right: 10px;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
-button:hover {
-    background-color: #0056b3;
+
+input[type="text"]:focus,
+input[type="number"]:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+    outline: none;
 }
-input[type="text"], input[type="number"] {
-    width: calc(100% - 22px);
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+
+button {
+    background-color: black !important; /* Unmistakable dark */
+    color: yellow !important; /* Unmistakable bright text */
+    padding: 14px 30px !important; /* Increased padding */
+    border: 5px solid red !important; /* Thick, contrasting border */
+    border-radius: 8px !important; /* Slightly more rounded */
+    cursor: pointer !important;
+    font-size: 17px !important;
+    font-weight: bold !important;
+    transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    margin-top: 15px !important; /* More space above buttons */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4) !important; /* More noticeable shadow */
+    opacity: 1 !important;
+    display: block !important;
+    visibility: visible !important;
+    width: 200px !important;
+    height: 50px !important;
 }
-.section {
-    margin-bottom: 30px;
-    padding: 20px;
-    border: 1px solid #eee;
+
+button:hover:not(:disabled) {
+    background-color: #343a40 !important; /* Slightly lighter dark on hover */
+    border-color: #0056b3 !important; /* Darker blue border on hover */
+    transform: translateY(-2px) !important; /* More pronounced lift */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5) !important; /* Larger shadow on hover */
+}
+
+button:disabled {
+    background-color: grey !important;
+    color: white !important;
+    border: 5px solid darkgrey !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important; /* No shadow when disabled */
+}
+
+.result-message {
+    margin-top: 20px;
+    padding: 15px;
     border-radius: 8px;
-    background-color: #f9f9f9;
-}
-.result {
-    background-color: #e9ecef;
-    padding: 10px;
-    border-radius: 4px;
-    margin-top: 10px;
+    font-size: 14px;
     white-space: pre-wrap;
     word-break: break-all;
 }
-.error {
-    color: red;
-    margin-top: 10px;
+
+.result-message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.result-message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Responsive adjustments */
+@media (min-width: 768px) {
+    .main-content {
+        grid-template-columns: 1fr 1fr; /* Two columns on larger screens */
+    }
 }
