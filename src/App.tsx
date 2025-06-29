@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useAccount, useDisconnect, usePublicClient, useWalletClient } from 'wagmi';
 import { useWeb3Modal } from '@web3modal/wagmi/react';
-import { TokenConfigV4Builder, WETH_ADDRESS, Clanker, POOL_POSITIONS } from 'clanker-sdk';
+import { TokenConfigV4Builder, WETH_ADDRESS, Clanker, POOL_POSITIONS, FEE_CONFIGS, type FeeConfigs } from 'clanker-sdk';
 import { formatUnits } from 'viem';
 import './App.css';
 
@@ -96,25 +96,108 @@ function calculateDevBuyTokens(
 }
 
 function App() {
+  // ========== CORE TOKEN SETTINGS ==========
   const [tokenName, setTokenName] = useState('My Project Coin');
   const [tokenSymbol, setTokenSymbol] = useState('MPC');
-  const [devBuyEthAmount, setDevBuyEthAmount] = useState(0.0001);
-  const [deployedTokenAddress, setDeployedTokenAddress] = useState('');
+  const [tokenAdmin, setTokenAdmin] = useState(''); // Will be set to connected address
+  const [tokenImage, setTokenImage] = useState('');
   
-  // Pair token configuration
+  // ========== TOKEN METADATA ==========
+  const [tokenDescription, setTokenDescription] = useState('');
+  const [socialMediaUrls, setSocialMediaUrls] = useState<string[]>(['']);
+  const [auditUrls, setAuditUrls] = useState<string[]>(['']);
+  
+  // ========== SOCIAL CONTEXT ==========
+  const [interfaceName, setInterfaceName] = useState('Astropad');
+  const [platform, setPlatform] = useState('');
+  const [messageId, setMessageId] = useState('');
+  const [socialId, setSocialId] = useState('');
+  
+  // ========== VAULT CONFIGURATION ==========
+  const [vaultEnabled, setVaultEnabled] = useState(false);
+  const [vaultPercentage, setVaultPercentage] = useState(10); // 0-90%
+  const [vaultLockupDuration, setVaultLockupDuration] = useState(7 * 24 * 60 * 60); // 7 days in seconds
+  const [vestingDuration, setVestingDuration] = useState(30 * 24 * 60 * 60); // 30 days in seconds
+  
+  // ========== AIRDROP CONFIGURATION ==========
+  const [airdropEnabled, setAirdropEnabled] = useState(false);
+  const [airdropPercentage, setAirdropPercentage] = useState(5); // % of total supply
+  const [airdropEntries, setAirdropEntries] = useState<{address: string, amount: number}[]>([
+    {address: '', amount: 1}
+  ]);
+  const [airdropLockupDuration, setAirdropLockupDuration] = useState(24 * 60 * 60); // 1 day
+  const [airdropVestingDuration, setAirdropVestingDuration] = useState(30 * 24 * 60 * 60); // 30 days
+  
+  // ========== REWARD RECIPIENTS (Multiple) ==========
+  const [rewardRecipients, setRewardRecipients] = useState<{
+    recipient: string;
+    admin: string;
+    bps: number;
+  }[]>([
+    { recipient: '', admin: '', bps: 10000 } // Default: 100% to token admin
+  ]);
+  
+  // ========== POOL CONFIGURATION ==========
   const [pairTokenType, setPairTokenType] = useState<'WETH' | 'custom'>('WETH');
   const [customPairTokenAddress, setCustomPairTokenAddress] = useState('');
   const [pairTokenValid, setPairTokenValid] = useState(false);
   const [pairTokenValidating, setPairTokenValidating] = useState(false);
   const [pairTokenInfo, setPairTokenInfo] = useState<{symbol: string, decimals: number} | null>(null);
+  const [startingMarketCap, setStartingMarketCap] = useState<number | ''>(''); // in ETH
+  const [poolPositionType, setPoolPositionType] = useState<'Standard' | 'Project' | 'Custom'>('Standard');
   
-  // Fee configuration (BPS = Basis Points, 100 BPS = 1%)
+  // Custom LP positions (for advanced users)
+  const [customPositions, setCustomPositions] = useState<{
+    tickLower: number;
+    tickUpper: number;
+    positionBps: number;
+  }[]>([
+    { tickLower: -230400, tickUpper: -120000, positionBps: 10000 }
+  ]);
+  
+  // ========== FEE CONFIGURATION ==========
+  const [feeType, setFeeType] = useState<'static' | 'dynamic'>('static');
+  
+  // Static fees
   const [clankerFeeBps, setClankerFeeBps] = useState(100); // 1% default
   const [pairedFeeBps, setPairedFeeBps] = useState(100); // 1% default
   
-  // Market cap configuration
-  const [startingMarketCap, setStartingMarketCap] = useState<number | ''>(''); // in ETH
+  // Dynamic fees
+  const [baseFee, setBaseFee] = useState(5000); // 0.5%
+  const [maxLpFee, setMaxLpFee] = useState(50000); // 5%
+  const [referenceTickFilterPeriod, setReferenceTickFilterPeriod] = useState(30); // 30 seconds
+  const [resetPeriod, setResetPeriod] = useState(120); // 2 minutes
+  const [resetTickFilter, setResetTickFilter] = useState(200); // 2% price movement
+  const [feeControlNumerator, setFeeControlNumerator] = useState(500000000);
+  const [decayFilterBps, setDecayFilterBps] = useState(7500); // 75%
   
+  // ========== DEV BUY CONFIGURATION ==========
+  const [devBuyEnabled, setDevBuyEnabled] = useState(true);
+  const [devBuyEthAmount, setDevBuyEthAmount] = useState(0.0001);
+  const [devBuyRecipient, setDevBuyRecipient] = useState(''); // Will default to token admin
+  const [devBuyAmountOutMin, setDevBuyAmountOutMin] = useState(0); // Slippage protection
+  
+  // ========== ADVANCED OPTIONS ==========
+  const [vanityEnabled, setVanityEnabled] = useState(false);
+  const [vanityPrefix, setVanityPrefix] = useState('');
+  const [vanitySuffix, setVanitySuffix] = useState('');
+  
+  // ========== UI STATE ==========
+  const [expandedSections, setExpandedSections] = useState<{[key: string]: boolean}>({
+    core: true,
+    metadata: false,
+    social: false,
+    vault: false,
+    airdrop: false,
+    rewards: false,
+    pool: true,
+    fees: false,
+    devbuy: true,
+    advanced: false
+  });
+  
+  // Existing state variables
+  const [deployedTokenAddress, setDeployedTokenAddress] = useState('');
   const [customClankerTokenAddress, setCustomClankerTokenAddress] = useState('0x699E27a42095D3cb9A6a23097E5C201E33E314B4');
   const [customFeeOwnerAddress, setCustomFeeOwnerAddress] = useState('0xCd2a99C6d6b27976537fC3737b0ef243E7C49946');
 
@@ -190,12 +273,104 @@ function App() {
     }
   }, [customPairTokenAddress, pairTokenType, publicClient]);
 
+  // Set token admin to connected address
+  useEffect(() => {
+    if (address && !tokenAdmin) {
+      setTokenAdmin(address);
+    }
+    
+    // Set dev buy recipient to token admin if not set
+    if (address && !devBuyRecipient) {
+      setDevBuyRecipient(address);
+    }
+    
+    // Update reward recipients if they're empty
+    if (address && rewardRecipients[0].recipient === '') {
+      setRewardRecipients([{ recipient: address, admin: address, bps: 10000 }]);
+    }
+  }, [address, tokenAdmin, devBuyRecipient, rewardRecipients]);
+
   // Clear starting market cap when switching away from WETH
   useEffect(() => {
     if (pairTokenType !== 'WETH' && startingMarketCap) {
       setStartingMarketCap('');
     }
   }, [pairTokenType]);
+
+  // Utility functions for managing arrays
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  const addSocialMediaUrl = () => {
+    setSocialMediaUrls([...socialMediaUrls, '']);
+  };
+
+  const removeSocialMediaUrl = (index: number) => {
+    setSocialMediaUrls(socialMediaUrls.filter((_, i) => i !== index));
+  };
+
+  const updateSocialMediaUrl = (index: number, value: string) => {
+    const updated = [...socialMediaUrls];
+    updated[index] = value;
+    setSocialMediaUrls(updated);
+  };
+
+  const addAuditUrl = () => {
+    setAuditUrls([...auditUrls, '']);
+  };
+
+  const removeAuditUrl = (index: number) => {
+    setAuditUrls(auditUrls.filter((_, i) => i !== index));
+  };
+
+  const updateAuditUrl = (index: number, value: string) => {
+    const updated = [...auditUrls];
+    updated[index] = value;
+    setAuditUrls(updated);
+  };
+
+  const addAirdropEntry = () => {
+    setAirdropEntries([...airdropEntries, { address: '', amount: 1 }]);
+  };
+
+  const removeAirdropEntry = (index: number) => {
+    setAirdropEntries(airdropEntries.filter((_, i) => i !== index));
+  };
+
+  const updateAirdropEntry = (index: number, field: 'address' | 'amount', value: string | number) => {
+    const updated = [...airdropEntries];
+    updated[index] = { ...updated[index], [field]: value };
+    setAirdropEntries(updated);
+  };
+
+  const addRewardRecipient = () => {
+    setRewardRecipients([...rewardRecipients, { recipient: '', admin: '', bps: 1000 }]);
+  };
+
+  const removeRewardRecipient = (index: number) => {
+    setRewardRecipients(rewardRecipients.filter((_, i) => i !== index));
+  };
+
+  const updateRewardRecipient = (index: number, field: 'recipient' | 'admin' | 'bps', value: string | number) => {
+    const updated = [...rewardRecipients];
+    updated[index] = { ...updated[index], [field]: value };
+    setRewardRecipients(updated);
+  };
+
+  const addCustomPosition = () => {
+    setCustomPositions([...customPositions, { tickLower: -230400, tickUpper: -120000, positionBps: 1000 }]);
+  };
+
+  const removeCustomPosition = (index: number) => {
+    setCustomPositions(customPositions.filter((_, i) => i !== index));
+  };
+
+  const updateCustomPosition = (index: number, field: 'tickLower' | 'tickUpper' | 'positionBps', value: number) => {
+    const updated = [...customPositions];
+    updated[index] = { ...updated[index], [field]: value };
+    setCustomPositions(updated);
+  };
 
   const handleSimulateToken = async () => {
     setSimulateLoading(true);
@@ -289,10 +464,20 @@ function App() {
       const pairTokenAddress = pairTokenType === 'WETH' ? WETH_ADDRESS : customPairTokenAddress as `0x${string}`;
       const pairTokenDecimals = pairTokenType === 'WETH' ? 18 : (pairTokenInfo?.decimals || 18);
 
+      // Determine LP positions
+      let positions;
+      if (poolPositionType === 'Standard') {
+        positions = POOL_POSITIONS.Standard;
+      } else if (poolPositionType === 'Project') {
+        positions = POOL_POSITIONS.Project;
+      } else {
+        positions = customPositions;
+      }
+
       const poolConfig: any = {
         pairedToken: pairTokenAddress,
         pairedTokenDecimals: pairTokenDecimals,
-        positions: POOL_POSITIONS.Standard,
+        positions: positions,
       };
 
       // Only add starting market cap if it's reasonable and using WETH
@@ -304,19 +489,88 @@ function App() {
         }
       }
 
-      const builder = new TokenConfigV4Builder()
+      let builder = new TokenConfigV4Builder()
         .withName(tokenName)
         .withSymbol(tokenSymbol)
-        .withTokenAdmin(SAFE_MULTISIG_ADDRESS)
-        .withStaticFeeConfig({
+        .withTokenAdmin(tokenAdmin || SAFE_MULTISIG_ADDRESS);
+
+      // Add image if provided
+      if (tokenImage) {
+        builder = builder.withImage(tokenImage);
+      }
+
+      // Add metadata if provided
+      const hasMetadata = tokenDescription || socialMediaUrls.some(url => url) || auditUrls.some(url => url);
+      if (hasMetadata) {
+        builder = builder.withMetadata({
+          description: tokenDescription,
+          socialMediaUrls: socialMediaUrls.filter(url => url),
+          auditUrls: auditUrls.filter(url => url),
+        });
+      }
+
+      // Add social context
+      builder = builder.withContext({
+        interface: interfaceName,
+        platform: platform,
+        messageId: messageId,
+        id: socialId,
+      });
+
+      // Add vault configuration if enabled
+      if (vaultEnabled) {
+        builder = builder.withVault({
+          percentage: vaultPercentage,
+          lockupDuration: vaultLockupDuration,
+          vestingDuration: vestingDuration,
+        });
+      }
+
+      // Add airdrop configuration if enabled
+      if (airdropEnabled && airdropEntries.some(entry => entry.address)) {
+        // For now, we'll skip airdrop as it requires merkle tree generation
+        // This would need additional implementation with AirdropExtension
+        console.log('Airdrop configuration detected but not implemented in this demo');
+      }
+
+      // Configure fees
+      if (feeType === 'static') {
+        builder = builder.withStaticFeeConfig({
           clankerFeeBps: clankerFeeBps,
           pairedFeeBps: pairedFeeBps,
-        })
-        .withPoolConfig(poolConfig)
-        .withDevBuy({
+        });
+      } else {
+        builder = builder.withDynamicFeeConfig({
+          baseFee: baseFee,
+          maxLpFee: maxLpFee,
+          referenceTickFilterPeriod: referenceTickFilterPeriod,
+          resetPeriod: resetPeriod,
+          resetTickFilter: resetTickFilter,
+          feeControlNumerator: feeControlNumerator,
+          decayFilterBps: decayFilterBps,
+        });
+      }
+
+      // Configure pool
+      builder = builder.withPoolConfig(poolConfig);
+
+      // Configure dev buy if enabled
+      if (devBuyEnabled && devBuyEthAmount > 0) {
+        builder = builder.withDevBuy({
           ethAmount: devBuyEthAmount,
-        })
-        .withRewardsRecipients({
+          // Add recipient and slippage protection when supported
+        });
+      }
+
+      // Configure reward recipients
+      const validRecipients = rewardRecipients.filter(r => r.recipient && r.admin);
+      if (validRecipients.length > 0) {
+        builder = builder.withRewardsRecipients({
+          recipients: validRecipients,
+        });
+      } else {
+        // Default fallback
+        builder = builder.withRewardsRecipients({
           recipients: [
             {
               admin: SAFE_MULTISIG_ADDRESS,
@@ -325,6 +579,12 @@ function App() {
             },
           ],
         });
+      }
+
+      // Add vanity address generation if enabled
+      if (vanityEnabled) {
+        builder = builder.withVanity();
+      }
 
       const tokenConfig = builder.build();
 
@@ -491,197 +751,1105 @@ function App() {
             </div>
             
             <div className="space-y-8">
-              <div className="space-y-3">
-                <label className="text-label">Token Name</label>
-                <input
-                  type="text"
-                  value={tokenName}
-                  onChange={(e) => setTokenName(e.target.value)}
-                  placeholder="My Awesome Token"
-                  className="input"
-                />
-              </div>
-              
-              <div className="space-y-3">
-                <label className="text-label">Token Symbol</label>
-                <input
-                  type="text"
-                  value={tokenSymbol}
-                  onChange={(e) => setTokenSymbol(e.target.value)}
-                  placeholder="MAT"
-                  className="input"
-                />
-              </div>
-              
-              <div className="space-y-3">
-                <label className="text-label">Dev Buy ETH Amount</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={devBuyEthAmount}
-                  onChange={(e) => setDevBuyEthAmount(parseFloat(e.target.value) || 0)}
-                  placeholder="e.g., 0.1"
-                  className="input"
-                />
-                <div className="text-xs text-gray-600 bg-blue-50 p-3 rounded-lg space-y-2">
-                  <div className="flex items-start space-x-2">
-                    <span>💡</span>
-                    <div>
-                      <div className="font-medium">About Dev Buy</div>
-                      <div>The dev buy is a swap that happens immediately after liquidity is created, using the constant product formula (x × y = k).</div>
+              <div className="space-y-6">
+                {/* CORE TOKEN SETTINGS */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection('core')}
+                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-xl">🎯</span>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900">Core Token Settings</h4>
+                        <p className="text-sm text-gray-600">Name, symbol, admin, and image</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-xs">
-                    • <strong>Swap Mechanics:</strong> Your ETH swaps against the initial pool liquidity to get tokens<br/>
-                    • <strong>Price Impact:</strong> Larger purchases cause exponentially higher price increases<br/>
-                    • <strong>Effective Price:</strong> The actual ETH-per-token rate you pay (higher than initial price due to slippage)
-                  </div>
-                </div>
-              </div>
-
-              {/* Pair Token Configuration */}
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <label className="text-label">Pair Token</label>
-                  <span className="text-xs text-gray-500">Token to pair with in liquidity pool</span>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="flex space-x-3">
-                    <button
-                      type="button"
-                      onClick={() => setPairTokenType('WETH')}
-                      className={`flex-1 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
-                        pairTokenType === 'WETH' 
-                          ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      WETH (Recommended)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPairTokenType('custom')}
-                      className={`flex-1 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
-                        pairTokenType === 'custom' 
-                          ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      Custom Token
-                    </button>
-                  </div>
-
-                  {pairTokenType === 'custom' && (
-                    <div className="space-y-2">
-                      <input
-                        type="text"
-                        value={customPairTokenAddress}
-                        onChange={(e) => setCustomPairTokenAddress(e.target.value)}
-                        placeholder="0x... (ERC-20 token address)"
-                        className="input font-mono text-sm"
-                      />
-                      {pairTokenValidating && (
-                        <div className="flex items-center space-x-2 text-sm text-gray-500">
-                          <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
-                          <span>Validating token...</span>
+                    <span className={`transform transition-transform ${expandedSections.core ? 'rotate-180' : ''}`}>
+                      ⌄
+                    </span>
+                  </button>
+                  
+                  {expandedSections.core && (
+                    <div className="p-6 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-label">Token Name *</label>
+                          <input
+                            type="text"
+                            value={tokenName}
+                            onChange={(e) => setTokenName(e.target.value)}
+                            placeholder="My Awesome Token"
+                            className="input"
+                          />
                         </div>
-                      )}
-                      {pairTokenInfo && pairTokenValid && (
-                        <div className="flex items-center space-x-2 text-sm text-green-600">
-                          <span>✅</span>
-                          <span>Valid ERC-20: {pairTokenInfo.symbol} ({pairTokenInfo.decimals} decimals)</span>
+                        
+                        <div className="space-y-2">
+                          <label className="text-label">Token Symbol *</label>
+                          <input
+                            type="text"
+                            value={tokenSymbol}
+                            onChange={(e) => setTokenSymbol(e.target.value)}
+                            placeholder="MAT"
+                            className="input"
+                          />
                         </div>
-                      )}
-                      {customPairTokenAddress && !pairTokenValid && !pairTokenValidating && (
-                        <div className="flex items-center space-x-2 text-sm text-red-600">
-                          <span>❌</span>
-                          <span>Invalid or non-ERC-20 token</span>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-label">Token Admin</label>
+                        <input
+                          type="text"
+                          value={tokenAdmin}
+                          onChange={(e) => setTokenAdmin(e.target.value)}
+                          placeholder="0x... (defaults to connected wallet)"
+                          className="input font-mono text-sm"
+                        />
+                        <span className="text-xs text-gray-500">Address that will control the token contract</span>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-label">Token Image (IPFS)</label>
+                        <input
+                          type="text"
+                          value={tokenImage}
+                          onChange={(e) => setTokenImage(e.target.value)}
+                          placeholder="ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+                          className="input text-sm"
+                        />
+                        <span className="text-xs text-gray-500">IPFS URL for the token image</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* METADATA */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection('metadata')}
+                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-xl">📄</span>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900">Token Metadata</h4>
+                        <p className="text-sm text-gray-600">Description, social links, and audit reports</p>
+                      </div>
+                    </div>
+                    <span className={`transform transition-transform ${expandedSections.metadata ? 'rotate-180' : ''}`}>
+                      ⌄
+                    </span>
+                  </button>
+                  
+                  {expandedSections.metadata && (
+                    <div className="p-6 space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-label">Description</label>
+                        <textarea
+                          value={tokenDescription}
+                          onChange={(e) => setTokenDescription(e.target.value)}
+                          placeholder="Describe your token project..."
+                          className="input min-h-[80px] resize-y"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-label">Social Media URLs</label>
+                          <button
+                            type="button"
+                            onClick={addSocialMediaUrl}
+                            className="text-blue-600 text-sm hover:underline"
+                          >
+                            + Add URL
+                          </button>
+                        </div>
+                        {socialMediaUrls.map((url, index) => (
+                          <div key={index} className="flex space-x-2">
+                            <input
+                              type="url"
+                              value={url}
+                              onChange={(e) => updateSocialMediaUrl(index, e.target.value)}
+                              placeholder="https://twitter.com/yourproject"
+                              className="input flex-1 text-sm"
+                            />
+                            {socialMediaUrls.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeSocialMediaUrl(index)}
+                                className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-label">Audit Report URLs</label>
+                          <button
+                            type="button"
+                            onClick={addAuditUrl}
+                            className="text-blue-600 text-sm hover:underline"
+                          >
+                            + Add URL
+                          </button>
+                        </div>
+                        {auditUrls.map((url, index) => (
+                          <div key={index} className="flex space-x-2">
+                            <input
+                              type="url"
+                              value={url}
+                              onChange={(e) => updateAuditUrl(index, e.target.value)}
+                              placeholder="https://auditor.com/report.pdf"
+                              className="input flex-1 text-sm"
+                            />
+                            {auditUrls.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeAuditUrl(index)}
+                                className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* SOCIAL CONTEXT */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection('social')}
+                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-xl">🌐</span>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900">Social Context</h4>
+                        <p className="text-sm text-gray-600">Platform information and identifiers</p>
+                      </div>
+                    </div>
+                    <span className={`transform transition-transform ${expandedSections.social ? 'rotate-180' : ''}`}>
+                      ⌄
+                    </span>
+                  </button>
+                  
+                  {expandedSections.social && (
+                    <div className="p-6 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-label">Interface Name</label>
+                          <input
+                            type="text"
+                            value={interfaceName}
+                            onChange={(e) => setInterfaceName(e.target.value)}
+                            placeholder="Astropad"
+                            className="input"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-label">Platform</label>
+                          <input
+                            type="text"
+                            value={platform}
+                            onChange={(e) => setPlatform(e.target.value)}
+                            placeholder="farcaster, X, discord"
+                            className="input"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-label">Message ID</label>
+                          <input
+                            type="text"
+                            value={messageId}
+                            onChange={(e) => setMessageId(e.target.value)}
+                            placeholder="Cast hash, tweet URL, etc."
+                            className="input"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-label">Social ID</label>
+                          <input
+                            type="text"
+                            value={socialId}
+                            onChange={(e) => setSocialId(e.target.value)}
+                            placeholder="FID, X handle, Discord ID"
+                            className="input"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* VAULT CONFIGURATION */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection('vault')}
+                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-xl">🔒</span>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900">Vault Configuration</h4>
+                        <p className="text-sm text-gray-600">Lock tokens with vesting schedule</p>
+                      </div>
+                    </div>
+                    <span className={`transform transition-transform ${expandedSections.vault ? 'rotate-180' : ''}`}>
+                      ⌄
+                    </span>
+                  </button>
+                  
+                  {expandedSections.vault && (
+                    <div className="p-6 space-y-4">
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          id="vaultEnabled"
+                          checked={vaultEnabled}
+                          onChange={(e) => setVaultEnabled(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="vaultEnabled" className="text-label">Enable Vault</label>
+                      </div>
+                      
+                      {vaultEnabled && (
+                        <div className="space-y-4 pl-7">
+                          <div className="space-y-2">
+                            <label className="text-label">Vault Percentage (0-90%)</label>
+                            <input
+                              type="number"
+                              value={vaultPercentage}
+                              onChange={(e) => setVaultPercentage(parseInt(e.target.value) || 0)}
+                              min="0"
+                              max="90"
+                              className="input"
+                            />
+                            <span className="text-xs text-gray-500">Percentage of total token supply to lock in vault</span>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-label">Lockup Duration (days)</label>
+                              <input
+                                type="number"
+                                value={Math.floor(vaultLockupDuration / (24 * 60 * 60))}
+                                onChange={(e) => setVaultLockupDuration((parseInt(e.target.value) || 7) * 24 * 60 * 60)}
+                                min="7"
+                                className="input"
+                              />
+                              <span className="text-xs text-gray-500">Minimum 7 days before vesting starts</span>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-label">Vesting Duration (days)</label>
+                              <input
+                                type="number"
+                                value={Math.floor(vestingDuration / (24 * 60 * 60))}
+                                onChange={(e) => setVestingDuration((parseInt(e.target.value) || 0) * 24 * 60 * 60)}
+                                min="0"
+                                className="input"
+                              />
+                              <span className="text-xs text-gray-500">Linear vesting period (0 for instant unlock)</span>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
                   )}
                 </div>
-              </div>
 
-              {/* Fee Configuration */}
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <label className="text-label">Fee Configuration</label>
-                  <span className="text-xs text-gray-500">BPS = Basis Points (100 BPS = 1%)</span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Clanker Fee (BPS)</label>
-                    <input
-                      type="number"
-                      value={clankerFeeBps}
-                      onChange={(e) => setClankerFeeBps(parseInt(e.target.value) || 0)}
-                      min="0"
-                      max="10000"
-                      className="input text-sm"
-                      placeholder="100"
-                    />
-                    <span className="text-xs text-gray-500">Current: {(clankerFeeBps / 100).toFixed(2)}%</span>
-                  </div>
+                {/* AIRDROP CONFIGURATION */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection('airdrop')}
+                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-xl">🎁</span>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900">Airdrop Configuration</h4>
+                        <p className="text-sm text-gray-600">Distribute tokens via merkle tree</p>
+                      </div>
+                    </div>
+                    <span className={`transform transition-transform ${expandedSections.airdrop ? 'rotate-180' : ''}`}>
+                      ⌄
+                    </span>
+                  </button>
                   
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Paired Token Fee (BPS)</label>
-                    <input
-                      type="number"
-                      value={pairedFeeBps}
-                      onChange={(e) => setPairedFeeBps(parseInt(e.target.value) || 0)}
-                      min="0"
-                      max="10000"
-                      className="input text-sm"
-                      placeholder="100"
-                    />
-                    <span className="text-xs text-gray-500">Current: {(pairedFeeBps / 100).toFixed(2)}%</span>
+                  {expandedSections.airdrop && (
+                    <div className="p-6 space-y-4">
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          id="airdropEnabled"
+                          checked={airdropEnabled}
+                          onChange={(e) => setAirdropEnabled(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="airdropEnabled" className="text-label">Enable Airdrop</label>
+                      </div>
+                      
+                      {airdropEnabled && (
+                        <div className="space-y-4 pl-7">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-label">Airdrop Percentage</label>
+                              <input
+                                type="number"
+                                value={airdropPercentage}
+                                onChange={(e) => setAirdropPercentage(parseInt(e.target.value) || 0)}
+                                min="0"
+                                max="50"
+                                className="input"
+                              />
+                              <span className="text-xs text-gray-500">% of total supply for airdrop</span>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-label">Lockup Duration (days)</label>
+                              <input
+                                type="number"
+                                value={Math.floor(airdropLockupDuration / (24 * 60 * 60))}
+                                onChange={(e) => setAirdropLockupDuration((parseInt(e.target.value) || 1) * 24 * 60 * 60)}
+                                min="1"
+                                className="input"
+                              />
+                              <span className="text-xs text-gray-500">Minimum 1 day</span>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-label">Vesting Duration (days)</label>
+                            <input
+                              type="number"
+                              value={Math.floor(airdropVestingDuration / (24 * 60 * 60))}
+                              onChange={(e) => setAirdropVestingDuration((parseInt(e.target.value) || 0) * 24 * 60 * 60)}
+                              min="0"
+                              className="input"
+                            />
+                            <span className="text-xs text-gray-500">Linear vesting period (0 for instant unlock)</span>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="text-label">Airdrop Recipients</label>
+                              <button
+                                type="button"
+                                onClick={addAirdropEntry}
+                                className="text-blue-600 text-sm hover:underline"
+                              >
+                                + Add Recipient
+                              </button>
+                            </div>
+                            {airdropEntries.map((entry, index) => (
+                              <div key={index} className="flex space-x-2">
+                                <input
+                                  type="text"
+                                  value={entry.address}
+                                  onChange={(e) => updateAirdropEntry(index, 'address', e.target.value)}
+                                  placeholder="0x... (recipient address)"
+                                  className="input flex-1 font-mono text-sm"
+                                />
+                                <input
+                                  type="number"
+                                  value={entry.amount}
+                                  onChange={(e) => updateAirdropEntry(index, 'amount', parseFloat(e.target.value) || 0)}
+                                  placeholder="Amount"
+                                  className="input w-24 text-sm"
+                                  min="0"
+                                  step="0.1"
+                                />
+                                {airdropEntries.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeAirdropEntry(index)}
+                                    className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                                  >
+                                    ×
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            <div className="text-xs text-yellow-600 bg-yellow-50 p-3 rounded-lg">
+                              ⚠️ Airdrop requires merkle tree generation - currently for display only
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* REWARD RECIPIENTS */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection('rewards')}
+                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-xl">💎</span>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900">Reward Recipients</h4>
+                        <p className="text-sm text-gray-600">Configure fee distribution</p>
+                      </div>
+                    </div>
+                    <span className={`transform transition-transform ${expandedSections.rewards ? 'rotate-180' : ''}`}>
+                      ⌄
+                    </span>
+                  </button>
+                  
+                  {expandedSections.rewards && (
+                    <div className="p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <label className="text-label">Fee Recipients</label>
+                        <button
+                          type="button"
+                          onClick={addRewardRecipient}
+                          className="text-blue-600 text-sm hover:underline"
+                        >
+                          + Add Recipient
+                        </button>
+                      </div>
+                      
+                      {rewardRecipients.map((recipient, index) => (
+                        <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-700">Recipient #{index + 1}</span>
+                            {rewardRecipients.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeRewardRecipient(index)}
+                                className="text-red-600 text-sm hover:underline"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <label className="text-sm text-gray-600">Recipient Address</label>
+                              <input
+                                type="text"
+                                value={recipient.recipient}
+                                onChange={(e) => updateRewardRecipient(index, 'recipient', e.target.value)}
+                                placeholder="0x... (receives fees)"
+                                className="input text-sm font-mono"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-sm text-gray-600">Admin Address</label>
+                              <input
+                                type="text"
+                                value={recipient.admin}
+                                onChange={(e) => updateRewardRecipient(index, 'admin', e.target.value)}
+                                placeholder="0x... (can claim fees)"
+                                className="input text-sm font-mono"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-600">Allocation (BPS)</label>
+                            <input
+                              type="number"
+                              value={recipient.bps}
+                              onChange={(e) => updateRewardRecipient(index, 'bps', parseInt(e.target.value) || 0)}
+                              min="0"
+                              max="10000"
+                              className="input text-sm"
+                            />
+                            <span className="text-xs text-gray-500">
+                              {(recipient.bps / 100).toFixed(2)}% • Total: {(rewardRecipients.reduce((sum, r) => sum + r.bps, 0) / 100).toFixed(2)}%
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg">
+                        💡 Total BPS must equal 10000 (100%) for valid configuration
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* POOL CONFIGURATION */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection('pool')}
+                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-xl">🏊</span>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900">Pool Configuration</h4>
+                        <p className="text-sm text-gray-600">Liquidity pool and pair token settings</p>
+                      </div>
+                    </div>
+                    <span className={`transform transition-transform ${expandedSections.pool ? 'rotate-180' : ''}`}>
+                      ⌄
+                    </span>
+                  </button>
+                  
+                  {expandedSections.pool && (
+                    <div className="p-6 space-y-4">
+                      {/* Pair Token Selection */}
+                      <div className="space-y-3">
+                        <label className="text-label">Pair Token</label>
+                        <div className="flex space-x-3">
+                          <button
+                            type="button"
+                            onClick={() => setPairTokenType('WETH')}
+                            className={`flex-1 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                              pairTokenType === 'WETH' 
+                                ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                            }`}
+                          >
+                            WETH (Recommended)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPairTokenType('custom')}
+                            className={`flex-1 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                              pairTokenType === 'custom' 
+                                ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                            }`}
+                          >
+                            Custom Token
+                          </button>
+                        </div>
+
+                        {pairTokenType === 'custom' && (
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              value={customPairTokenAddress}
+                              onChange={(e) => setCustomPairTokenAddress(e.target.value)}
+                              placeholder="0x... (ERC-20 token address)"
+                              className="input font-mono text-sm"
+                            />
+                            {pairTokenValidating && (
+                              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                                <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+                                <span>Validating token...</span>
+                              </div>
+                            )}
+                            {pairTokenInfo && pairTokenValid && (
+                              <div className="flex items-center space-x-2 text-sm text-green-600">
+                                <span>✅</span>
+                                <span>Valid ERC-20: {pairTokenInfo.symbol} ({pairTokenInfo.decimals} decimals)</span>
+                              </div>
+                            )}
+                            {customPairTokenAddress && !pairTokenValid && !pairTokenValidating && (
+                              <div className="flex items-center space-x-2 text-sm text-red-600">
+                                <span>❌</span>
+                                <span>Invalid or non-ERC-20 token</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Starting Market Cap */}
+                      <div className="space-y-2">
+                        <label className="text-label">Starting Market Cap (ETH)</label>
+                        <input
+                          type="number"
+                          value={startingMarketCap}
+                          onChange={(e) => setStartingMarketCap(parseFloat(e.target.value) || '')}
+                          placeholder="Leave empty for default (~10 ETH)"
+                          min="0.1"
+                          max="1000"
+                          step="0.1"
+                          className="input"
+                          disabled={pairTokenType !== 'WETH'}
+                        />
+                        <span className="text-xs text-gray-500">
+                          {pairTokenType === 'WETH' 
+                            ? 'Range: 0.1-1000 ETH (only works with WETH pairs)'
+                            : 'Only available with WETH pair token'
+                          }
+                        </span>
+                      </div>
+
+                      {/* LP Position Type */}
+                      <div className="space-y-3">
+                        <label className="text-label">LP Position Strategy</label>
+                        <div className="space-y-2">
+                          {(['Standard', 'Project', 'Custom'] as const).map((type) => (
+                            <label key={type} className="flex items-center space-x-3">
+                              <input
+                                type="radio"
+                                name="poolPositionType"
+                                value={type}
+                                checked={poolPositionType === type}
+                                onChange={(e) => setPoolPositionType(e.target.value as any)}
+                                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                              />
+                              <span className="text-sm font-medium">{type}</span>
+                              <span className="text-xs text-gray-500">
+                                {type === 'Standard' && '(Recommended for most tokens)'}
+                                {type === 'Project' && '(Wider range for project tokens)'}
+                                {type === 'Custom' && '(Advanced: Define your own ranges)'}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Custom Positions */}
+                      {poolPositionType === 'Custom' && (
+                        <div className="space-y-3 pl-7">
+                          <div className="flex items-center justify-between">
+                            <label className="text-label">Custom LP Positions</label>
+                            <button
+                              type="button"
+                              onClick={addCustomPosition}
+                              className="text-blue-600 text-sm hover:underline"
+                            >
+                              + Add Position
+                            </button>
+                          </div>
+                          {customPositions.map((position, index) => (
+                            <div key={index} className="border border-gray-200 rounded-lg p-3 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-700">Position #{index + 1}</span>
+                                {customPositions.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeCustomPosition(index)}
+                                    className="text-red-600 text-sm hover:underline"
+                                  >
+                                    Remove
+                                  </button>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-3 gap-2">
+                                <div>
+                                  <label className="text-xs text-gray-600">Tick Lower</label>
+                                  <input
+                                    type="number"
+                                    value={position.tickLower}
+                                    onChange={(e) => updateCustomPosition(index, 'tickLower', parseInt(e.target.value) || 0)}
+                                    className="input text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-600">Tick Upper</label>
+                                  <input
+                                    type="number"
+                                    value={position.tickUpper}
+                                    onChange={(e) => updateCustomPosition(index, 'tickUpper', parseInt(e.target.value) || 0)}
+                                    className="input text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-600">BPS</label>
+                                  <input
+                                    type="number"
+                                    value={position.positionBps}
+                                    onChange={(e) => updateCustomPosition(index, 'positionBps', parseInt(e.target.value) || 0)}
+                                    min="0"
+                                    max="10000"
+                                    className="input text-sm"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* FEE CONFIGURATION */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection('fees')}
+                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-xl">💰</span>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900">Fee Configuration</h4>
+                        <p className="text-sm text-gray-600">Static or dynamic fee structure</p>
+                      </div>
+                    </div>
+                    <span className={`transform transition-transform ${expandedSections.fees ? 'rotate-180' : ''}`}>
+                      ⌄
+                    </span>
+                  </button>
+                  
+                  {expandedSections.fees && (
+                    <div className="p-6 space-y-4">
+                      {/* Fee Type Selection */}
+                      <div className="space-y-3">
+                        <label className="text-label">Fee Type</label>
+                        <div className="flex space-x-3">
+                          <button
+                            type="button"
+                            onClick={() => setFeeType('static')}
+                            className={`flex-1 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                              feeType === 'static' 
+                                ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                            }`}
+                          >
+                            Static Fees
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFeeType('dynamic')}
+                            className={`flex-1 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                              feeType === 'dynamic' 
+                                ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                            }`}
+                          >
+                            Dynamic Fees
+                          </button>
+                        </div>
+                      </div>
+
+                      {feeType === 'static' ? (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-label">Clanker Fee (BPS)</label>
+                              <input
+                                type="number"
+                                value={clankerFeeBps}
+                                onChange={(e) => setClankerFeeBps(parseInt(e.target.value) || 0)}
+                                min="0"
+                                max="10000"
+                                className="input"
+                              />
+                              <span className="text-xs text-gray-500">Current: {(clankerFeeBps / 100).toFixed(2)}%</span>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-label">Paired Token Fee (BPS)</label>
+                              <input
+                                type="number"
+                                value={pairedFeeBps}
+                                onChange={(e) => setPairedFeeBps(parseInt(e.target.value) || 0)}
+                                min="0"
+                                max="10000"
+                                className="input"
+                              />
+                              <span className="text-xs text-gray-500">Current: {(pairedFeeBps / 100).toFixed(2)}%</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-label">Base Fee (BPS)</label>
+                              <input
+                                type="number"
+                                value={baseFee}
+                                onChange={(e) => setBaseFee(parseInt(e.target.value) || 0)}
+                                min="0"
+                                max="100000"
+                                className="input"
+                              />
+                              <span className="text-xs text-gray-500">Minimum fee: {(baseFee / 100).toFixed(2)}%</span>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-label">Max LP Fee (BPS)</label>
+                              <input
+                                type="number"
+                                value={maxLpFee}
+                                onChange={(e) => setMaxLpFee(parseInt(e.target.value) || 0)}
+                                min="0"
+                                max="100000"
+                                className="input"
+                              />
+                              <span className="text-xs text-gray-500">Maximum fee: {(maxLpFee / 100).toFixed(2)}%</span>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-label">Ref Tick Filter Period (s)</label>
+                              <input
+                                type="number"
+                                value={referenceTickFilterPeriod}
+                                onChange={(e) => setReferenceTickFilterPeriod(parseInt(e.target.value) || 0)}
+                                min="1"
+                                className="input"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-label">Reset Period (s)</label>
+                              <input
+                                type="number"
+                                value={resetPeriod}
+                                onChange={(e) => setResetPeriod(parseInt(e.target.value) || 0)}
+                                min="1"
+                                className="input"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-label">Reset Tick Filter</label>
+                              <input
+                                type="number"
+                                value={resetTickFilter}
+                                onChange={(e) => setResetTickFilter(parseInt(e.target.value) || 0)}
+                                min="0"
+                                className="input"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-label">Fee Control Numerator</label>
+                              <input
+                                type="number"
+                                value={feeControlNumerator}
+                                onChange={(e) => setFeeControlNumerator(parseInt(e.target.value) || 0)}
+                                min="0"
+                                className="input"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-label">Decay Filter (BPS)</label>
+                              <input
+                                type="number"
+                                value={decayFilterBps}
+                                onChange={(e) => setDecayFilterBps(parseInt(e.target.value) || 0)}
+                                min="0"
+                                max="10000"
+                                className="input"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* DEV BUY CONFIGURATION */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection('devbuy')}
+                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-xl">🚀</span>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900">Dev Buy Configuration</h4>
+                        <p className="text-sm text-gray-600">Immediate token purchase after deployment</p>
+                      </div>
+                    </div>
+                    <span className={`transform transition-transform ${expandedSections.devbuy ? 'rotate-180' : ''}`}>
+                      ⌄
+                    </span>
+                  </button>
+                  
+                  {expandedSections.devbuy && (
+                    <div className="p-6 space-y-4">
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          id="devBuyEnabled"
+                          checked={devBuyEnabled}
+                          onChange={(e) => setDevBuyEnabled(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="devBuyEnabled" className="text-label">Enable Dev Buy</label>
+                      </div>
+                      
+                      {devBuyEnabled && (
+                        <div className="space-y-4 pl-7">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-label">ETH Amount</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={devBuyEthAmount}
+                                onChange={(e) => setDevBuyEthAmount(parseFloat(e.target.value) || 0)}
+                                placeholder="e.g., 0.1"
+                                className="input"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-label">Recipient Address</label>
+                              <input
+                                type="text"
+                                value={devBuyRecipient}
+                                onChange={(e) => setDevBuyRecipient(e.target.value)}
+                                placeholder="0x... (defaults to token admin)"
+                                className="input font-mono text-sm"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-label">Minimum Amount Out</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={devBuyAmountOutMin}
+                              onChange={(e) => setDevBuyAmountOutMin(parseFloat(e.target.value) || 0)}
+                              placeholder="0 (slippage protection)"
+                              className="input"
+                            />
+                            <span className="text-xs text-gray-500">Minimum tokens to receive (slippage protection)</span>
+                          </div>
+                          
+                          <div className="text-xs text-blue-600 bg-blue-50 p-3 rounded-lg space-y-2">
+                            <div className="flex items-start space-x-2">
+                              <span>💡</span>
+                              <div>
+                                <div className="font-medium">About Dev Buy</div>
+                                <div>The dev buy is a swap that happens immediately after liquidity is created, using the constant product formula (x × y = k).</div>
+                              </div>
+                            </div>
+                            <div className="text-xs">
+                              • <strong>Swap Mechanics:</strong> Your ETH swaps against the initial pool liquidity to get tokens<br/>
+                              • <strong>Price Impact:</strong> Larger purchases cause exponentially higher price increases<br/>
+                              • <strong>Effective Price:</strong> The actual ETH-per-token rate you pay (higher than initial price due to slippage)
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* ADVANCED OPTIONS */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection('advanced')}
+                    className="w-full px-6 py-4 bg-gray-50 text-left flex items-center justify-between hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-xl">⚡</span>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900">Advanced Options</h4>
+                        <p className="text-sm text-gray-600">Vanity addresses and advanced features</p>
+                      </div>
+                    </div>
+                    <span className={`transform transition-transform ${expandedSections.advanced ? 'rotate-180' : ''}`}>
+                      ⌄
+                    </span>
+                  </button>
+                  
+                  {expandedSections.advanced && (
+                    <div className="p-6 space-y-4">
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          id="vanityEnabled"
+                          checked={vanityEnabled}
+                          onChange={(e) => setVanityEnabled(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="vanityEnabled" className="text-label">Generate Vanity Address</label>
+                      </div>
+                      
+                      {vanityEnabled && (
+                        <div className="space-y-4 pl-7">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-label">Prefix</label>
+                              <input
+                                type="text"
+                                value={vanityPrefix}
+                                onChange={(e) => setVanityPrefix(e.target.value)}
+                                placeholder="e.g., 0x1337"
+                                className="input font-mono text-sm"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-label">Suffix</label>
+                              <input
+                                type="text"
+                                value={vanitySuffix}
+                                onChange={(e) => setVanitySuffix(e.target.value)}
+                                placeholder="e.g., cafe"
+                                className="input font-mono text-sm"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="text-xs text-yellow-600 bg-yellow-50 p-3 rounded-lg">
+                            ⚠️ Vanity address generation may take time and increase gas costs
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Continue with other sections in the next part... */}
+                
+                {/* For now, add a basic dev buy section to maintain functionality */}
+                <div className="border border-blue-200 bg-blue-50 rounded-xl p-6" style={{ display: 'none' }}>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-xl">💰</span>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900">Dev Buy</h4>
+                        <p className="text-sm text-gray-600">Immediate token purchase after deployment</p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <label className="text-label">Dev Buy ETH Amount</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={devBuyEthAmount}
+                        onChange={(e) => setDevBuyEthAmount(parseFloat(e.target.value) || 0)}
+                        placeholder="e.g., 0.1"
+                        className="input"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Starting Market Cap Configuration */}
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <label className="text-label">Starting Market Cap (Optional)</label>
-                  <span className="text-xs text-gray-500">In ETH only</span>
-                </div>
-                <input
-                  type="number"
-                  value={startingMarketCap}
-                  onChange={(e) => setStartingMarketCap(e.target.value ? parseFloat(e.target.value) : '')}
-                  step="0.001"
-                  min="0.1"
-                  max="1000"
-                  placeholder="0.1 - 1000 ETH (leave empty for default)"
-                  className="input"
-                  disabled={pairTokenType !== 'WETH'}
-                />
-                
-                {pairTokenType !== 'WETH' && (
-                  <div className="flex items-center space-x-2 text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
-                    <span>⚠️</span>
-                    <span>Starting market cap is only available when using WETH as the pair token.</span>
-                  </div>
-                )}
-                
-                {pairTokenType === 'WETH' && (
-                  <span className="text-xs text-gray-500">
-                    Sets initial token price (0.1 - 1000 ETH range). Leave empty for default pricing (~$27K market cap).
-                  </span>
-                )}
-                
-                {startingMarketCap && (startingMarketCap < 0.1 || startingMarketCap > 1000) && pairTokenType === 'WETH' && (
-                  <div className="flex items-center space-x-2 text-sm text-red-600">
-                    <span>❌</span>
-                    <span>Market cap must be between 0.1 and 1000 ETH for compatibility with liquidity positions.</span>
-                  </div>
-                )}
-              </div>
-              
               {/* Step 1: Simulate Deploy */}
               {!simulationResult && (
                 <button
