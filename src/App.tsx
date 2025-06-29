@@ -205,93 +205,247 @@ function App() {
   };
 
   return (
-    <div className="app-container">
-      <header className="app-header">
-        <h1>Clanker Token Tools</h1>
-        <div className="wallet-section">
-          {!isConnected ? (
-            <button onClick={() => open()}>Connect Wallet</button>
-          ) : (
-            <>
-              <div className="wallet-info">
-                <p>Account: {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'None'}</p>
-                <p>Chain: {chain?.name || 'None'}</p>
+    <div className="min-h-screen" style={{background: 'var(--apple-gray-light)'}}>
+      {/* Apple-style Header */}
+      <header className="glass-strong sticky top-0 z-50 border-b border-white/10">
+        <div className="max-w-6xl mx-auto px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
+                🚀
               </div>
-              <button onClick={() => disconnect()}>Disconnect</button>
-            </>
-          )}
+              <div>
+                <h1 className="text-title font-bold text-gray-900">
+                  ClankerTools
+                </h1>
+                <p className="text-caption">Token Management Platform</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              {!isConnected ? (
+                <button
+                  onClick={() => open()}
+                  className="btn btn-primary"
+                >
+                  <span className="btn-icon">🔗</span>
+                  <span>Connect Wallet</span>
+                </button>
+              ) : (
+                <div className="flex items-center space-x-4">
+                  <div className="glass px-4 py-3 rounded-2xl flex items-center space-x-3">
+                    <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-body font-mono text-sm">
+                      {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Connected'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => disconnect()}
+                    className="btn btn-secondary"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="main-content">
-        <section className="card">
-          <h2>Deploy Token</h2>
-          <div className="form-group">
-            <label htmlFor="tokenName">Token Name:</label>
-            <input
-              type="text"
-              id="tokenName"
-              value={tokenName}
-              onChange={(e) => setTokenName(e.target.value)}
-              placeholder="My Project Coin"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="tokenSymbol">Token Symbol:</label>
-            <input
-              type="text"
-              id="tokenSymbol"
-              value={tokenSymbol}
-              onChange={(e) => setTokenSymbol(e.target.value)}
-              placeholder="MPC"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="devBuyEthAmount">Dev Buy ETH Amount:</label>
-            <input
-              type="number"
-              id="devBuyEthAmount"
-              value={devBuyEthAmount}
-              onChange={(e) => setDevBuyEthAmount(parseFloat(e.target.value))}
-              step="0.0001"
-              placeholder="0.0001"
-            />
-          </div>
-          <button onClick={handleDeployToken} disabled={deployLoading}>
-            {deployLoading ? 'Deploying...' : 'Deploy Token'}
-          </button>
-          {deployResult && <div className="result-message success" style={{ whiteSpace: 'pre-wrap' }}>{deployResult}</div>}
-          {deployError && <div className="result-message error">{deployError}</div>}
-        </section>
+      {/* Hero Section */}
+      <div className="pt-16 pb-12 px-8">
+        <div className="max-w-4xl mx-auto text-center animate-fade-in-up">
+          <h2 className="text-display font-bold text-gray-900 mb-6">
+            Deploy & Manage
+            <span style={{background: 'linear-gradient(135deg, var(--apple-blue), var(--apple-purple))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}> Tokens</span>
+          </h2>
+          <p className="text-body text-gray-600 max-w-2xl mx-auto mb-12 leading-relaxed">
+            Create and manage your Clanker tokens with our intuitive, Apple-inspired interface. 
+            Built for simplicity, designed for power.
+          </p>
+        </div>
+      </div>
 
-        <section className="card">
-          <h2>Check Fees</h2>
-          <div className="form-group">
-            <label htmlFor="customClankerTokenAddress">Clanker Token Address:</label>
-            <input
-              type="text"
-              id="customClankerTokenAddress"
-              value={customClankerTokenAddress}
-              onChange={(e) => setCustomClankerTokenAddress(e.target.value)}
-              placeholder="0x..."
-            />
+      {/* Main Content */}
+      <main className="max-w-5xl mx-auto px-8 pb-16">
+        <div className="grid lg:grid-cols-2 gap-12">
+          {/* Deploy Token Card */}
+          <div className="card animate-fade-in-up">
+            <div className="flex items-center space-x-4 mb-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-3xl flex items-center justify-center text-white text-2xl shadow-lg">
+                🎯
+              </div>
+              <div>
+                <h3 className="text-title font-bold text-gray-900">Deploy Token</h3>
+                <p className="text-caption">Create your new token in seconds</p>
+              </div>
+            </div>
+            
+            <div className="space-y-8">
+              <div className="space-y-3">
+                <label className="text-label">Token Name</label>
+                <input
+                  type="text"
+                  value={tokenName}
+                  onChange={(e) => setTokenName(e.target.value)}
+                  placeholder="My Awesome Token"
+                  className="input"
+                />
+              </div>
+              
+              <div className="space-y-3">
+                <label className="text-label">Token Symbol</label>
+                <input
+                  type="text"
+                  value={tokenSymbol}
+                  onChange={(e) => setTokenSymbol(e.target.value)}
+                  placeholder="MAT"
+                  className="input"
+                />
+              </div>
+              
+              <div className="space-y-3">
+                <label className="text-label">Dev Buy ETH Amount</label>
+                <input
+                  type="number"
+                  value={devBuyEthAmount}
+                  onChange={(e) => setDevBuyEthAmount(parseFloat(e.target.value))}
+                  step="0.0001"
+                  placeholder="0.0001"
+                  className="input"
+                />
+              </div>
+              
+              <button
+                onClick={handleDeployToken}
+                disabled={deployLoading}
+                className="btn btn-success btn-lg w-full"
+              >
+                {deployLoading ? (
+                  <>
+                    <div className="spinner"></div>
+                    <span>Deploying Token...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="btn-icon">🚀</span>
+                    <span>Deploy Token</span>
+                  </>
+                )}
+              </button>
+              
+              {deployResult && (
+                <div className="status-message status-success animate-scale-in">
+                  <div className="flex items-start space-x-3">
+                    <span className="text-xl">✅</span>
+                    <div>
+                      <h4 className="text-headline font-semibold mb-2">Deployment Successful!</h4>
+                      <p className="text-body font-mono text-sm whitespace-pre-wrap">{deployResult}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {deployError && (
+                <div className="status-message status-error animate-scale-in">
+                  <div className="flex items-start space-x-3">
+                    <span className="text-xl">❌</span>
+                    <div>
+                      <h4 className="text-headline font-semibold mb-2">Deployment Failed</h4>
+                      <p className="text-body text-sm">{deployError}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="form-group">
-            <label htmlFor="customFeeOwnerAddress">Fee Owner Address:</label>
-            <input
-              type="text"
-              id="customFeeOwnerAddress"
-              value={customFeeOwnerAddress}
-              onChange={(e) => setCustomFeeOwnerAddress(e.target.value)}
-              placeholder="0x..."
-            />
+
+          {/* Check Fees Card */}
+          <div className="card animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+            <div className="flex items-center space-x-4 mb-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-3xl flex items-center justify-center text-white text-2xl shadow-lg">
+                💰
+              </div>
+              <div>
+                <h3 className="text-title font-bold text-gray-900">Check Fees</h3>
+                <p className="text-caption">Monitor your token earnings</p>
+              </div>
+            </div>
+            
+            <div className="space-y-8">
+              <div className="space-y-3">
+                <label className="text-label">Clanker Token Address</label>
+                <input
+                  type="text"
+                  value={customClankerTokenAddress}
+                  onChange={(e) => setCustomClankerTokenAddress(e.target.value)}
+                  placeholder="0x..."
+                  className="input font-mono text-sm"
+                />
+              </div>
+              
+              <div className="space-y-3">
+                <label className="text-label">Fee Owner Address</label>
+                <input
+                  type="text"
+                  value={customFeeOwnerAddress}
+                  onChange={(e) => setCustomFeeOwnerAddress(e.target.value)}
+                  placeholder="0x..."
+                  className="input font-mono text-sm"
+                />
+              </div>
+              
+              <button
+                onClick={handleCheckFees}
+                disabled={feesLoading || !customClankerTokenAddress || !customFeeOwnerAddress}
+                className="btn btn-primary btn-lg w-full"
+              >
+                {feesLoading ? (
+                  <>
+                    <div className="spinner"></div>
+                    <span>Checking Fees...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="btn-icon">🔍</span>
+                    <span>Check Fees</span>
+                  </>
+                )}
+              </button>
+              
+              {feesResult && (
+                <div className="status-message status-success animate-scale-in">
+                  <div className="flex items-start space-x-3">
+                    <span className="text-xl">📊</span>
+                    <div>
+                      <h4 className="text-headline font-semibold mb-2">Fee Information</h4>
+                      <p className="text-body font-mono text-sm whitespace-pre-wrap">{feesResult}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {feesError && (
+                <div className="status-message status-error animate-scale-in">
+                  <div className="flex items-start space-x-3">
+                    <span className="text-xl">❌</span>
+                    <div>
+                      <h4 className="text-headline font-semibold mb-2">Error</h4>
+                      <p className="text-body text-sm">{feesError}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-          <button onClick={handleCheckFees} disabled={feesLoading || !customClankerTokenAddress || !customFeeOwnerAddress}>
-            {feesLoading ? 'Checking...' : 'Check Fees for Custom Token'}
-          </button>
-          {feesResult && <div className="result-message success" style={{ whiteSpace: 'pre-wrap' }}>{feesResult}</div>}
-          {feesError && <div className="result-message error">{feesError}</div>}
-        </section>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-20 text-center">
+          <p className="text-caption">
+            Built with ❤️ for the Clanker ecosystem
+          </p>
+        </div>
       </main>
     </div>
   );
