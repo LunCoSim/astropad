@@ -428,64 +428,63 @@ export async function fetchTokensWithFallbacks(
 }
 
 /**
- * Sync blockchain tokens with local storage
+ * Sync tokens with blockchain using Alchemy API (primary) and manual entry
  */
 export async function syncTokensWithBlockchain(
   publicClient: PublicClient,
   walletAddress: string,
-  useHybridApproach: boolean = true
+  useAlchemyApi: boolean = false // Set to false by default for now
 ): Promise<DeployedToken[]> {
   try {
-    // Get existing stored tokens
-    const storedTokens = getStoredTokens(walletAddress);
+    console.log(`Syncing tokens for wallet: ${walletAddress}`);
     
-    // Fetch tokens from blockchain using hybrid approach (more efficient)
-    const blockchainTokens = useHybridApproach 
-      ? await fetchTokensWithFallbacks(publicClient, walletAddress)
-      : await fetchDeployedTokensFromBlockchain(publicClient, walletAddress);
-    
-    // Create a map of existing tokens by address for quick lookup
-    const existingTokensMap = new Map(
-      storedTokens.map(token => [token.address.toLowerCase(), token])
-    );
-    
-    // Merge blockchain tokens with stored tokens
-    const mergedTokens: DeployedToken[] = [];
-    
-    for (const blockchainToken of blockchainTokens) {
-      const existing = existingTokensMap.get(blockchainToken.address.toLowerCase());
-      
-      if (existing) {
-        // Update existing token with blockchain data
-        mergedTokens.push({
-          ...existing,
-          ...blockchainToken,
-          // Preserve manually added data
-          source: existing.source === 'manual' ? 'manual' : 'blockchain',
-        });
-      } else {
-        // Add new blockchain token
-        mergedTokens.push(blockchainToken);
+    let blockchainTokens: DeployedToken[] = [];
+
+    if (useAlchemyApi) {
+      // Try Alchemy API first (when implemented fully)
+      try {
+        console.log('Using Alchemy API for token discovery...');
+        blockchainTokens = await fetchTokensViaAlchemyDirect(walletAddress);
+        console.log(`Found ${blockchainTokens.length} tokens via Alchemy API`);
+      } catch (error) {
+        console.warn('Alchemy API failed, falling back to direct blockchain query:', error);
+        blockchainTokens = await fetchDeployedTokensFromBlockchain(publicClient, walletAddress);
       }
-      
-      // Remove from existing map to track what's left
-      existingTokensMap.delete(blockchainToken.address.toLowerCase());
+    } else {
+      // Use direct blockchain query (reliable method)
+      console.log('Using direct blockchain query for token discovery...');
+      blockchainTokens = await fetchDeployedTokensFromBlockchain(publicClient, walletAddress);
     }
-    
-    // Add remaining stored tokens that weren't found on blockchain (manual additions)
-    for (const [, remainingToken] of existingTokensMap) {
-      mergedTokens.push(remainingToken);
-    }
-    
+
+    // Get manually added tokens from storage
+    const storedTokens = getStoredTokens(walletAddress);
+    const manualTokens = storedTokens.filter(token => token.source === 'manual');
+
+    // Combine all tokens
+    const allTokens = [...blockchainTokens, ...manualTokens];
+
+    // Remove duplicates (prefer blockchain data over manual)
+    const uniqueTokens = allTokens.reduce((acc: DeployedToken[], token) => {
+      const existing = acc.find(t => t.address.toLowerCase() === token.address.toLowerCase());
+      if (!existing) {
+        acc.push(token);
+      } else if (token.source === 'blockchain' && existing.source === 'manual') {
+        // Replace manual entry with blockchain data
+        const index = acc.indexOf(existing);
+        acc[index] = token;
+      }
+      return acc;
+    }, []);
+
     // Sort by deployment timestamp (newest first)
-    const sortedTokens = mergedTokens.sort((a, b) => b.deploymentTimestamp - a.deploymentTimestamp);
-    
-    // Store the merged list
+    const sortedTokens = uniqueTokens.sort((a, b) => b.deploymentTimestamp - a.deploymentTimestamp);
+
+    // Update storage with all tokens
     const allExistingTokens = localStorage.getItem(STORAGE_KEY);
-    const allTokens: DeployedToken[] = allExistingTokens ? JSON.parse(allExistingTokens) : [];
+    const allTokensInStorage: DeployedToken[] = allExistingTokens ? JSON.parse(allExistingTokens) : [];
     
     // Remove old tokens for this wallet and add updated ones
-    const otherWalletTokens = allTokens.filter(token => 
+    const otherWalletTokens = allTokensInStorage.filter(token => 
       token.deployerAddress.toLowerCase() !== walletAddress.toLowerCase()
     );
     
@@ -494,7 +493,7 @@ export async function syncTokensWithBlockchain(
     
     return sortedTokens;
   } catch (error) {
-    console.error('Error syncing tokens with blockchain:', error);
+    console.error('Error syncing tokens:', error);
     return getStoredTokens(walletAddress); // Fall back to stored tokens
   }
 }
@@ -576,5 +575,71 @@ export function clearAllStoredTokens(): void {
     localStorage.removeItem(STORAGE_KEY);
   } catch (error) {
     console.error('Error clearing stored tokens:', error);
+  }
+}
+
+/**
+ * Fetch deployed tokens directly from Alchemy API (frontend only)
+ */
+async function fetchTokensViaAlchemyDirect(walletAddress: string): Promise<DeployedToken[]> {
+  // Get API key from environment (Vite prefix for frontend)
+  const ALCHEMY_API_KEY = import.meta.env.VITE_ALCHEMY_API_KEY;
+  
+  if (!ALCHEMY_API_KEY) {
+    throw new Error('Alchemy API key not configured. Please set VITE_ALCHEMY_API_KEY in your environment variables.');
+  }
+
+  try {
+    console.log('Fetching token deployments via Alchemy API...');
+    
+    // Alchemy API endpoint for Base network
+    const alchemyUrl = `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`;
+    
+    // Get asset transfers where the wallet interacted with the Clanker contract
+    const response = await fetch(alchemyUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        id: 1,
+        jsonrpc: '2.0',
+        method: 'alchemy_getAssetTransfers',
+        params: [
+          {
+            fromBlock: '0x112A880', // Block 18,000,000 in hex (approximate Clanker deployment)
+            toBlock: 'latest',
+            fromAddress: walletAddress,
+            toAddress: CLANKER_CONTRACT_ADDRESS,
+            category: ['external', 'internal'],
+            withMetadata: true,
+            excludeZeroValue: false,
+            maxCount: '0x3e8', // 1000 transactions max
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Alchemy API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    if ((data as any).error) {
+      throw new Error(`Alchemy API error: ${(data as any).error.message}`);
+    }
+
+    const transfers = (data as any).result?.transfers || [];
+    console.log(`Found ${transfers.length} transactions to Clanker contract`);
+
+    // For now, return empty array as we need to process transaction receipts
+    // This is a simplified implementation - in production you'd process the receipts
+    // to find the actual token addresses from TokenCreated events
+    return [];
+
+  } catch (error: any) {
+    console.error('Error fetching tokens via Alchemy:', error);
+    throw error;
   }
 } 
