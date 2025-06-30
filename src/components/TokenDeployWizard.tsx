@@ -1,13 +1,12 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { usePublicClient, useWalletClient } from 'wagmi';
-import { TokenConfigV4Builder, WETH_ADDRESS, Clanker, POOL_POSITIONS, FEE_CONFIGS, type FeeConfigs } from 'clanker-sdk';
-import { formatUnits } from 'viem';
-import { getAvailableFees } from '../../lib/fees.js';
 
 // Step Components
 import { TokenBasicsStep } from './steps/TokenBasicsStep';
 import { LiquiditySetupStep } from './steps/LiquiditySetupStep';
-// Note: ExtensionsStep, AdvancedConfigStep, and DeploymentStep components are not yet implemented
+import { ExtensionsStep } from './steps/ExtensionsStep';
+import { AdvancedConfigStep } from './steps/AdvancedConfigStep';
+import { DeploymentStep } from './steps/DeploymentStep';
 
 // Types
 export interface TokenConfig {
@@ -89,53 +88,7 @@ export interface TokenConfig {
   };
 }
 
-// Generic ERC20 ABI for fetching decimals and symbol
-const ERC20_ABI = [
-  {
-    inputs: [],
-    name: 'decimals',
-    outputs: [{ internalType: 'uint8', name: '', type: 'uint8' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'symbol',
-    outputs: [{ internalType: 'string', name: '', type: 'string' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-];
 
-async function getTokenDecimals(publicClient: ReturnType<typeof usePublicClient> | undefined, tokenAddress: `0x${string}`) {
-  if (!publicClient) return 18; // Default if publicClient is not available
-  try {
-    const decimals = await publicClient.readContract({
-      address: tokenAddress,
-      abi: ERC20_ABI,
-      functionName: 'decimals',
-    });
-    return decimals;
-  } catch (error: any) {
-    console.warn(`Could not fetch decimals for ${tokenAddress}, assuming 18. Error:`, error);
-    return 18; // Default to 18 if decimals cannot be fetched
-  }
-}
-
-async function getTokenSymbol(publicClient: ReturnType<typeof usePublicClient> | undefined, tokenAddress: `0x${string}`) {
-  if (!publicClient) return 'UNKNOWN'; // Default if publicClient is not available
-  try {
-    const symbol = await publicClient.readContract({
-      address: tokenAddress,
-      abi: ERC20_ABI,
-      functionName: 'symbol',
-    });
-    return symbol;
-  } catch (error: any) {
-    console.warn(`Could not fetch symbol for ${tokenAddress}, assuming 'UNKNOWN'. Error:`, error);
-    return 'UNKNOWN';
-  }
-}
 
 // AMM calculation function using constant product formula (x * y = k)
 function calculateDevBuyTokens(
@@ -231,8 +184,6 @@ export function TokenDeployWizard({
 
   // ========== UI STATE ==========
   const [currentStep, setCurrentStep] = useState(0);
-  const [deployedTokenAddress, setDeployedTokenAddress] = useState('');
-  const [simulationResult, setSimulationResult] = useState<any>(null);
   
   // Configuration state using TokenConfig interface
   const [config, setConfig] = useState<TokenConfig>({
@@ -310,9 +261,7 @@ export function TokenDeployWizard({
     }
   });
 
-  // Fee checking state
-  const [customClankerTokenAddress, setCustomClankerTokenAddress] = useState('0x699E27a42095D3cb9A6a23097E5C201E33E314B4');
-  const [customFeeOwnerAddress, setCustomFeeOwnerAddress] = useState('0xCd2a99C6d6b27976537fC3737b0ef243E7C49946');
+
 
   // Update config when address changes
   useEffect(() => {
@@ -337,9 +286,10 @@ export function TokenDeployWizard({
       case 1: // Liquidity
         return !!(config.startingMarketCap && config.startingMarketCap > 0);
       case 2: // Extensions
-        return true; // Optional step
-      case 3: // Advanced
-        return true; // Optional step
+        return true; // Extensions are optional
+      case 3: // Advanced Config
+        const totalBps = config.rewardRecipients.reduce((sum, r) => sum + r.bps, 0);
+        return totalBps === 10000; // Must equal 100%
       case 4: // Deploy
         return isStepValid(0) && isStepValid(1);
       default:
@@ -359,103 +309,7 @@ export function TokenDeployWizard({
     }
   };
 
-  const handleSimulateToken = async () => {
-    if (!publicClient || !walletClient) {
-      alert('Wallet not connected properly');
-      return;
-    }
 
-    try {
-      const builder = new TokenConfigV4Builder()
-        .withName(config.name)
-        .withSymbol(config.symbol)
-// Note: withChainId is not available in current SDK version
-        // .withChainId(84532) // Base chain ID
-        .withTokenAdmin(config.admin as `0x${string}`)
-        .withStaticFeeConfig({
-          clankerFeeBps: config.fees.static.clankerFeeBps,
-          pairedFeeBps: config.fees.static.pairedFeeBps,
-        })
-        .withPoolConfig({
-          pairedToken: config.pairTokenType === 'WETH' ? WETH_ADDRESS : config.customPairTokenAddress as `0x${string}`,
-          positions: POOL_POSITIONS.Standard,
-        })
-        .withRewardsRecipients({
-          recipients: config.rewardRecipients.map(r => ({
-            admin: r.admin as `0x${string}`,
-            recipient: r.recipient as `0x${string}`,
-            bps: r.bps,
-          })),
-        });
-
-      if (config.devBuy.enabled) {
-        builder.withDevBuy({
-          ethAmount: config.devBuy.ethAmount,
-        });
-      }
-
-      const tokenConfig = builder.build();
-      const clanker = new Clanker({ publicClient });
-
-      const result = await clanker.simulateDeployToken(tokenConfig, walletClient.account);
-
-             if ('error' in result) {
-         throw new Error(String(result.error));
-       }
-
-      setSimulationResult(result);
-      alert(`Simulation successful! Estimated token address: ${result.simulatedAddress}`);
-    } catch (error: any) {
-      console.error('Simulation failed:', error);
-      alert(`Simulation failed: ${error.message}`);
-    }
-  };
-
-  const handleConfirmDeploy = async () => {
-    if (!simulationResult || !walletClient) {
-      alert('Please simulate deployment first');
-      return;
-    }
-
-    try {
-      const hash = await walletClient.sendTransaction({
-        to: simulationResult.transaction.to,
-        value: simulationResult.transaction.value,
-        data: simulationResult.transaction.data,
-        account: walletClient.account,
-      });
-
-      setDeployedTokenAddress(simulationResult.simulatedAddress);
-      alert(`Token deployed! Transaction hash: ${hash}`);
-    } catch (error: any) {
-      console.error('Deployment failed:', error);
-      alert(`Deployment failed: ${error.message}`);
-    }
-  };
-
-  const handleCheckFees = async () => {
-    if (!publicClient) {
-      alert('Wallet not connected');
-      return;
-    }
-
-    try {
-      const fees = await getAvailableFees(
-        publicClient,
-        customFeeOwnerAddress as `0x${string}`,
-        customClankerTokenAddress as `0x${string}`
-      );
-
-      const feesList = Object.entries(fees)
-        .map(([symbol, amount]) => `${symbol}: ${amount}`)
-        .join('\n');
-      
-      alert(`Available fees:\n${feesList}`);
-    } catch (error: any) {
-      console.error('Error checking fees:', error);
-      alert(`Error checking fees: ${error.message}`);
-    }
-  };
 
   const renderCurrentStep = () => {
     switch (currentStep) {
@@ -476,9 +330,31 @@ export function TokenDeployWizard({
             onPrevious={prevStep}
           />
         );
-             case 2:
-       case 3:
-       case 4:
+      case 2:
+        return (
+          <ExtensionsStep
+            config={config}
+            updateConfig={updateConfig}
+            onNext={nextStep}
+            onPrevious={prevStep}
+          />
+        );
+      case 3:
+        return (
+          <AdvancedConfigStep
+            config={config}
+            updateConfig={updateConfig}
+            onNext={nextStep}
+            onPrevious={prevStep}
+          />
+        );
+      case 4:
+        return (
+          <DeploymentStep
+            config={config}
+            onPrevious={prevStep}
+          />
+        );
       default:
         return <div>Step not implemented yet</div>;
     }
@@ -540,66 +416,6 @@ export function TokenDeployWizard({
 
       {/* Current Step Content */}
       {renderCurrentStep()}
-
-      {/* Fee Checking Section */}
-      {currentStep === WIZARD_STEPS.length - 1 && (
-        <div className="card">
-          <h3 className="text-lg font-bold text-primary mb-md">Check Fees</h3>
-          <div className="grid grid-2 gap-md mb-md">
-            <input
-              type="text"
-              value={customFeeOwnerAddress}
-              onChange={(e) => setCustomFeeOwnerAddress(e.target.value)}
-              placeholder="Fee Owner Address"
-              className="input"
-            />
-            <input
-              type="text"
-              value={customClankerTokenAddress}
-              onChange={(e) => setCustomClankerTokenAddress(e.target.value)}
-              placeholder="Clanker Token Address"
-              className="input"
-            />
-          </div>
-          <button onClick={handleCheckFees} className="btn btn-secondary">
-            Check Available Fees
-          </button>
-        </div>
-      )}
-
-      {/* Deployment Actions */}
-      {currentStep === WIZARD_STEPS.length - 1 && (
-        <div className="card">
-          <h3 className="text-lg font-bold text-primary mb-md">Deploy Token</h3>
-          <div className="flex space-x-md">
-            <button
-              onClick={handleSimulateToken}
-              className="btn btn-secondary"
-              disabled={!isStepValid(currentStep)}
-            >
-              Simulate Deployment
-            </button>
-            <button
-              onClick={handleConfirmDeploy}
-              className="btn btn-primary"
-              disabled={!simulationResult}
-            >
-              Confirm Deploy
-            </button>
-          </div>
-          
-          {deployedTokenAddress && (
-            <div className="card mt-md" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-              <p className="font-semibold" style={{ color: 'var(--color-success)' }}>
-                Token deployed successfully!
-              </p>
-              <p className="text-secondary text-sm" style={{ wordBreak: 'break-all' }}>
-                Address: {deployedTokenAddress}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
