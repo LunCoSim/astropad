@@ -10,24 +10,26 @@ export function InfoTooltip({ content, position = 'top', size = 'md' }: InfoTool
   const [isVisible, setIsVisible] = useState(false);
 
   const sizeClasses = {
-    sm: 'w-4 h-4 text-xs',
-    md: 'w-5 h-5 text-xs',
-    lg: 'w-6 h-6 text-sm'
+    sm: { width: '1rem', height: '1rem', fontSize: '0.75rem' },
+    md: { width: '1.25rem', height: '1.25rem', fontSize: '0.75rem' },
+    lg: { width: '1.5rem', height: '1.5rem', fontSize: '0.875rem' }
   };
 
   const tooltipPositionClasses = {
-    top: 'bottom-full left-1/2 transform -translate-x-1/2 mb-3',
-    bottom: 'top-full left-1/2 transform -translate-x-1/2 mt-3',
-    left: 'right-full top-1/2 transform -translate-y-1/2 mr-3',
-    right: 'left-full top-1/2 transform -translate-y-1/2 ml-3'
+    top: { bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: 'var(--spacing-sm)' },
+    bottom: { top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: 'var(--spacing-sm)' },
+    left: { right: '100%', top: '50%', transform: 'translateY(-50%)', marginRight: 'var(--spacing-sm)' },
+    right: { left: '100%', top: '50%', transform: 'translateY(-50%)', marginLeft: 'var(--spacing-sm)' }
   };
 
-  const arrowClasses = {
-    top: 'top-full left-1/2 transform -translate-x-1/2 border-l-4 border-r-4 border-t-4 border-transparent border-t-cosmos-800',
-    bottom: 'bottom-full left-1/2 transform -translate-x-1/2 border-l-4 border-r-4 border-b-4 border-transparent border-b-cosmos-800',
-    left: 'left-full top-1/2 transform -translate-y-1/2 border-t-4 border-b-4 border-l-4 border-transparent border-l-cosmos-800',
-    right: 'right-full top-1/2 transform -translate-y-1/2 border-t-4 border-b-4 border-r-4 border-transparent border-r-cosmos-800'
+  const arrowStyles = {
+    top: { top: '100%', left: '50%', transform: 'translateX(-50%)', borderLeft: '4px solid transparent', borderRight: '4px solid transparent', borderTop: '4px solid var(--bg-surface)', borderBottom: 'none' },
+    bottom: { bottom: '100%', left: '50%', transform: 'translateX(-50%)', borderLeft: '4px solid transparent', borderRight: '4px solid transparent', borderBottom: '4px solid var(--bg-surface)', borderTop: 'none' },
+    left: { left: '100%', top: '50%', transform: 'translateY(-50%)', borderTop: '4px solid transparent', borderBottom: '4px solid transparent', borderLeft: '4px solid var(--bg-surface)', borderRight: 'none' },
+    right: { right: '100%', top: '50%', transform: 'translateY(-50%)', borderTop: '4px solid transparent', borderBottom: '4px solid transparent', borderRight: '4px solid var(--bg-surface)', borderLeft: 'none' }
   };
+
+  const currentSize = sizeClasses[size];
 
   return (
     <div className="relative inline-block">
@@ -37,26 +39,29 @@ export function InfoTooltip({ content, position = 'top', size = 'md' }: InfoTool
         onMouseLeave={() => setIsVisible(false)}
         onFocus={() => setIsVisible(true)}
         onBlur={() => setIsVisible(false)}
-        className={`
-          ${sizeClasses[size]} 
-          bg-gradient-to-br from-primary-400 to-secondary-400 
-          hover:from-primary-500 hover:to-secondary-500
-          rounded-full 
-          flex items-center justify-center 
-          text-white font-bold 
-          transition-all duration-300 
-          transform hover:scale-110 
-          shadow-lg shadow-primary-500/25
-          hover:shadow-xl hover:shadow-primary-500/40
-          focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 focus:ring-offset-transparent
-          animate-pulse-slow
-          ml-2
-        `}
+        className="rounded-full flex items-center justify-center text-primary font-bold transition cursor-pointer"
+        style={{
+          width: currentSize.width,
+          height: currentSize.height,
+          fontSize: currentSize.fontSize,
+          background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))',
+          marginLeft: 'var(--spacing-sm)',
+          border: 'none',
+          boxShadow: 'var(--shadow-md)'
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.transform = 'scale(1.1)';
+          e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+        }}
         aria-label="More information"
         aria-describedby={isVisible ? 'tooltip-content' : undefined}
       >
         <svg 
-          className="w-3/4 h-3/4" 
+          style={{ width: '75%', height: '75%' }}
           fill="currentColor" 
           viewBox="0 0 20 20"
           aria-hidden="true"
@@ -73,27 +78,31 @@ export function InfoTooltip({ content, position = 'top', size = 'md' }: InfoTool
         <div 
           id="tooltip-content"
           role="tooltip"
-          className={`
-            absolute ${tooltipPositionClasses[position]}
-            px-4 py-3 
-            bg-cosmos-800/95 backdrop-blur-md
-            text-white text-sm 
-            rounded-xl 
-            shadow-2xl shadow-cosmos-900/50
-            z-50 
-            max-w-xs 
-            whitespace-normal 
-            border border-cosmos-600/30
-            animate-fade-in-up
-            transition-all duration-200 ease-out
-          `}
+          className="absolute z-50 animate-fade-in"
           style={{
-            animation: isVisible ? 'fadeInUp 0.2s ease-out' : 'fadeOut 0.2s ease-out'
+            ...tooltipPositionClasses[position],
+            maxWidth: '18rem',
+            padding: 'var(--spacing-md)',
+            background: 'var(--bg-surface)',
+            backdropFilter: 'blur(10px)',
+            color: 'var(--text-primary)',
+            fontSize: '0.875rem',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-xl)',
+            border: '1px solid var(--border-secondary)',
+            whiteSpace: 'normal'
           }}
         >
           <div className="relative">
             {content}
-            <div className={`absolute ${arrowClasses[position]} w-0 h-0`}></div>
+            <div 
+              className="absolute"
+              style={{
+                ...arrowStyles[position],
+                width: 0,
+                height: 0
+              }}
+            />
           </div>
         </div>
       )}

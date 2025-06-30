@@ -9,69 +9,71 @@ function App() {
   const { open } = useWeb3Modal();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-900 via-dark-800 to-primary-900">
+    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-tertiary) 100%)' }}>
       {/* Header */}
-      <header className="border-b border-white/10 backdrop-blur-sm bg-dark-900/80 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-lg">A</span>
-              </div>
-              <h1 className="text-2xl font-bold text-white">
-                astro<span className="text-gradient">pad</span>
-              </h1>
+      <header className="header">
+        <div className="header-content">
+          <div className="logo">
+            <div className="logo-icon">
+              A
             </div>
-            
-            <div className="flex items-center space-x-4">
-              {isConnected ? (
-                <div className="flex items-center space-x-4">
-                  <div className="text-sm">
-                    <div className="text-white/70">Connected</div>
-                    <div className="text-white font-mono text-xs">
-                      {address?.slice(0, 6)}...{address?.slice(-4)}
-                    </div>
+            <h1 className="logo-text">
+              astro<span className="text-gradient">pad</span>
+            </h1>
+          </div>
+          
+          <div className="flex items-center space-x-md">
+            {isConnected ? (
+              <div className="flex items-center space-x-md">
+                <div className="text-sm">
+                  <div className="text-muted">Connected</div>
+                  <div className="text-primary font-mono text-xs">
+                    {address?.slice(0, 6)}...{address?.slice(-4)}
                   </div>
-                  <button
-                    onClick={() => disconnect()}
-                    className="btn btn-secondary"
-                  >
-                    Disconnect
-                  </button>
                 </div>
-              ) : (
                 <button
-                  onClick={() => open()}
-                  className="btn btn-primary"
+                  onClick={() => disconnect()}
+                  className="btn btn-secondary"
                 >
-                  Connect Wallet
+                  Disconnect
                 </button>
-              )}
-            </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => open()}
+                className="btn btn-primary"
+              >
+                Connect Wallet
+              </button>
+            )}
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="container" style={{ paddingTop: 'var(--spacing-2xl)', paddingBottom: 'var(--spacing-2xl)' }}>
         {isConnected ? (
           <TokenDeployWizard 
             connected={isConnected}
             address={address}
           />
         ) : (
-          <div className="text-center py-20">
-            <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-3xl mx-auto mb-8 flex items-center justify-center">
-              <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
-              </svg>
+          <div className="text-center space-y-xl">
+            <div className="animate-float mx-auto" style={{ width: '5rem', height: '5rem', background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))', borderRadius: 'var(--radius-2xl)' }}>
+              <div className="flex items-center justify-center w-full h-full">
+                <svg className="text-primary" style={{ width: '2.5rem', height: '2.5rem' }} fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
+                </svg>
+              </div>
             </div>
-            <h2 className="text-3xl font-bold text-white mb-4">
-              Welcome to <span className="text-gradient">AstroPad</span>
-            </h2>
-            <p className="text-lg text-white/70 mb-8 max-w-2xl mx-auto">
-              Deploy and manage Clanker tokens with ease. Connect your wallet to get started with token deployment, liquidity setup, and fee management.
-            </p>
+            <div className="space-y-md">
+              <h2 className="text-4xl font-bold text-primary mb-md">
+                Welcome to <span className="text-gradient">AstroPad</span>
+              </h2>
+              <p className="text-lg text-secondary mx-auto" style={{ maxWidth: '32rem' }}>
+                Deploy and manage Clanker tokens with ease. Connect your wallet to get started with token deployment, liquidity setup, and fee management.
+              </p>
+            </div>
             <button
               onClick={() => open()}
               className="btn btn-primary btn-lg"
