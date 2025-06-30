@@ -2,105 +2,343 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+/* Custom utility classes to replace opacity-based classes not supported in Tailwind v4 */
+.bg-white-5 { background-color: rgba(255, 255, 255, 0.05); }
+.bg-white-10 { background-color: rgba(255, 255, 255, 0.1); }
+.bg-white-20 { background-color: rgba(255, 255, 255, 0.2); }
+.bg-white-30 { background-color: rgba(255, 255, 255, 0.3); }
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+.text-white-40 { color: rgba(255, 255, 255, 0.4); }
+.text-white-50 { color: rgba(255, 255, 255, 0.5); }
+.text-white-60 { color: rgba(255, 255, 255, 0.6); }
+.text-white-70 { color: rgba(255, 255, 255, 0.7); }
+.text-white-80 { color: rgba(255, 255, 255, 0.8); }
+.text-white-90 { color: rgba(255, 255, 255, 0.9); }
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
+.border-white-10 { border-color: rgba(255, 255, 255, 0.1); }
+.border-white-20 { border-color: rgba(255, 255, 255, 0.2); }
+.border-white-30 { border-color: rgba(255, 255, 255, 0.3); }
+
+.placeholder-white-50::placeholder { color: rgba(255, 255, 255, 0.5); }
+
+.hover\:bg-white-10:hover { background-color: rgba(255, 255, 255, 0.1); }
+.hover\:bg-white-20:hover { background-color: rgba(255, 255, 255, 0.2); }
+.hover\:bg-white-30:hover { background-color: rgba(255, 255, 255, 0.3); }
+
+.hover\:border-white-30:hover { border-color: rgba(255, 255, 255, 0.3); }
+
+.group-hover\:bg-white-20:hover { background-color: rgba(255, 255, 255, 0.2); }
+
+/* Component-specific styles that extend the Tailwind design system */
+
+/* Enhanced card styles for nested components */
+.card-nested {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
+/* Specialized input styles for forms */
+.input-group {
   display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+.input-label {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+.input-required::after {
+  content: "*";
+  color: #f87171;
+  margin-left: 0.25rem;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+/* Enhanced animation classes */
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
   }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
+  50% {
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.8), 0 0 60px rgba(59, 130, 246, 0.4);
   }
 }
 
-/* Clean, minimal enhancements */
-.transition-all {
-  transition: all 0.2s ease-in-out;
-}
-
-/* Better focus states for accessibility */
-.focus-ring:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  border-color: #3b82f6;
-}
-
-/* Clean card hover effects */
-.card-hover:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-/* Simple loading spinner */
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid #f3f4f6;
-  border-top-color: #3b82f6;
+/* Status indicator styles */
+.status-online {
+  width: 0.75rem;
+  height: 0.75rem;
+  background-color: #4ade80;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.status-processing {
+  width: 0.75rem;
+  height: 0.75rem;
+  background-color: #fbbf24;
+  border-radius: 50%;
+  animation: spin 3s linear infinite;
+}
+
+.status-error {
+  width: 0.75rem;
+  height: 0.75rem;
+  background-color: #f87171;
+  border-radius: 50%;
+  animation: wiggle 1s ease-in-out infinite;
+}
+
+/* Progress bar enhancements */
+.progress-bar {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(to right, #60a5fa, #22d3ee);
+  border-radius: 9999px;
+  transition: all 0.7s ease-out;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: shimmer 2s linear infinite;
+}
+
+/* Interactive element enhancements */
+.interactive-hover {
+  transition: all 0.2s ease-out;
+}
+
+.interactive-hover:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.interactive-press:active {
+  transform: scale(0.95);
+  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Typography enhancements */
+.heading-gradient {
+  background: linear-gradient(to right, #ffffff, #dbeafe, #cffafe);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-mono-small {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Layout utilities */
+.center-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.grid-auto-fit {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+/* Responsive spacing utilities */
+.space-section > * + * {
+  margin-top: 3rem;
+}
+
+@media (min-width: 1024px) {
+  .space-section > * + * {
+    margin-top: 4rem;
+  }
+}
+
+.space-card > * + * {
+  margin-top: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .space-card > * + * {
+    margin-top: 2rem;
+  }
+}
+
+/* Custom scrollbar for specific containers */
+.scrollbar-custom {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.5) transparent;
+}
+
+.scrollbar-custom::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-custom::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.5);
+  border-radius: 3px;
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.7);
+}
+
+/* Error and success states */
+.state-error {
+  border-color: rgba(239, 68, 68, 0.5);
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #fecaca;
+}
+
+.state-success {
+  border-color: rgba(34, 197, 94, 0.5);
+  background-color: rgba(34, 197, 94, 0.1);
+  color: #bbf7d0;
+}
+
+.state-warning {
+  border-color: rgba(245, 158, 11, 0.5);
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #fde68a;
+}
+
+/* Loading states */
+.loading-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.loading-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: shimmer 2s linear infinite;
+}
+
+/* Form validation states */
+.input-valid {
+  border-color: rgba(34, 197, 94, 0.5);
+}
+
+.input-valid:focus {
+  border-color: #22c55e;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+}
+
+.input-invalid {
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.input-invalid:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+}
+
+/* Enhanced backdrop effects */
+.backdrop-strong {
+  backdrop-filter: blur(20px) saturate(180%) contrast(120%);
+}
+
+.backdrop-subtle {
+  backdrop-filter: blur(10px) saturate(150%);
+}
+
+/* Print styles override */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+}
+
+/* Simple, clean styling additions */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.input-field {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.input-field::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  color: white;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+}
+
+.card-glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+}
+
+.text-muted {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.text-subtle {
+  color: rgba(255, 255, 255, 0.5);
 }
