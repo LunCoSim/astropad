@@ -1,4 +1,4 @@
-import type { DeployedToken } from '../lib/deployed-tokens.js';
+import type { DeployedToken } from '../lib/deployed-tokens';
 
 interface AlchemyAssetTransfer {
   from: string;
@@ -18,18 +18,19 @@ interface AlchemyResponse {
   pageKey?: string;
 }
 
-// Clanker contract address on Base
-const CLANKER_CONTRACT_ADDRESS = '0x375C15db32D28cEcdcAB5C03Ab889bf15cbD2c5E';
+// Clanker contract address on Base (v4.0.0 - current)
+const CLANKER_CONTRACT_ADDRESS = '0xE85A59c628F7d27878ACeB4bf3b35733630083a9';
 
 /**
  * Fetch deployed tokens using Alchemy API
- * Works in both local development and Netlify Functions
+ * Centralized implementation for both API and Netlify Functions
  */
 export async function fetchDeployedTokensViaAlchemy(walletAddress: string): Promise<DeployedToken[]> {
   const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY || process.env.VITE_ALCHEMY_API_KEY;
   
   if (!ALCHEMY_API_KEY) {
-    throw new Error('Alchemy API key not configured. Please set ALCHEMY_API_KEY in your environment variables.');
+    console.warn('Alchemy API key not configured. Returning empty results.');
+    return [];
   }
 
   try {
@@ -38,7 +39,7 @@ export async function fetchDeployedTokensViaAlchemy(walletAddress: string): Prom
     // Alchemy API endpoint for Base network
     const alchemyUrl = `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`;
     
-    // Get asset transfers where the wallet interacted with the Clanker contract
+    // Get asset transfers where the wallet interacted with the current Clanker contract (v4)
     const response = await fetch(alchemyUrl, {
       method: 'POST',
       headers: {
@@ -50,11 +51,11 @@ export async function fetchDeployedTokensViaAlchemy(walletAddress: string): Prom
         method: 'alchemy_getAssetTransfers',
         params: [
           {
-            fromBlock: '0x112A880', // Block 18,000,000 in hex (approximate Clanker deployment)
+            fromBlock: '0x0', // Start from genesis to catch all transactions
             toBlock: 'latest',
             fromAddress: walletAddress,
             toAddress: CLANKER_CONTRACT_ADDRESS,
-            category: ['external', 'internal'],
+            category: ['external'],
             withMetadata: true,
             excludeZeroValue: false,
             maxCount: '0x3e8', // 1000 transactions max
@@ -74,7 +75,7 @@ export async function fetchDeployedTokensViaAlchemy(walletAddress: string): Prom
     }
 
     const transfers = (data as any).result?.transfers || [];
-    console.log(`Found ${transfers.length} transactions to Clanker contract`);
+    console.log(`Found ${transfers.length} transactions to Clanker contract (v4)`);
 
     // For each transaction, we need to get the token that was created
     // We'll fetch transaction receipts to find TokenCreated events
@@ -109,7 +110,8 @@ export async function fetchDeployedTokensViaAlchemy(walletAddress: string): Prom
 
   } catch (error: any) {
     console.error('Error fetching tokens via Alchemy:', error);
-    throw new Error(`Failed to fetch tokens via Alchemy: ${error.message}`);
+    // Return empty array instead of throwing to allow graceful fallbacks
+    return [];
   }
 }
 
@@ -147,7 +149,7 @@ async function getTokenFromTransaction(
       return null;
     }
 
-    // Find logs that match TokenCreated event from Clanker contract
+    // Find logs that match TokenCreated event from Clanker contract (v4)
     // We look for logs from the Clanker contract with multiple topics (indicating indexed parameters)
     const tokenCreatedLogs = receipt.logs.filter((log: any) => 
       log.address.toLowerCase() === CLANKER_CONTRACT_ADDRESS.toLowerCase() &&

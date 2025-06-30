@@ -2,8 +2,10 @@
  * Validation utilities for token configuration steps
  */
 
-import { VALIDATION_LIMITS } from './constants';
-import type { RewardRecipient } from './array-utils';
+import type { PublicClient } from 'viem';
+import { parseUnits, formatUnits } from 'viem';
+import { VALIDATION_LIMITS } from './constants.js';
+import type { RewardRecipient } from './array-utils.js';
 
 export interface TokenConfig {
   name: string;

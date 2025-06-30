@@ -1,19 +1,35 @@
+import 'dotenv/config';
 import express from 'express';
-import { type Request, type Response } from 'express';
 import { createPublicClient, http, type PublicClient } from 'viem';
 import { base } from 'viem/chains';
-import { getAvailableFees } from '../lib/fees.js';
-
+import { getAvailableFees } from '../lib/fees';
+import { fetchDeployedTokensViaAlchemy } from './alchemy-tokens';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Import the indexed tokens handler
-import indexedTokensHandler from './indexed-tokens.js';
+// Middleware
+app.use(express.json());
 
-app.get('/api/indexed-tokens', indexedTokensHandler);
+// CORS middleware for development
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 
-app.get('/api/check-fees', async (req: any, res: any) => {
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Fee checking endpoint
+app.get('/api/check-fees', async (req, res) => {
   const publicClient = createPublicClient({
     chain: base,
     transport: http(),
@@ -38,8 +54,8 @@ app.get('/api/check-fees', async (req: any, res: any) => {
   }
 });
 
-// Alchemy tokens endpoint
-app.get('/api/alchemy-tokens', async (req: any, res: any) => {
+// Alchemy tokens endpoint (consolidated functionality)
+app.get('/api/alchemy-tokens', async (req, res) => {
   try {
     const { wallet } = req.query;
 
@@ -48,18 +64,21 @@ app.get('/api/alchemy-tokens', async (req: any, res: any) => {
     }
 
     // Validate wallet address format
-    if (!/^0x[a-fA-F0-9]{40}$/.test(wallet)) {
+    if (!/^0x[a-fA-F0-9]{40}$/.test(wallet as string)) {
       return res.status(400).json({ error: 'Invalid wallet address format' });
     }
 
-    // For now, return an empty array since we'll implement this via frontend API call
-    // The frontend will call Alchemy directly with environment variables
+    console.log(`Fetching tokens for wallet: ${wallet}`);
+    
+    const tokens = await fetchDeployedTokensViaAlchemy(wallet as string);
+
     res.status(200).json({
       success: true,
-      tokens: [],
-      count: 0,
+      tokens,
+      count: tokens.length,
       wallet,
-      message: 'Using frontend Alchemy integration'
+      source: 'alchemy',
+      query_time: new Date().toISOString(),
     });
 
   } catch (error: any) {

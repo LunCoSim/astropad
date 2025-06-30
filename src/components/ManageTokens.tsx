@@ -44,9 +44,9 @@ export function ManageTokens() {
     setTokensError('');
     
     try {
-      // Use blockchain query by default (reliable method)
-      console.log('Loading deployed tokens via blockchain query...');
-      const tokens = await syncTokensWithBlockchain(publicClient, address, false);
+      // Use Alchemy API by default for faster loading
+      console.log('Loading deployed tokens via Alchemy API...');
+      const tokens = await syncTokensWithBlockchain(publicClient, address, true);
       
       setDeployedTokens(tokens);
       

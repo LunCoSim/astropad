@@ -6,9 +6,9 @@
   "description": "",
   "scripts": {
     "start-vite": "vite",
-    "start-api": "node --loader ts-node/esm api/index.ts",
+    "start-api": "tsx api/index.ts",
     "dev": "concurrently \"pnpm start-vite\" \"pnpm start-api\"",
-    "cli:check-fees": "ts-node cli/check-fees.ts",
+    "cli:check-fees": "tsx cli/check-fees.ts",
     "build": "vite build && tsc -p tsconfig.api.json",
     "start": "node dist-api/api/index.js",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
@@ -25,9 +25,11 @@
     "@types/express": "^5.0.3",
     "clanker-sdk": "^4.0.22",
     "concurrently": "^9.2.0",
+    "dotenv": "^17.0.0",
     "express": "^5.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "tsx": "^4.20.3",
     "viem": "^2.17.3",
     "wagmi": "^2.15.6"
   },

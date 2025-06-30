@@ -363,7 +363,7 @@ export async function fetchTokensViaIndexedAPI(
       throw new Error(`API response: ${response.status}`);
     }
     
-    const data = await response.json();
+    const data: any = await response.json();
     
     // Transform API response to our format
     return data.tokens?.map((token: any) => ({
@@ -433,7 +433,7 @@ export async function fetchTokensWithFallbacks(
 export async function syncTokensWithBlockchain(
   publicClient: PublicClient,
   walletAddress: string,
-  useAlchemyApi: boolean = false // Set to false by default for now
+  useAlchemyApi: boolean = true // Enable Alchemy API by default
 ): Promise<DeployedToken[]> {
   try {
     console.log(`Syncing tokens for wallet: ${walletAddress}`);
@@ -441,10 +441,10 @@ export async function syncTokensWithBlockchain(
     let blockchainTokens: DeployedToken[] = [];
 
     if (useAlchemyApi) {
-      // Try Alchemy API first (when implemented fully)
+      // Try Alchemy API first via backend/Netlify function
       try {
         console.log('Using Alchemy API for token discovery...');
-        blockchainTokens = await fetchTokensViaAlchemyDirect(walletAddress);
+        blockchainTokens = await fetchTokensViaAlchemyAPI(walletAddress);
         console.log(`Found ${blockchainTokens.length} tokens via Alchemy API`);
       } catch (error) {
         console.warn('Alchemy API failed, falling back to direct blockchain query:', error);
@@ -495,6 +495,36 @@ export async function syncTokensWithBlockchain(
   } catch (error) {
     console.error('Error syncing tokens:', error);
     return getStoredTokens(walletAddress); // Fall back to stored tokens
+  }
+}
+
+/**
+ * Fetch deployed tokens via API endpoint (works in both local dev and production)
+ */
+export async function fetchTokensViaAlchemyAPI(walletAddress: string): Promise<DeployedToken[]> {
+  try {
+    console.log('Fetching tokens via API endpoint...');
+    
+    // Use the appropriate API endpoint based on environment
+    const apiUrl = `/api/alchemy-tokens?wallet=${encodeURIComponent(walletAddress)}`;
+    
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} ${response.statusText}`);
+    }
+    
+    const data: any = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'API request failed');
+    }
+    
+    return data.tokens || [];
+    
+  } catch (error: any) {
+    console.error('Error fetching tokens via API:', error);
+    return []; // Return empty array instead of throwing to allow graceful fallbacks
   }
 }
 
@@ -578,68 +608,8 @@ export function clearAllStoredTokens(): void {
   }
 }
 
-/**
- * Fetch deployed tokens directly from Alchemy API (frontend only)
- */
-async function fetchTokensViaAlchemyDirect(walletAddress: string): Promise<DeployedToken[]> {
-  // Get API key from environment (Vite prefix for frontend)
-  const ALCHEMY_API_KEY = import.meta.env.VITE_ALCHEMY_API_KEY;
-  
-  if (!ALCHEMY_API_KEY) {
-    throw new Error('Alchemy API key not configured. Please set VITE_ALCHEMY_API_KEY in your environment variables.');
-  }
 
-  try {
-    console.log('Fetching token deployments via Alchemy API...');
-    
-    // Alchemy API endpoint for Base network
-    const alchemyUrl = `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`;
-    
-    // Get asset transfers where the wallet interacted with the Clanker contract
-    const response = await fetch(alchemyUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        id: 1,
-        jsonrpc: '2.0',
-        method: 'alchemy_getAssetTransfers',
-        params: [
-          {
-            fromBlock: '0x112A880', // Block 18,000,000 in hex (approximate Clanker deployment)
-            toBlock: 'latest',
-            fromAddress: walletAddress,
-            toAddress: CLANKER_CONTRACT_ADDRESS,
-            category: ['external', 'internal'],
-            withMetadata: true,
-            excludeZeroValue: false,
-            maxCount: '0x3e8', // 1000 transactions max
-          },
-        ],
-      }),
-    });
 
-    if (!response.ok) {
-      throw new Error(`Alchemy API error: ${response.status} ${response.statusText}`);
-    }
 
-    const data = await response.json();
-    
-    if ((data as any).error) {
-      throw new Error(`Alchemy API error: ${(data as any).error.message}`);
-    }
 
-    const transfers = (data as any).result?.transfers || [];
-    console.log(`Found ${transfers.length} transactions to Clanker contract`);
-
-    // For now, return empty array as we need to process transaction receipts
-    // This is a simplified implementation - in production you'd process the receipts
-    // to find the actual token addresses from TokenCreated events
-    return [];
-
-  } catch (error: any) {
-    console.error('Error fetching tokens via Alchemy:', error);
-    throw error;
-  }
-} 
+ 
