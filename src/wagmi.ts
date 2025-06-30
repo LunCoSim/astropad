@@ -1,7 +1,7 @@
-import { createWeb3Modal } from '@web3modal/wagmi/react';
-import { createConfig } from 'wagmi';
-import { base } from 'wagmi/chains';
-import { http } from 'viem';
+import { createAppKit } from '@reown/appkit/react';
+import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
+import { base } from '@reown/appkit/networks';
+import { cookieStorage, createStorage } from 'wagmi';
 
 export const projectId = '03cafb3be79ba7760436a3741199a564';
 
@@ -12,17 +12,33 @@ const metadata = {
   icons: ['https://avatars.githubusercontent.com/u/37784886'],
 };
 
-const chains = [base] as const;
-export const config = createConfig({
-  chains,
-  transports: {
-    [base.id]: http(),
-  },
+const networks = [base];
+
+// Create the Wagmi adapter
+const wagmiAdapter = new WagmiAdapter({
+  storage: createStorage({
+    storage: cookieStorage
+  }),
+  ssr: true,
+  networks,
+  projectId,
+  metadata
 });
 
-createWeb3Modal({
-  wagmiConfig: config,
+// Create AppKit modal
+createAppKit({
+  adapters: [wagmiAdapter],
   projectId,
-  enableAnalytics: true,
+  networks,
   metadata,
+  features: {
+    analytics: true,
+    email: true,
+    socials: ['google', 'github', 'discord', 'x', 'apple'],
+    onramp: true,
+    swaps: true
+  },
+  themeMode: 'light'
 });
+
+export const config = wagmiAdapter.wagmiConfig;

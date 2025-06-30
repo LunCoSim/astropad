@@ -1,5 +1,5 @@
 import { useAccount, useDisconnect } from 'wagmi';
-import { useWeb3Modal } from '@web3modal/wagmi/react';
+import { useAppKit } from '@reown/appkit/react';
 import { TokenDeployWizard } from './components/TokenDeployWizard';
 import { ManageTokens } from './components/ManageTokens';
 import { useState } from 'react';
@@ -10,7 +10,7 @@ type AppView = 'dashboard' | 'deploy' | 'manage-tokens' | 'rewards' | 'utilities
 function App() {
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
-  const { open } = useWeb3Modal();
+  const { open } = useAppKit();
   const [currentView, setCurrentView] = useState<AppView>('dashboard');
 
   const dashboardCards = [
