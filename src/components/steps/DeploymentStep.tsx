@@ -2,7 +2,6 @@ import { useState } from 'react';
 import type { TokenConfig } from '../TokenDeployWizard';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { usePublicClient, useWalletClient } from 'wagmi';
-import { getAvailableFees } from '../../../lib/fees';
 
 interface DeploymentStepProps {
   config: TokenConfig;
@@ -15,11 +14,8 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
   
   const [simulationResult, setSimulationResult] = useState<any>(null);
   const [deployedTokenAddress, setDeployedTokenAddress] = useState('');
-  const [customClankerTokenAddress, setCustomClankerTokenAddress] = useState('0x699E27a42095D3cb9A6a23097E5C201E33E314B4');
-  const [customFeeOwnerAddress, setCustomFeeOwnerAddress] = useState('0xCd2a99C6d6b27976537fC3737b0ef243E7C49946');
   const [isSimulating, setIsSimulating] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
-  const [isCheckingFees, setIsCheckingFees] = useState(false);
 
   const handleSimulateToken = async () => {
     if (!publicClient) {
@@ -80,32 +76,7 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
     }
   };
 
-  const handleCheckFees = async () => {
-    if (!publicClient) {
-      alert('Wallet not connected');
-      return;
-    }
 
-    setIsCheckingFees(true);
-    try {
-      const fees = await getAvailableFees(
-        publicClient,
-        customFeeOwnerAddress as `0x${string}`,
-        customClankerTokenAddress as `0x${string}`
-      );
-
-      const feesList = Object.entries(fees)
-        .map(([symbol, amount]) => `${symbol}: ${amount}`)
-        .join('\n');
-      
-      alert(`Available fees:\n${feesList}`);
-    } catch (error: any) {
-      console.error('Error checking fees:', error);
-      alert(`Error checking fees: ${error.message}`);
-    } finally {
-      setIsCheckingFees(false);
-    }
-  };
 
   return (
     <div className="space-y-2xl animate-fade-in">
@@ -173,46 +144,7 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
         </div>
       </div>
 
-      {/* Fee Checking Section */}
-      <div className="card card-hover">
-        <div className="flex items-center space-x-md mb-lg">
-          <h3 className="text-xl font-bold text-primary">Check Available Fees</h3>
-          <InfoTooltip content="Check fees available for withdrawal from existing tokens" />
-        </div>
 
-        <div className="space-y-lg">
-          <div className="grid grid-2 gap-lg">
-            <div className="form-group">
-              <label className="form-label">Fee Owner Address</label>
-              <input
-                type="text"
-                value={customFeeOwnerAddress}
-                onChange={(e) => setCustomFeeOwnerAddress(e.target.value)}
-                placeholder="0x... fee owner address"
-                className="input font-mono text-sm"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Clanker Token Address</label>
-              <input
-                type="text"
-                value={customClankerTokenAddress}
-                onChange={(e) => setCustomClankerTokenAddress(e.target.value)}
-                placeholder="0x... token address"
-                className="input font-mono text-sm"
-              />
-            </div>
-          </div>
-
-          <button 
-            onClick={handleCheckFees} 
-            className="btn btn-secondary"
-            disabled={isCheckingFees}
-          >
-            {isCheckingFees ? 'Checking...' : 'Check Available Fees'}
-          </button>
-        </div>
-      </div>
 
       {/* Deployment Actions */}
       <div className="card card-hover">

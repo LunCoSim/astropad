@@ -7,8 +7,8 @@ interface FeeData {
 
 export function ManageTokens() {
   const { address } = useAccount();
-  const [tokenAddress, setTokenAddress] = useState('');
-  const [feeOwnerAddress, setFeeOwnerAddress] = useState(address || '');
+  const [tokenAddress, setTokenAddress] = useState('0x699E27a42095D3cb9A6a23097E5C201E33E314B4');
+  const [feeOwnerAddress, setFeeOwnerAddress] = useState('0xCd2a99C6d6b27976537fC3737b0ef243E7C49946');
   const [fees, setFees] = useState<FeeData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -42,8 +42,8 @@ export function ManageTokens() {
   };
 
   const resetForm = () => {
-    setTokenAddress('');
-    setFeeOwnerAddress(address || '');
+    setTokenAddress('0x699E27a42095D3cb9A6a23097E5C201E33E314B4');
+    setFeeOwnerAddress('0xCd2a99C6d6b27976537fC3737b0ef243E7C49946');
     setFees(null);
     setError('');
   };
