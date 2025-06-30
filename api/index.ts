@@ -7,6 +7,11 @@ import { getAvailableFees } from '../lib/fees.js';
 const app = express();
 const port = 3001;
 
+// Import the indexed tokens handler
+import indexedTokensHandler from './indexed-tokens.js';
+
+app.get('/api/indexed-tokens', indexedTokensHandler);
+
 app.get('/api/check-fees', async (req: any, res: any) => {
   const publicClient = createPublicClient({
     chain: base,

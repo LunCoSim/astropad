@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { TokenConfig } from '../TokenDeployWizard';
 import { InfoTooltip } from '../ui/InfoTooltip';
-import { usePublicClient, useWalletClient } from 'wagmi';
+import { usePublicClient, useWalletClient, useAccount } from 'wagmi';
+import { storeDeployedToken } from '../../../lib/deployed-tokens';
 
 interface DeploymentStepProps {
   config: TokenConfig;
@@ -11,6 +12,7 @@ interface DeploymentStepProps {
 export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
+  const { address } = useAccount();
   
   const [simulationResult, setSimulationResult] = useState<any>(null);
   const [deployedTokenAddress, setDeployedTokenAddress] = useState('');
@@ -67,6 +69,22 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
       });
 
       setDeployedTokenAddress(simulationResult.simulatedAddress);
+      
+      // Save the deployed token
+      if (address) {
+        const deployedToken = {
+          address: simulationResult.simulatedAddress,
+          name: config.name,
+          symbol: config.symbol,
+          deployerAddress: address,
+          deploymentTxHash: hash,
+          deploymentTimestamp: Date.now(),
+          isVerified: true,
+          source: 'blockchain' as const,
+        };
+        storeDeployedToken(deployedToken);
+      }
+      
       alert(`Token deployed! Transaction hash: ${hash}`);
     } catch (error: any) {
       console.error('Deployment failed:', error);

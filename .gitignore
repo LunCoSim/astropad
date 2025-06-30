@@ -24,3 +24,5 @@ dist-api
 *.njsproj
 *.sln
 *.sw?
+
+.env
