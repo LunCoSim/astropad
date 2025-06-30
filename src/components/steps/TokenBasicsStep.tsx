@@ -1,5 +1,6 @@
 import type { TokenConfig } from '../TokenDeployWizard';
 import { InfoTooltip } from '../ui/InfoTooltip';
+import { addSocialUrl, removeSocialUrl, updateSocialUrl, addAuditUrl, removeAuditUrl, updateAuditUrl } from '../../../lib/array-utils';
 
 interface CoinBasicsStepProps {
   config: TokenConfig;
@@ -10,44 +11,40 @@ interface CoinBasicsStepProps {
 export function CoinBasicsStep({ config, updateConfig, onNext }: CoinBasicsStepProps) {
   const isValid = !!(config.name && config.symbol && config.admin);
 
-  const addSocialUrl = () => {
+  const handleAddSocialUrl = () => {
     updateConfig({
-      socialUrls: [...config.socialUrls, '']
+      socialUrls: addSocialUrl(config.socialUrls)
     });
   };
 
-  const removeSocialUrl = (index: number) => {
-    if (config.socialUrls.length > 1) {
-      updateConfig({
-        socialUrls: config.socialUrls.filter((_, i) => i !== index)
-      });
-    }
-  };
-
-  const updateSocialUrl = (index: number, value: string) => {
-    const newUrls = [...config.socialUrls];
-    newUrls[index] = value;
-    updateConfig({ socialUrls: newUrls });
-  };
-
-  const addAuditUrl = () => {
+  const handleRemoveSocialUrl = (index: number) => {
     updateConfig({
-      auditUrls: [...config.auditUrls, '']
+      socialUrls: removeSocialUrl(config.socialUrls, index)
     });
   };
 
-  const removeAuditUrl = (index: number) => {
-    if (config.auditUrls.length > 1) {
-      updateConfig({
-        auditUrls: config.auditUrls.filter((_, i) => i !== index)
-      });
-    }
+  const handleUpdateSocialUrl = (index: number, value: string) => {
+    updateConfig({
+      socialUrls: updateSocialUrl(config.socialUrls, index, value)
+    });
   };
 
-  const updateAuditUrl = (index: number, value: string) => {
-    const newUrls = [...config.auditUrls];
-    newUrls[index] = value;
-    updateConfig({ auditUrls: newUrls });
+  const handleAddAuditUrl = () => {
+    updateConfig({
+      auditUrls: addAuditUrl(config.auditUrls)
+    });
+  };
+
+  const handleRemoveAuditUrl = (index: number) => {
+    updateConfig({
+      auditUrls: removeAuditUrl(config.auditUrls, index)
+    });
+  };
+
+  const handleUpdateAuditUrl = (index: number, value: string) => {
+    updateConfig({
+      auditUrls: updateAuditUrl(config.auditUrls, index, value)
+    });
   };
 
   return (
@@ -216,13 +213,13 @@ export function CoinBasicsStep({ config, updateConfig, onNext }: CoinBasicsStepP
                   <input
                     type="text"
                     value={url}
-                    onChange={(e) => updateSocialUrl(index, e.target.value)}
+                    onChange={(e) => handleUpdateSocialUrl(index, e.target.value)}
                     placeholder="https://twitter.com/yourproject"
                     className="input flex-1"
                   />
                   <button
                     type="button"
-                    onClick={() => removeSocialUrl(index)}
+                    onClick={() => handleRemoveSocialUrl(index)}
                     className="btn btn-secondary"
                     style={{ padding: 'var(--spacing-sm)' }}
                     disabled={config.socialUrls.length <= 1}
@@ -235,7 +232,7 @@ export function CoinBasicsStep({ config, updateConfig, onNext }: CoinBasicsStepP
               ))}
               <button
                 type="button"
-                onClick={addSocialUrl}
+                onClick={handleAddSocialUrl}
                 className="btn btn-secondary text-sm"
               >
                 <svg style={{ width: '1rem', height: '1rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -257,13 +254,13 @@ export function CoinBasicsStep({ config, updateConfig, onNext }: CoinBasicsStepP
                   <input
                     type="text"
                     value={url}
-                    onChange={(e) => updateAuditUrl(index, e.target.value)}
+                    onChange={(e) => handleUpdateAuditUrl(index, e.target.value)}
                     placeholder="https://your-audit-report.pdf"
                     className="input flex-1"
                   />
                   <button
                     type="button"
-                    onClick={() => removeAuditUrl(index)}
+                    onClick={() => handleRemoveAuditUrl(index)}
                     className="btn btn-secondary"
                     style={{ padding: 'var(--spacing-sm)' }}
                     disabled={config.auditUrls.length <= 1}
@@ -276,7 +273,7 @@ export function CoinBasicsStep({ config, updateConfig, onNext }: CoinBasicsStepP
               ))}
               <button
                 type="button"
-                onClick={addAuditUrl}
+                onClick={handleAddAuditUrl}
                 className="btn btn-secondary text-sm"
               >
                 <svg style={{ width: '1rem', height: '1rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">

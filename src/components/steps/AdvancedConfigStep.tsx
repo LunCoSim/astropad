@@ -1,5 +1,7 @@
 import type { TokenConfig } from '../TokenDeployWizard';
 import { InfoTooltip } from '../ui/InfoTooltip';
+import { addRewardRecipient, removeRewardRecipient, updateRewardRecipient } from '../../../lib/array-utils';
+import { VALIDATION_LIMITS } from '../../../lib/constants';
 
 interface AdvancedConfigStepProps {
   config: TokenConfig;
@@ -9,27 +11,22 @@ interface AdvancedConfigStepProps {
 }
 
 export function AdvancedConfigStep({ config, updateConfig, onNext, onPrevious }: AdvancedConfigStepProps) {
-  const addRewardRecipient = () => {
+  const handleAddRewardRecipient = () => {
     updateConfig({
-      rewardRecipients: [
-        ...config.rewardRecipients,
-        { recipient: '', admin: '', bps: 1000 }
-      ]
+      rewardRecipients: addRewardRecipient(config.rewardRecipients)
     });
   };
 
-  const removeRewardRecipient = (index: number) => {
-    if (config.rewardRecipients.length > 1) {
-      updateConfig({
-        rewardRecipients: config.rewardRecipients.filter((_, i) => i !== index)
-      });
-    }
+  const handleRemoveRewardRecipient = (index: number) => {
+    updateConfig({
+      rewardRecipients: removeRewardRecipient(config.rewardRecipients, index)
+    });
   };
 
-  const updateRewardRecipient = (index: number, field: 'recipient' | 'admin' | 'bps', value: string | number) => {
-    const newRecipients = [...config.rewardRecipients];
-    newRecipients[index] = { ...newRecipients[index], [field]: value };
-    updateConfig({ rewardRecipients: newRecipients });
+  const handleUpdateRewardRecipient = (index: number, field: 'recipient' | 'admin' | 'bps', value: string | number) => {
+    updateConfig({
+      rewardRecipients: updateRewardRecipient(config.rewardRecipients, index, field, value)
+    });
   };
 
   const totalBps = config.rewardRecipients.reduce((sum, r) => sum + r.bps, 0);

@@ -1,5 +1,7 @@
 import type { TokenConfig } from '../TokenDeployWizard';
 import { InfoTooltip } from '../ui/InfoTooltip';
+import { addAirdropEntry, removeAirdropEntry, updateAirdropEntry } from '../../../lib/array-utils';
+import { calculateDevBuyEstimate } from '../../../lib/calculations';
 
 interface ExtensionsStepProps {
   config: TokenConfig;
@@ -9,53 +11,37 @@ interface ExtensionsStepProps {
 }
 
 export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: ExtensionsStepProps) {
-  const addAirdropEntry = () => {
+  const handleAddAirdropEntry = () => {
     updateConfig({
       airdrop: {
         ...config.airdrop,
-        entries: [...config.airdrop.entries, { address: '', amount: 1 }]
+        entries: addAirdropEntry(config.airdrop.entries)
       }
     });
   };
 
-  const removeAirdropEntry = (index: number) => {
-    if (config.airdrop.entries.length > 1) {
-      updateConfig({
-        airdrop: {
-          ...config.airdrop,
-          entries: config.airdrop.entries.filter((_, i) => i !== index)
-        }
-      });
-    }
-  };
-
-  const updateAirdropEntry = (index: number, field: 'address' | 'amount', value: string | number) => {
-    const newEntries = [...config.airdrop.entries];
-    newEntries[index] = { ...newEntries[index], [field]: value };
+  const handleRemoveAirdropEntry = (index: number) => {
     updateConfig({
-      airdrop: { ...config.airdrop, entries: newEntries }
+      airdrop: {
+        ...config.airdrop,
+        entries: removeAirdropEntry(config.airdrop.entries, index)
+      }
     });
   };
 
-  // Calculate estimated token amounts for dev buy
-  const calculateDevBuyEstimate = () => {
-    if (!config.startingMarketCap || !config.devBuy.ethAmount) return null;
-    
-    const totalSupply = 100_000_000_000; // 100 billion tokens
-    const marketCapEth = Number(config.startingMarketCap);
-    const devBuyEth = config.devBuy.ethAmount;
-    
-    // Simple estimation assuming tokens = (devBuyEth / marketCapEth) * totalSupply
-    const estimatedTokens = (devBuyEth / marketCapEth) * totalSupply;
-    const priceImpact = (devBuyEth / marketCapEth) * 100;
-    
-    return {
-      tokensReceived: estimatedTokens,
-      priceImpact
-    };
+  const handleUpdateAirdropEntry = (index: number, field: 'address' | 'amount', value: string | number) => {
+    updateConfig({
+      airdrop: {
+        ...config.airdrop,
+        entries: updateAirdropEntry(config.airdrop.entries, index, field, value)
+      }
+    });
   };
 
-  const devBuyEstimate = calculateDevBuyEstimate();
+  const devBuyEstimate = calculateDevBuyEstimate(
+    config.devBuy.ethAmount,
+    Number(config.startingMarketCap)
+  );
 
   return (
     <div className="space-y-2xl animate-fade-in">
@@ -184,14 +170,14 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                       <input
                         type="text"
                         value={entry.address}
-                        onChange={(e) => updateAirdropEntry(index, 'address', e.target.value)}
+                        onChange={(e) => handleUpdateAirdropEntry(index, 'address', e.target.value)}
                         placeholder="0x... recipient address"
                         className="input flex-1 font-mono text-sm"
                       />
                       <input
                         type="number"
                         value={entry.amount}
-                        onChange={(e) => updateAirdropEntry(index, 'amount', Number(e.target.value))}
+                        onChange={(e) => handleUpdateAirdropEntry(index, 'amount', Number(e.target.value))}
                         placeholder="Amount"
                         className="input"
                         style={{ width: '8rem' }}
@@ -200,7 +186,7 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                       />
                       <button
                         type="button"
-                        onClick={() => removeAirdropEntry(index)}
+                        onClick={() => handleRemoveAirdropEntry(index)}
                         className="btn btn-secondary"
                         style={{ padding: 'var(--spacing-sm)' }}
                         disabled={config.airdrop.entries.length <= 1}
@@ -211,7 +197,7 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                   ))}
                   <button
                     type="button"
-                    onClick={addAirdropEntry}
+                    onClick={handleAddAirdropEntry}
                     className="btn btn-secondary text-sm"
                   >
                     + Add Recipient

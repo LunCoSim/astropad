@@ -3,6 +3,9 @@ import { usePublicClient } from 'wagmi';
 import type { TokenConfig } from '../TokenDeployWizard';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { WETH_ADDRESS, POOL_POSITIONS } from 'clanker-sdk';
+import { validatePairToken, ERC20_ABI } from '../../../lib/token-validation';
+import { calculateTokenDistribution } from '../../../lib/calculations';
+import { addCustomPosition, removeCustomPosition, updateCustomPosition } from '../../../lib/array-utils';
 
 interface LiquiditySetupStepProps {
   config: TokenConfig;
@@ -10,24 +13,6 @@ interface LiquiditySetupStepProps {
   onNext: () => void;
   onPrevious: () => void;
 }
-
-// ERC20 ABI for token validation
-const ERC20_ABI = [
-  {
-    inputs: [],
-    name: 'decimals',
-    outputs: [{ internalType: 'uint8', name: '', type: 'uint8' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'symbol',
-    outputs: [{ internalType: 'string', name: '', type: 'string' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-];
 
 export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }: LiquiditySetupStepProps) {
   const publicClient = usePublicClient();
@@ -39,27 +24,20 @@ export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }:
 
   // Validate custom pair token
   useEffect(() => {
-    const validatePairToken = async () => {
-      if (config.pairTokenType === 'custom' && config.customPairTokenAddress) {
+    const validateToken = async () => {
+      if (config.pairTokenType === 'custom' && config.customPairTokenAddress && publicClient) {
         try {
           setPairTokenValidating(true);
           const tokenAddress = config.customPairTokenAddress as `0x${string}`;
+          const tokenInfo = await validatePairToken(publicClient, tokenAddress);
           
-          const [decimals, symbol] = await Promise.all([
-            publicClient?.readContract({
-              address: tokenAddress,
-              abi: ERC20_ABI,
-              functionName: 'decimals',
-            }),
-            publicClient?.readContract({
-              address: tokenAddress,
-              abi: ERC20_ABI,
-              functionName: 'symbol',
-            })
-          ]);
-
-          setPairTokenInfo({ symbol: symbol as string, decimals: decimals as number });
-          setPairTokenValid(true);
+          if (tokenInfo) {
+            setPairTokenInfo(tokenInfo);
+            setPairTokenValid(true);
+          } else {
+            setPairTokenInfo(null);
+            setPairTokenValid(false);
+          }
         } catch (error) {
           setPairTokenInfo(null);
           setPairTokenValid(false);
@@ -72,53 +50,28 @@ export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }:
       }
     };
 
-    validatePairToken();
+    validateToken();
   }, [config.pairTokenType, config.customPairTokenAddress, publicClient]);
 
-  const addCustomPosition = () => {
+  const handleAddCustomPosition = () => {
     updateConfig({
-      customPositions: [...config.customPositions, { tickLower: -230400, tickUpper: -120000, positionBps: 10000 }]
+      customPositions: addCustomPosition(config.customPositions)
     });
   };
 
-  const removeCustomPosition = (index: number) => {
+  const handleRemoveCustomPosition = (index: number) => {
     updateConfig({
-      customPositions: config.customPositions.filter((_, i) => i !== index)
+      customPositions: removeCustomPosition(config.customPositions, index)
     });
   };
 
-  const updateCustomPosition = (index: number, field: 'tickLower' | 'tickUpper' | 'positionBps', value: number) => {
-    const newPositions = [...config.customPositions];
-    newPositions[index] = { ...newPositions[index], [field]: value };
-    updateConfig({ customPositions: newPositions });
+  const handleUpdateCustomPosition = (index: number, field: 'tickLower' | 'tickUpper' | 'positionBps', value: number) => {
+    updateConfig({
+      customPositions: updateCustomPosition(config.customPositions, index, field, value)
+    });
   };
 
-  // Calculate estimated token distribution
-  const calculateDistribution = () => {
-    const totalSupply = 100_000_000_000; // 100 billion tokens
-    let remaining = totalSupply;
-    
-    const distributions = [];
-    
-    if (config.vault.enabled) {
-      const vaultTokens = (totalSupply * config.vault.percentage) / 100;
-      distributions.push({ name: 'Vault', amount: vaultTokens, percentage: config.vault.percentage });
-      remaining -= vaultTokens;
-    }
-    
-    if (config.airdrop.enabled) {
-      const airdropTokens = (totalSupply * config.airdrop.percentage) / 100;
-      distributions.push({ name: 'Airdrop', amount: airdropTokens, percentage: config.airdrop.percentage });
-      remaining -= airdropTokens;
-    }
-    
-    const liquidityPercentage = (remaining / totalSupply) * 100;
-    distributions.push({ name: 'Liquidity Pool', amount: remaining, percentage: liquidityPercentage });
-    
-    return distributions;
-  };
-
-  const distributions = calculateDistribution();
+  const distributions = calculateTokenDistribution(config);
 
   return (
     <div className="space-y-2xl animate-fade-in">
