@@ -486,42 +486,52 @@ export function TokenDeployWizard({
 
   if (!connected) {
     return (
-      <div className="text-center py-20">
-        <h2 className="text-2xl font-bold text-white mb-4">Wallet Required</h2>
-        <p className="text-white/70">Please connect your wallet to use the token deployment wizard.</p>
+      <div className="text-center" style={{ padding: 'var(--spacing-3xl) 0' }}>
+        <h2 className="text-2xl font-bold text-primary mb-md">Wallet Required</h2>
+        <p className="text-secondary">Please connect your wallet to use the token deployment wizard.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-xl">
       {/* Progress Bar */}
-      <div className="bg-white/5 rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-white">Deploy Your Token</h2>
-          <span className="text-sm text-white/60">
+      <div className="card">
+        <div className="flex items-center justify-between mb-md">
+          <h2 className="text-xl font-bold text-primary">Deploy Your Token</h2>
+          <span className="text-sm text-muted">
             Step {currentStep + 1} of {WIZARD_STEPS.length}
           </span>
         </div>
         
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-md">
           {WIZARD_STEPS.map((step, index) => (
             <div key={step.id} className="flex items-center">
               <div
-                className={`
-                  w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold
-                  ${index === currentStep
-                    ? 'bg-primary-500 text-white'
-                    : index < currentStep
-                    ? 'bg-green-500 text-white'
-                    : 'bg-white/10 text-white/50'
-                  }
-                `}
+                className="flex items-center justify-center text-sm font-bold rounded-full"
+                style={{
+                  width: '2.5rem',
+                  height: '2.5rem',
+                  background: index === currentStep 
+                    ? 'var(--color-primary)' 
+                    : index < currentStep 
+                    ? 'var(--color-success)' 
+                    : 'var(--bg-surface)',
+                  color: index <= currentStep ? 'white' : 'var(--text-muted)'
+                }}
               >
                 {index < currentStep ? '✓' : index + 1}
               </div>
               {index < WIZARD_STEPS.length - 1 && (
-                <div className={`w-12 h-1 mx-2 ${index < currentStep ? 'bg-green-500' : 'bg-white/10'}`} />
+                <div 
+                  style={{
+                    width: '3rem',
+                    height: '0.25rem',
+                    margin: '0 var(--spacing-sm)',
+                    background: index < currentStep ? 'var(--color-success)' : 'var(--bg-surface)',
+                    borderRadius: 'var(--radius-sm)'
+                  }}
+                />
               )}
             </div>
           ))}
@@ -533,9 +543,9 @@ export function TokenDeployWizard({
 
       {/* Fee Checking Section */}
       {currentStep === WIZARD_STEPS.length - 1 && (
-        <div className="bg-white/5 rounded-2xl p-6">
-          <h3 className="text-lg font-bold text-white mb-4">Check Fees</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="card">
+          <h3 className="text-lg font-bold text-primary mb-md">Check Fees</h3>
+          <div className="grid grid-2 gap-md mb-md">
             <input
               type="text"
               value={customFeeOwnerAddress}
@@ -559,9 +569,9 @@ export function TokenDeployWizard({
 
       {/* Deployment Actions */}
       {currentStep === WIZARD_STEPS.length - 1 && (
-        <div className="bg-white/5 rounded-2xl p-6">
-          <h3 className="text-lg font-bold text-white mb-4">Deploy Token</h3>
-          <div className="flex space-x-4">
+        <div className="card">
+          <h3 className="text-lg font-bold text-primary mb-md">Deploy Token</h3>
+          <div className="flex space-x-md">
             <button
               onClick={handleSimulateToken}
               className="btn btn-secondary"
@@ -579,11 +589,11 @@ export function TokenDeployWizard({
           </div>
           
           {deployedTokenAddress && (
-            <div className="mt-4 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-              <p className="text-green-400 font-semibold">
+            <div className="card mt-md" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+              <p className="font-semibold" style={{ color: 'var(--color-success)' }}>
                 Token deployed successfully!
               </p>
-              <p className="text-white/70 text-sm break-all">
+              <p className="text-secondary text-sm" style={{ wordBreak: 'break-all' }}>
                 Address: {deployedTokenAddress}
               </p>
             </div>
