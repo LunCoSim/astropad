@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
-import { syncTokensWithBlockchain, addTokenByAddress, removeStoredToken, type DeployedToken } from '../../lib/deployed-tokens';
+import { syncTokensWithBlockchain, addTokenByAddress, removeStoredToken } from '../../lib/deployed-tokens';
 import { getAvailableFees, claimFees } from '../../lib/fees';
-
-interface FeeData {
-  [symbol: string]: string;
-}
+import type { DeployedToken, FeeData } from '../../lib/types';
 
 export function ManageTokens() {
   const { address } = useAccount();

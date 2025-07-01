@@ -1,4 +1,4 @@
-import type { DeployedToken } from '../lib/deployed-tokens';
+import type { DeployedToken } from '../lib/types';
 
 interface AlchemyAssetTransfer {
   from: string;

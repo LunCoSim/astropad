@@ -5,15 +5,7 @@
 import type { PublicClient } from 'viem';
 import { parseUnits, formatUnits } from 'viem';
 import { VALIDATION_LIMITS } from './constants.js';
-import type { RewardRecipient } from './array-utils.js';
-
-export interface TokenConfig {
-  name: string;
-  symbol: string;
-  admin: string;
-  startingMarketCap: number | '';
-  rewardRecipients: RewardRecipient[];
-}
+import type { TokenConfig, RewardRecipient, ValidationResult } from './types.js';
 
 /**
  * Validate step 0: Token Basics
@@ -102,7 +94,7 @@ export function getStepValidationErrors(stepIndex: number, config: TokenConfig):
 /**
  * Validate token name
  */
-export function validateTokenName(name: string): { isValid: boolean; error?: string } {
+export function validateTokenName(name: string): ValidationResult {
   if (!name.trim()) {
     return { isValid: false, error: 'Token name is required' };
   }
@@ -115,7 +107,7 @@ export function validateTokenName(name: string): { isValid: boolean; error?: str
 /**
  * Validate token symbol
  */
-export function validateTokenSymbol(symbol: string): { isValid: boolean; error?: string } {
+export function validateTokenSymbol(symbol: string): ValidationResult {
   if (!symbol.trim()) {
     return { isValid: false, error: 'Token symbol is required' };
   }
@@ -131,7 +123,7 @@ export function validateTokenSymbol(symbol: string): { isValid: boolean; error?:
 /**
  * Validate Ethereum address
  */
-export function validateEthereumAddress(address: string): { isValid: boolean; error?: string } {
+export function validateEthereumAddress(address: string): ValidationResult {
   if (!address.trim()) {
     return { isValid: false, error: 'Address is required' };
   }
@@ -144,7 +136,7 @@ export function validateEthereumAddress(address: string): { isValid: boolean; er
 /**
  * Validate percentage value
  */
-export function validatePercentage(value: number, min: number = 0, max: number = 100): { isValid: boolean; error?: string } {
+export function validatePercentage(value: number, min: number = 0, max: number = 100): ValidationResult {
   if (value < min) {
     return { isValid: false, error: `Percentage must be at least ${min}%` };
   }

@@ -1,31 +1,10 @@
 import type { PublicClient } from "viem";
+import { ERC20_ABI } from './abis.js';
+import type { TokenInfo } from './types.js';
 
 /**
  * Token validation utilities for ERC20 contracts
  */
-
-// Generic ERC20 ABI for fetching decimals and symbol
-export const ERC20_ABI = [
-  {
-    inputs: [],
-    name: "decimals",
-    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "symbol",
-    outputs: [{ internalType: "string", name: "", type: "string" }],
-    stateMutability: "view",
-    type: "function",
-  },
-] as const;
-
-export interface TokenInfo {
-  symbol: string;
-  decimals: number;
-}
 
 /**
  * Fetch token decimals from an ERC20 contract

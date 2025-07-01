@@ -2,30 +2,7 @@
  * AMM and DeFi calculation utilities for token deployment
  */
 
-export interface DevBuyResult {
-  tokensReceived: number;
-  priceImpact: number;
-  newPrice: number;
-  effectivePrice: number;
-}
-
-export interface TokenDistribution {
-  name: string;
-  amount: number;
-  percentage: number;
-}
-
-export interface TokenConfig {
-  vault: {
-    enabled: boolean;
-    percentage: number;
-  };
-  airdrop: {
-    enabled: boolean;
-    percentage: number;
-  };
-  startingMarketCap: number | '';
-}
+import type { DevBuyResult, TokenDistribution, TokenConfig } from './types.js';
 
 /**
  * AMM calculation function using constant product formula (x * y = k)

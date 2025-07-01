@@ -3,7 +3,7 @@ import { usePublicClient } from 'wagmi';
 import type { TokenConfig } from '../TokenDeployWizard';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { WETH_ADDRESS, POOL_POSITIONS } from 'clanker-sdk';
-import { validatePairToken, ERC20_ABI } from '../../../lib/token-validation';
+import { validatePairToken } from '../../../lib/token-validation';
 import { calculateTokenDistribution } from '../../../lib/calculations';
 import { addCustomPosition, removeCustomPosition, updateCustomPosition } from '../../../lib/array-utils';
 

@@ -2,22 +2,7 @@
  * Generic array manipulation utilities for managing dynamic lists in forms
  */
 
-export interface AirdropEntry {
-  address: string;
-  amount: number;
-}
-
-export interface CustomPosition {
-  tickLower: number;
-  tickUpper: number;
-  positionBps: number;
-}
-
-export interface RewardRecipient {
-  recipient: string;
-  admin: string;
-  bps: number;
-}
+import type { AirdropEntry, CustomPosition, RewardRecipient } from './types.js';
 
 /**
  * Generic function to add an item to an array

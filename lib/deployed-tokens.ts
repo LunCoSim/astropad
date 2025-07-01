@@ -1,79 +1,13 @@
 import type { PublicClient } from 'viem';
-
-export interface DeployedToken {
-  address: string;
-  name: string;
-  symbol: string;
-  deployerAddress: string;
-  deploymentTxHash?: string;
-  deploymentBlockNumber?: number;
-  deploymentTimestamp: number;
-  adminAddress?: string;
-  isVerified?: boolean;
-  source: 'manual' | 'blockchain'; // Track how token was discovered
-}
-
-export interface TokenMetadata {
-  name: string;
-  symbol: string;
-  decimals: number;
-  totalSupply: string;
-}
+import { ERC20_ABI, TOKEN_CREATED_EVENT_ABI } from './abis.js';
+import type { DeployedToken, TokenMetadata } from './types.js';
 
 const STORAGE_KEY = 'astropad_deployed_tokens';
 
 // Clanker contract address on Base
 const CLANKER_CONTRACT_ADDRESS = '0x375C15db32D28cEcdcAB5C03Ab889bf15cbD2c5E' as const;
 
-// ERC20 ABI for token metadata
-const ERC20_METADATA_ABI = [
-  {
-    constant: true,
-    inputs: [],
-    name: 'name',
-    outputs: [{ name: '', type: 'string' }],
-    type: 'function',
-  },
-  {
-    constant: true,
-    inputs: [],
-    name: 'symbol',
-    outputs: [{ name: '', type: 'string' }],
-    type: 'function',
-  },
-  {
-    constant: true,
-    inputs: [],
-    name: 'decimals',
-    outputs: [{ name: '', type: 'uint8' }],
-    type: 'function',
-  },
-  {
-    constant: true,
-    inputs: [],
-    name: 'totalSupply',
-    outputs: [{ name: '', type: 'uint256' }],
-    type: 'function',
-  },
-] as const;
 
-// TokenCreated event ABI for Clanker contract
-const TOKEN_CREATED_EVENT_ABI = [
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, name: 'token', type: 'address' },
-      { indexed: false, name: 'name', type: 'string' },
-      { indexed: false, name: 'symbol', type: 'string' },
-      { indexed: true, name: 'deployer', type: 'address' },
-      { indexed: false, name: 'totalSupply', type: 'uint256' },
-      { indexed: false, name: 'fid', type: 'uint256' },
-      { indexed: false, name: 'positionId', type: 'uint256' },
-    ],
-    name: 'TokenCreated',
-    type: 'event',
-  },
-] as const;
 
 /**
  * Get all stored deployed tokens for the connected wallet
@@ -150,22 +84,22 @@ export async function fetchTokenMetadata(
     const [name, symbol, decimals, totalSupply] = await Promise.all([
       publicClient.readContract({
         address: tokenAddress as `0x${string}`,
-        abi: ERC20_METADATA_ABI,
+        abi: ERC20_ABI,
         functionName: 'name',
       }),
       publicClient.readContract({
         address: tokenAddress as `0x${string}`,
-        abi: ERC20_METADATA_ABI,
+        abi: ERC20_ABI,
         functionName: 'symbol',
       }),
       publicClient.readContract({
         address: tokenAddress as `0x${string}`,
-        abi: ERC20_METADATA_ABI,
+        abi: ERC20_ABI,
         functionName: 'decimals',
       }),
       publicClient.readContract({
         address: tokenAddress as `0x${string}`,
-        abi: ERC20_METADATA_ABI,
+        abi: ERC20_ABI,
         functionName: 'totalSupply',
       }),
     ]);
