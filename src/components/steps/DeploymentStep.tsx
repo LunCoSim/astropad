@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import type { TokenConfig } from '../TokenDeployWizard';
+import type { TokenConfig } from '../../../lib/types';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { usePublicClient, useWalletClient, useAccount } from 'wagmi';
 import { storeDeployedToken } from '../../../lib/deployed-tokens';
+import { Clanker, WETH_ADDRESS, POOL_POSITIONS, FEE_CONFIGS, TokenConfigV4Builder } from 'clanker-sdk';
+import { base } from 'viem/chains';
 
 interface DeploymentStepProps {
   config: TokenConfig;
@@ -18,83 +20,182 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
   const [deployedTokenAddress, setDeployedTokenAddress] = useState('');
   const [isSimulating, setIsSimulating] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
+  const [error, setError] = useState<string>('');
 
   const handleSimulateToken = async () => {
-    if (!publicClient) {
-      alert('Wallet not connected');
+    if (!publicClient || !walletClient || !address) {
+      setError('Wallet not connected properly');
       return;
     }
 
     setIsSimulating(true);
+    setError('');
+    
     try {
-      // Simulate deployment logic here
-      // This would typically call the Clanker contract's simulation function
-      console.log('Simulating token deployment with config:', config);
+      // Initialize Clanker SDK
+      const clanker = new Clanker({
+        wallet: walletClient,
+        publicClient,
+      });
+
+      // Build the token configuration using v4 format with proper required fields
+      const pairedToken = config.pairTokenType === 'WETH' 
+        ? WETH_ADDRESS 
+        : config.customPairTokenAddress as `0x${string}`;
+
+      const builder = new TokenConfigV4Builder()
+        .withName(config.name)
+        .withSymbol(config.symbol)
+        .withTokenAdmin(address)
+        .withImage(config.image || 'ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi')
+        .withMetadata({
+          description: config.description || 'Token deployed via Astropad',
+          socialMediaUrls: config.socialUrls.filter((url: string) => url.trim()),
+          auditUrls: config.auditUrls.filter((url: string) => url.trim()),
+        })
+        .withContext({
+          interface: config.interfaceName,
+          platform: config.platform || '',
+          messageId: config.messageId || '',
+          id: config.socialId || '',
+        })
+        .withPoolConfig({
+          pairedToken,
+          positions: config.poolPositionType === 'Standard' ? POOL_POSITIONS.Standard : POOL_POSITIONS.Project,
+        });
+
+      // Configure fees (required)
+      if (config.fees.type === 'static') {
+        builder.withStaticFeeConfig({
+          clankerFeeBps: config.fees.static.clankerFeeBps,
+          pairedFeeBps: config.fees.static.pairedFeeBps,
+        });
+      } else {
+        builder.withDynamicFeeConfig(FEE_CONFIGS.DynamicBasic);
+      }
+
+      // Configure rewards (required)
+      builder.withRewardsRecipients({
+        recipients: config.rewardRecipients.map((r: any) => ({
+          admin: r.admin as `0x${string}`,
+          recipient: r.recipient as `0x${string}`,
+          bps: r.bps,
+        })),
+      });
+
+      // Configure optional extensions
+      if (config.vault.enabled) {
+        builder.withVault({
+          percentage: config.vault.percentage,
+          lockupDuration: config.vault.lockupDuration,
+          vestingDuration: config.vault.vestingDuration,
+        });
+      }
+
+      if (config.devBuy.enabled && config.devBuy.ethAmount > 0) {
+        builder.withDevBuy({
+          ethAmount: config.devBuy.ethAmount,
+        });
+      }
+
+      const builtConfig = builder.build();
       
-      // Mock simulation result for now
-      const mockResult = {
-        transaction: {
-          to: '0x1234567890123456789012345678901234567890',
-          value: BigInt(0),
-          data: '0x1234567890abcdef',
-        },
-        simulatedAddress: '0xabcdef1234567890abcdef1234567890abcdef12',
-        gasEstimate: BigInt(500000),
-        estimatedCost: '0.01 ETH'
+      // Add the v4 type field for the unified API
+      const tokenConfig = {
+        ...builtConfig,
+        type: 'v4' as const,
       };
+
+      // Simulate the deployment using real Clanker SDK
+      console.log('Simulating token deployment with config:', tokenConfig);
       
-      setSimulationResult(mockResult);
-      alert('Simulation successful! Ready to deploy.');
+      const clankerSimulator = new Clanker({
+        publicClient: publicClient!,
+      });
+
+      const simulationResponse = await clankerSimulator.simulateDeployToken(tokenConfig, {
+        address,
+        type: 'json-rpc',
+      } as any);
+
+      if ('error' in simulationResponse) {
+        throw new Error((simulationResponse.error as any)?.message || 'Simulation failed');
+      }
+
+      const { simulatedAddress } = simulationResponse;
+      const gasEstimate = BigInt(2000000); // Default estimate
+      const estimatedCost = '0.05 ETH'; // Default estimate
+      
+      setSimulationResult({
+        tokenConfig,
+        gasEstimate,
+        estimatedCost,
+        simulatedAddress,
+      });
+      
     } catch (error: any) {
       console.error('Simulation failed:', error);
-      alert(`Simulation failed: ${error.message}`);
+      setError(`Simulation failed: ${error.message}`);
     } finally {
       setIsSimulating(false);
     }
   };
 
   const handleConfirmDeploy = async () => {
-    if (!simulationResult || !walletClient) {
-      alert('Please simulate deployment first');
+    if (!simulationResult || !walletClient || !address) {
+      setError('Please simulate deployment first and ensure wallet is connected');
       return;
     }
 
     setIsDeploying(true);
+    setError('');
+    
     try {
-      const hash = await walletClient.sendTransaction({
-        to: simulationResult.transaction.to,
-        value: simulationResult.transaction.value,
-        data: simulationResult.transaction.data,
-        account: walletClient.account,
+      // Initialize Clanker SDK
+      const clankerDeployer = new Clanker({
+        wallet: walletClient,
+        publicClient: publicClient!,
       });
 
-      setDeployedTokenAddress(simulationResult.simulatedAddress);
+      console.log('Deploying token with config:', simulationResult.tokenConfig);
+
+      // Deploy the token - v4 returns { txHash, waitForTransaction, error }
+      const deployResult = await clankerDeployer.deployToken(simulationResult.tokenConfig);
+      
+      if ('error' in deployResult) {
+        throw new Error((deployResult.error as any)?.message || 'Deployment failed');
+      }
+
+      const { txHash, waitForTransaction } = deployResult;
+      console.log(`Token deployment transaction: ${txHash}`);
+      
+      // Wait for the transaction to be mined and get the token address
+      const { address: tokenAddress } = await waitForTransaction();
+      
+      console.log(`Token deployed successfully: ${tokenAddress}`);
+      
+      setDeployedTokenAddress(tokenAddress);
       
       // Save the deployed token
-      if (address) {
-        const deployedToken = {
-          address: simulationResult.simulatedAddress,
-          name: config.name,
-          symbol: config.symbol,
-          deployerAddress: address,
-          deploymentTxHash: hash,
-          deploymentTimestamp: Date.now(),
-          isVerified: true,
-          source: 'blockchain' as const,
-        };
-        storeDeployedToken(deployedToken);
-      }
+      const deployedToken = {
+        address: tokenAddress,
+        name: config.name,
+        symbol: config.symbol,
+        deployerAddress: address,
+        deploymentTxHash: txHash,
+        deploymentTimestamp: Date.now(),
+        isVerified: true,
+        source: 'blockchain' as const,
+      };
+      storeDeployedToken(deployedToken);
       
-      alert(`Token deployed! Transaction hash: ${hash}`);
     } catch (error: any) {
       console.error('Deployment failed:', error);
-      alert(`Deployment failed: ${error.message}`);
+      setError(`Deployment failed: ${error.message}`);
     } finally {
       setIsDeploying(false);
     }
   };
-
-
 
   return (
     <div className="space-y-2xl animate-fade-in">
@@ -162,8 +263,6 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
         </div>
       </div>
 
-
-
       {/* Deployment Actions */}
       <div className="card card-hover">
         <div className="flex items-center space-x-md mb-lg">
@@ -172,6 +271,14 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
         </div>
 
         <div className="space-y-lg">
+          {error && (
+            <div className="card" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+              <div className="text-sm" style={{ color: 'var(--color-error, #ef4444)' }}>
+                ❌ {error}
+              </div>
+            </div>
+          )}
+          
           <div className="flex space-x-md">
             <button
               onClick={handleSimulateToken}
@@ -222,12 +329,12 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
                     Copy Address
                   </button>
                   <a 
-                    href={`https://etherscan.io/address/${deployedTokenAddress}`}
+                    href={`https://basescan.org/token/${deployedTokenAddress}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn btn-secondary text-xs"
                   >
-                    View on Etherscan
+                    View on BaseScan
                   </a>
                 </div>
               </div>
