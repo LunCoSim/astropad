@@ -44,32 +44,45 @@ export function TokenDeployWizard({
     socialUrls: [''],
     auditUrls: [''],
     
-    // Social Context
+    // Social Context (enhanced for v4)
     interfaceName: 'astropad',
     platform: '',
     messageId: '',
     socialId: '',
+    originatingChainId: 8453, // Base mainnet
     
-    // Pool Configuration (Clanker v4)
+    // Pool Configuration (enhanced for v4)
     pool: {
       pairedToken: BASE_NETWORK.WETH_ADDRESS,
       tickIfToken0IsClanker: -230400, // Default starting tick
       tickSpacing: 200, // Default tick spacing
-      positions: POOL_POSITIONS.Standard
+      positions: POOL_POSITIONS.Standard,
+      poolData: undefined // Custom pool data for hooks
     },
     
-    // Token Locker (required for v4)
+    // MEV Protection Configuration (NEW)
+    mev: {
+      enabled: true, // Enable by default for security
+      moduleType: 'block-delay',
+      blockDelay: 2, // 2 block delay by default
+      customModule: undefined,
+      customData: undefined
+    },
+    
+    // Token Locker (enhanced)
     locker: {
       locker: CLANKER_V4_ADDRESSES.LOCKER,
-      lockerData: '0x' // Default empty data
+      lockerData: '0x', // Default empty data
+      customRewardDistribution: false
     },
     
-    // Extensions (all optional)
+    // Extensions (enhanced with more options)
     vault: {
       enabled: false,
       percentage: 5, // 5% default
       lockupDuration: 7 * 24 * 60 * 60, // 7 days minimum
-      vestingDuration: 0 // No vesting by default
+      vestingDuration: 0, // No vesting by default
+      msgValue: 0 // No ETH value by default
     },
     
     airdrop: {
@@ -78,38 +91,51 @@ export function TokenDeployWizard({
       amount: 1000, // 1000 tokens default
       lockupDuration: 24 * 60 * 60, // 1 day minimum
       vestingDuration: 0, // No vesting by default
-      entries: [] // Will be populated by user
+      entries: [], // Will be populated by user
+      msgValue: 0 // No ETH value by default
     },
     
     devBuy: {
       enabled: false,
       ethAmount: 0.1, // 0.1 ETH default
-      amountOutMin: 0 // No slippage protection by default
+      amountOutMin: 0, // No slippage protection by default
+      recipient: address || '' // Defaults to token admin
     },
     
-    // Fee Configuration with automatic distribution
+    // Fee Configuration (enhanced for v4)
     fees: {
       type: 'static',
       userFeeBps: 100, // 1% total fee (60% to user, 20% to clanker, 20% to us)
       static: {
         clankerFeeBps: 100, // Will be calculated
-        pairedFeeBps: 100   // Will be calculated
+        pairedFeeBps: 100, // Will be calculated
+        customDistribution: false
       }
     },
     
-    // Reward Recipients (simple single recipient - user gets 100% of LP fees)
+    // Reward Recipients (enhanced)
     rewards: {
       recipients: [{
         recipient: address || '',
         admin: address || '',
         bps: 10000 // 100% to user
-      }]
+      }],
+      customDistribution: false
     },
     
-    // Vanity Address
+    // Vanity Address (enhanced)
     vanity: {
       enabled: false,
-      suffix: '0x4b07' // Default vanity suffix
+      suffix: '0x4b07', // Default vanity suffix
+      customSalt: undefined
+    },
+    
+    // Advanced Configuration (NEW)
+    advanced: {
+      customHookData: false,
+      hookData: undefined,
+      customExtensions: [],
+      gasOptimization: false
     },
     
     // Legacy fields for backwards compatibility
@@ -133,13 +159,14 @@ export function TokenDeployWizard({
         ...prev,
         tokenAdmin: address,
         admin: address, // Legacy field
-        devBuy: prev.devBuy ? { ...prev.devBuy } : undefined,
+        devBuy: prev.devBuy ? { ...prev.devBuy, recipient: address } : undefined,
         rewards: {
           recipients: [{
             recipient: address,
             admin: address,
             bps: 10000 // 100% to user
-          }]
+          }],
+          customDistribution: false
         },
         rewardRecipients: [{
           recipient: address,

@@ -1,4 +1,4 @@
-import type { TokenConfig } from '../TokenDeployWizard';
+import type { TokenConfig } from '../../../lib/types';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { addAirdropEntry, removeAirdropEntry, updateAirdropEntry } from '../../../lib/array-utils';
 import { calculateDevBuyEstimate } from '../../../lib/calculations';

@@ -28,8 +28,8 @@ export const WIZARD_STEPS: WizardStep[] = [
   },
   {
     id: 'advanced',
-    title: 'Fees & Distribution',
-    description: 'Fee collection and reward distribution',
+    title: 'Advanced Config',
+    description: 'MEV protection, fees, and pool settings',
     icon: '⚙️',
     required: false
   },
