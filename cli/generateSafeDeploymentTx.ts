@@ -3,11 +3,10 @@ import fs from "fs";
 import path from "path";
 import { base } from "viem/chains";
 import {
-  TokenConfigV4Builder,
   WETH_ADDRESS,
-  Clanker,
   POOL_POSITIONS,
 } from "clanker-sdk";
+import { Clanker } from "clanker-sdk/v4";
 
 // Your Gnosis Safe Multisig address
 const SAFE_MULTISIG_ADDRESS =

@@ -4,9 +4,11 @@ import { InfoTooltip } from '../ui/InfoTooltip';
 import { usePublicClient, useWalletClient, useAccount } from 'wagmi';
 import { storeDeployedToken } from '../../../lib/deployed-tokens';
 import { 
-  Clanker,
-  WETH_ADDRESS
+  WETH_ADDRESS,
+  FEE_CONFIGS,
+  POOL_POSITIONS
 } from 'clanker-sdk';
+import { Clanker } from 'clanker-sdk/v4';
 
 interface DeploymentStepProps {
   config: TokenConfig;
@@ -51,9 +53,11 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
 
       // Build the Clanker v4 token configuration - updated for v4.1 API
       const clankerV4Config = {
+        type: 'v4' as const,
         name: config.name,
         symbol: config.symbol,
         image: config.image || '',
+        tokenAdmin: config.tokenAdmin as `0x${string}`,
         metadata: {
           description: config.description || 'Token deployed via Astropad',
           socialMediaUrls: config.socialUrls.filter(url => url.trim()),
@@ -66,26 +70,28 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
           id: config.socialId || '',
         },
         pool: {
-          quoteToken: (config.pairTokenType === 'WETH' ? WETH_ADDRESS : config.customPairTokenAddress) as `0x${string}`,
-          initialMarketCap: "1", // Default 1 ETH initial market cap
+          pairedToken: (config.pairTokenType === 'WETH' ? WETH_ADDRESS : config.customPairTokenAddress) as `0x${string}`,
+          positions: POOL_POSITIONS.Standard
         },
         devBuy: {
           ethAmount: config.devBuy?.enabled ? config.devBuy.ethAmount : 0,
         },
-        rewardsConfig: {
-          creatorReward: 75, // 75% to creator
-          creatorAdmin: config.tokenAdmin as `0x${string}`,
-          creatorRewardRecipient: config.tokenAdmin as `0x${string}`,
-          interfaceAdmin: "0x1eaf444ebDf6495C57aD52A04C61521bBf564ace",
-          interfaceRewardRecipient: "0x1eaf444ebDf6495C57aD52A04C61521bBf564ace",
+        rewards: {
+          recipients: [{
+            admin: config.tokenAdmin as `0x${string}`,
+            recipient: config.tokenAdmin as `0x${string}`,
+            bps: 10000 // 100% to the user
+          }]
         },
+        fees: FEE_CONFIGS.DynamicBasic,
       };
 
       // Add vault if enabled
       if (config.vault?.enabled) {
         clankerV4Config.vault = {
           percentage: Math.min(config.vault.percentage, 30), // Max 30%
-          durationInDays: Math.round(config.vault.lockupDuration / (24 * 60 * 60)), // Convert seconds to days
+          lockupDuration: config.vault.lockupDuration,
+          vestingDuration: config.vault.vestingDuration || 0,
         };
       }
       
@@ -94,16 +100,16 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
       console.log('Simulating Clanker v4 token deployment with config:', clankerV4Config);
       
       // DEBUG: Validate essential addresses
-      console.log('Creator admin address:', clankerV4Config.rewardsConfig.creatorAdmin);
-      console.log('Quote token address:', clankerV4Config.pool.quoteToken);
+      console.log('Token admin address:', clankerV4Config.tokenAdmin);
+      console.log('Paired token address:', clankerV4Config.pool.pairedToken);
       
       // Validate addresses are properly formatted
-      if (!clankerV4Config.rewardsConfig.creatorAdmin.startsWith('0x') || clankerV4Config.rewardsConfig.creatorAdmin.length !== 42) {
-        throw new Error(`Invalid creator admin address: ${clankerV4Config.rewardsConfig.creatorAdmin}`);
+      if (!clankerV4Config.tokenAdmin.startsWith('0x') || clankerV4Config.tokenAdmin.length !== 42) {
+        throw new Error(`Invalid token admin address: ${clankerV4Config.tokenAdmin}`);
       }
       
-      if (!clankerV4Config.pool.quoteToken.startsWith('0x') || clankerV4Config.pool.quoteToken.length !== 42) {
-        throw new Error(`Invalid quote token address: ${clankerV4Config.pool.quoteToken}`);
+      if (!clankerV4Config.pool.pairedToken.startsWith('0x') || clankerV4Config.pool.pairedToken.length !== 42) {
+        throw new Error(`Invalid paired token address: ${clankerV4Config.pool.pairedToken}`);
       }
       
       // DEBUG: Log the exact parameters being sent
@@ -158,8 +164,57 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
 
       console.log('Deploying token with v4 config:', simulationResult.tokenConfig);
 
-      // Deploy the token
-      const tokenAddress = await clanker.deployToken(simulationResult.tokenConfig);
+      // Ensure the configuration is clean and properly typed
+      const deployConfig = {
+        type: simulationResult.tokenConfig.type,
+        name: simulationResult.tokenConfig.name,
+        symbol: simulationResult.tokenConfig.symbol,
+        image: simulationResult.tokenConfig.image,
+        tokenAdmin: simulationResult.tokenConfig.tokenAdmin,
+        metadata: simulationResult.tokenConfig.metadata,
+        context: simulationResult.tokenConfig.context,
+        pool: simulationResult.tokenConfig.pool,
+        devBuy: simulationResult.tokenConfig.devBuy,
+        rewards: simulationResult.tokenConfig.rewards,
+        fees: simulationResult.tokenConfig.fees,
+        ...(simulationResult.tokenConfig.vault && { vault: simulationResult.tokenConfig.vault })
+      };
+
+      console.log('Clean deploy config:', deployConfig);
+      console.log('Config type check:', typeof deployConfig.type, deployConfig.type);
+      console.log('Config keys:', Object.keys(deployConfig));
+      
+      // Additional validation before deployment
+      if (!deployConfig.type) {
+        throw new Error('Missing type field in config');
+      }
+      if (deployConfig.type !== 'v4') {
+        throw new Error(`Invalid type: ${deployConfig.type}, expected 'v4'`);
+      }
+      if (!deployConfig.tokenAdmin) {
+        throw new Error('Missing tokenAdmin field in config');
+      }
+
+      // Try with a minimal config first to isolate the issue
+      const minimalConfig = {
+        type: 'v4' as const,
+        name: deployConfig.name,
+        symbol: deployConfig.symbol,
+        tokenAdmin: deployConfig.tokenAdmin,
+      };
+      
+      console.log('Trying minimal config first:', minimalConfig);
+      
+      let tokenAddress;
+      try {
+        // Deploy the token using the correct v4.1 API
+        tokenAddress = await clanker.deploy(minimalConfig);
+        console.log('Minimal config worked! Token address:', tokenAddress);
+      } catch (minimalError) {
+        console.log('Minimal config failed, trying full config:', minimalError);
+        // If minimal fails, try the full config
+        tokenAddress = await clanker.deploy(deployConfig);
+      }
       
       console.log(`Token deployed successfully: ${tokenAddress}`);
       
