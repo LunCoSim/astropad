@@ -8,11 +8,13 @@ import type { PublicClient } from 'viem';
 // ===== CORE TOKEN CONFIGURATION =====
 
 export interface TokenConfig {
-  // Core Coin Settings
+  // Core Token Settings
   name: string;
   symbol: string;
-  admin: string;
   image: string;
+  tokenAdmin: string; // Admin for the token (can change metadata, etc.)
+  
+  // Metadata
   description: string;
   socialUrls: string[];
   auditUrls: string[];
@@ -23,67 +25,89 @@ export interface TokenConfig {
   messageId: string;
   socialId: string;
   
-  // Liquidity Setup
+  // Pool Configuration
+  pool: {
+    pairedToken: string; // Token to pair with (defaults to WETH)
+    tickIfToken0IsClanker: number; // Starting tick of the pool
+    tickSpacing: number; // Tick spacing
+    positions: CustomPosition[]; // Initial liquidity positions
+  };
+  
+  // Token Locker (required)
+  locker: {
+    locker: string; // Locker extension address
+    lockerData: string; // Hex encoded locker data
+  };
+  
+  // Extensions (all optional)
+  vault?: {
+    enabled: boolean;
+    percentage: number; // 0-90% of total supply
+    lockupDuration: number; // Minimum 7 days in seconds
+    vestingDuration: number; // Linear vesting duration in seconds
+  };
+  
+  airdrop?: {
+    enabled: boolean;
+    merkleRoot: string; // Root of merkle tree
+    amount: number; // Tokens to airdrop (whole tokens)
+    lockupDuration: number; // Minimum 1 day in seconds
+    vestingDuration: number; // Linear vesting duration in seconds
+    entries: AirdropEntry[]; // UI helper for generating merkle tree
+  };
+  
+  devBuy?: {
+    enabled: boolean;
+    ethAmount: number; // ETH amount to spend on initial buy
+    poolKey?: {
+      currency0: string;
+      currency1: string;
+      fee: number;
+      tickSpacing: number;
+      hooks: string;
+    };
+    amountOutMin: number; // Min amount for ETH->PAIR swap if not WETH paired
+  };
+  
+  // Fee Configuration
+  fees: {
+    type: 'static' | 'dynamic';
+    // User-facing fee percentage (we'll calculate the actual distribution)
+    userFeeBps: number; // What user sets (will be split: 60% user, 20% clanker, 20% us)
+    static?: {
+      clankerFeeBps: number; // Calculated from userFeeBps
+      pairedFeeBps: number; // Calculated from userFeeBps
+    };
+    dynamic?: {
+      baseFee: number; // Minimum fee in bps
+      maxFee: number; // Maximum fee in bps
+      referenceTickFilterPeriod: number; // Seconds
+      resetPeriod: number; // Seconds
+      resetTickFilter: number; // Basis points
+      feeControlNumerator: number; // Volatility response control
+      decayFilterBps: number; // Decay rate (e.g., 9500 = 95%)
+    };
+  };
+  
+  // Reward Recipients (fee distribution)
+  rewards: {
+    recipients: RewardRecipient[]; // Will include user, clanker, and our addresses
+  };
+  
+  // Vanity Address
+  vanity: {
+    enabled: boolean;
+    suffix?: string; // e.g., "0x4b07" for vanity ending
+  };
+  
+  // Legacy fields for backwards compatibility
+  admin: string; // Alias for tokenAdmin
   pairTokenType: 'WETH' | 'custom';
   customPairTokenAddress: string;
   startingMarketCap: number | '';
   poolPositionType: 'Standard' | 'Project' | 'Custom';
-  customPositions: Array<{
-    tickLower: number;
-    tickUpper: number;
-    positionBps: number;
-  }>;
-  
-  // Extensions
-  vault: {
-    enabled: boolean;
-    percentage: number;
-    lockupDuration: number;
-    vestingDuration: number;
-  };
-  airdrop: {
-    enabled: boolean;
-    percentage: number;
-    entries: Array<{address: string, amount: number}>;
-    lockupDuration: number;
-    vestingDuration: number;
-  };
-  devBuy: {
-    enabled: boolean;
-    ethAmount: number;
-    recipient: string;
-    amountOutMin: number;
-  };
-  
-  // Advanced Configuration
-  fees: {
-    type: 'static' | 'dynamic';
-    static: {
-      clankerFeeBps: number;
-      pairedFeeBps: number;
-    };
-    dynamic: {
-      baseFee: number;
-      maxLpFee: number;
-      referenceTickFilterPeriod: number;
-      resetPeriod: number;
-      resetTickFilter: number;
-      feeControlNumerator: number;
-      decayFilterBps: number;
-    };
-  };
-  rewardRecipients: Array<{
-    recipient: string;
-    admin: string;
-    bps: number;
-  }>;
-  
-  // Vanity
-  vanity: {
-    enabled: boolean;
-    prefix: string;
-    suffix: string;
-  };
+  customPositions: CustomPosition[];
+  rewardRecipients: RewardRecipient[];
 }
 
 // ===== ARRAY UTILITY INTERFACES =====
@@ -168,4 +192,5 @@ export interface ValidationResult {
 
 export interface FeeData {
   [symbol: string]: string;
+} 
 } 

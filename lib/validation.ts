@@ -10,15 +10,15 @@ import type { TokenConfig, RewardRecipient, ValidationResult } from './types.js'
 /**
  * Validate step 0: Token Basics
  */
-export function validateBasicsStep(config: Pick<TokenConfig, 'name' | 'symbol' | 'admin'>): boolean {
-  return !!(config.name && config.symbol && config.admin);
+export function validateBasicsStep(config: Pick<TokenConfig, 'name' | 'symbol' | 'tokenAdmin'>): boolean {
+  return !!(config.name && config.symbol && config.tokenAdmin);
 }
 
 /**
- * Validate step 1: Liquidity Setup
+ * Validate step 1: Pool Setup (always valid with default configuration)
  */
-export function validateLiquidityStep(config: Pick<TokenConfig, 'startingMarketCap'>): boolean {
-  return !!(config.startingMarketCap && config.startingMarketCap > 0);
+export function validateLiquidityStep(): boolean {
+  return true; // Pool configuration is always valid with v4 defaults
 }
 
 /**
@@ -29,18 +29,19 @@ export function validateExtensionsStep(): boolean {
 }
 
 /**
- * Validate step 3: Advanced Config
+ * Validate step 3: Advanced Config (fees are automatically distributed)
  */
-export function validateAdvancedStep(config: Pick<TokenConfig, 'rewardRecipients'>): boolean {
-  const totalBps = config.rewardRecipients.reduce((sum, r) => sum + r.bps, 0);
-  return totalBps === VALIDATION_LIMITS.TOTAL_BPS; // Must equal 100%
+export function validateAdvancedStep(config: Pick<TokenConfig, 'fees'>): boolean {
+  // Fee validation - check if userFeeBps is within valid range
+  const feeBps = config.fees.userFeeBps;
+  return feeBps >= 0 && feeBps <= VALIDATION_LIMITS.MAX_FEE_BPS;
 }
 
 /**
- * Validate step 4: Deploy (checks basics and liquidity)
+ * Validate step 4: Deploy (checks basics)
  */
-export function validateDeployStep(config: Pick<TokenConfig, 'name' | 'symbol' | 'admin' | 'startingMarketCap'>): boolean {
-  return validateBasicsStep(config) && validateLiquidityStep(config);
+export function validateDeployStep(config: Pick<TokenConfig, 'name' | 'symbol' | 'tokenAdmin'>): boolean {
+  return validateBasicsStep(config);
 }
 
 /**
@@ -51,7 +52,7 @@ export function validateStep(stepIndex: number, config: TokenConfig): boolean {
     case 0:
       return validateBasicsStep(config);
     case 1:
-      return validateLiquidityStep(config);
+      return validateLiquidityStep();
     case 2:
       return validateExtensionsStep();
     case 3:
@@ -73,17 +74,18 @@ export function getStepValidationErrors(stepIndex: number, config: TokenConfig):
     case 0:
       if (!config.name) errors.push('Token name is required');
       if (!config.symbol) errors.push('Token symbol is required');
-      if (!config.admin) errors.push('Token admin address is required');
-      break;
-    case 1:
-      if (!config.startingMarketCap || config.startingMarketCap <= 0) {
-        errors.push('Starting market cap must be greater than 0');
-      }
+      if (!config.tokenAdmin) errors.push('Token admin address is required');
       break;
     case 3:
-      const totalBps = config.rewardRecipients.reduce((sum, r) => sum + r.bps, 0);
-      if (totalBps !== VALIDATION_LIMITS.TOTAL_BPS) {
-        errors.push(`Reward recipients must total exactly ${VALIDATION_LIMITS.TOTAL_BPS / 100}% (currently ${totalBps / 100}%)`);
+      const feeBps = config.fees.userFeeBps;
+      if (feeBps < 0) {
+        errors.push('Fee percentage cannot be negative');
+      }
+      if (feeBps > VALIDATION_LIMITS.MAX_FEE_BPS) {
+        errors.push(`Fee percentage cannot exceed ${VALIDATION_LIMITS.MAX_FEE_BPS / 100}%`);
+      }
+      if (feeBps > 0 && feeBps < VALIDATION_LIMITS.MIN_FEE_BPS) {
+        errors.push(`Minimum fee is ${VALIDATION_LIMITS.MIN_FEE_BPS / 100}% if enabled`);
       }
       break;
   }

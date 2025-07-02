@@ -9,16 +9,12 @@ import { AdvancedConfigStep } from './steps/AdvancedConfigStep';
 import { DeploymentStep } from './steps/DeploymentStep';
 
 // Utilities
-import { WIZARD_STEPS, DEFAULT_FEE_CONFIG, DEFAULT_VAULT_CONFIG, DEFAULT_AIRDROP_CONFIG, DEFAULT_DEV_BUY_CONFIG, DEFAULT_VANITY_CONFIG, DEFAULT_CUSTOM_POSITION } from '../../lib/constants';
+import { WIZARD_STEPS, BASE_NETWORK, POOL_POSITIONS, CLANKER_V4_ADDRESSES, DEFAULT_CUSTOM_POSITION } from '../../lib/constants';
 import { validateStep } from '../../lib/validation';
+import { calculateFeeDistribution } from '../../lib/fees';
 
 // Types
 import type { TokenConfig } from '../../lib/types';
-
-
-
-// Import the calculation function from lib
-import { calculateDevBuyTokens } from '../../lib/calculations';
 
 interface TokenDeployWizardProps {
   connected: boolean;
@@ -35,13 +31,15 @@ export function TokenDeployWizard({
   // ========== UI STATE ==========
   const [currentStep, setCurrentStep] = useState(0);
   
-  // Configuration state using TokenConfig interface
+  // Configuration state using updated TokenConfig interface for Clanker v4
   const [config, setConfig] = useState<TokenConfig>({
-    // Core Coin Settings
-    name: 'My Project Coin',
-    symbol: 'MPC',
-    admin: address || '',
+    // Core Token Settings
+    name: 'My Project Token',
+    symbol: 'MPT',
     image: '',
+    tokenAdmin: address || '',
+    
+    // Metadata
     description: '',
     socialUrls: [''],
     auditUrls: [''],
@@ -52,45 +50,89 @@ export function TokenDeployWizard({
     messageId: '',
     socialId: '',
     
-    // Liquidity Setup
+    // Pool Configuration (Clanker v4)
+    pool: {
+      pairedToken: BASE_NETWORK.WETH_ADDRESS,
+      tickIfToken0IsClanker: -230400, // Default starting tick
+      tickSpacing: 200, // Default tick spacing
+      positions: POOL_POSITIONS.Standard
+    },
+    
+    // Token Locker (required for v4)
+    locker: {
+      locker: CLANKER_V4_ADDRESSES.LOCKER,
+      lockerData: '0x' // Default empty data
+    },
+    
+    // Extensions (all optional)
+    vault: {
+      enabled: false,
+      percentage: 5, // 5% default
+      lockupDuration: 7 * 24 * 60 * 60, // 7 days minimum
+      vestingDuration: 0 // No vesting by default
+    },
+    
+    airdrop: {
+      enabled: false,
+      merkleRoot: '0x0000000000000000000000000000000000000000000000000000000000000000',
+      amount: 1000, // 1000 tokens default
+      lockupDuration: 24 * 60 * 60, // 1 day minimum
+      vestingDuration: 0, // No vesting by default
+      entries: [] // Will be populated by user
+    },
+    
+    devBuy: {
+      enabled: false,
+      ethAmount: 0.1, // 0.1 ETH default
+      amountOutMin: 0 // No slippage protection by default
+    },
+    
+    // Fee Configuration with automatic distribution
+    fees: {
+      type: 'static',
+      userFeeBps: 100, // 1% total fee (60% to user, 20% to clanker, 20% to us)
+      static: {
+        clankerFeeBps: 100, // Will be calculated
+        pairedFeeBps: 100   // Will be calculated
+      }
+    },
+    
+    // Reward Recipients (auto-calculated with fee distribution)
+    rewards: {
+      recipients: calculateFeeDistribution(address || '', 100) // 1% default
+    },
+    
+    // Vanity Address
+    vanity: {
+      enabled: false,
+      suffix: '0x4b07' // Default vanity suffix
+    },
+    
+    // Legacy fields for backwards compatibility
+    admin: address || '',
     pairTokenType: 'WETH',
     customPairTokenAddress: '',
     startingMarketCap: '',
     poolPositionType: 'Standard',
     customPositions: [DEFAULT_CUSTOM_POSITION],
-    
-    // Extensions
-    vault: DEFAULT_VAULT_CONFIG,
-    airdrop: DEFAULT_AIRDROP_CONFIG,
-    devBuy: { ...DEFAULT_DEV_BUY_CONFIG, recipient: address || '' },
-    
-    // Advanced Configuration
-    fees: {
-      type: 'static',
-      static: DEFAULT_FEE_CONFIG.static,
-      dynamic: DEFAULT_FEE_CONFIG.dynamic
-    },
-    rewardRecipients: [
-      { recipient: address || '', admin: address || '', bps: 10000 }
-    ],
-    
-    // Vanity
-    vanity: DEFAULT_VANITY_CONFIG
+    rewardRecipients: calculateFeeDistribution(address || '', 100)
   });
-
-
 
   // Update config when address changes
   useEffect(() => {
-    if (address && address !== config.admin) {
+    if (address && address !== config.tokenAdmin) {
       setConfig(prev => ({
         ...prev,
-        admin: address,
-        devBuy: { ...prev.devBuy, recipient: address },
-        rewardRecipients: prev.rewardRecipients.map(r => ({ ...r, recipient: address, admin: address }))
+        tokenAdmin: address,
+        admin: address, // Legacy field
+        devBuy: prev.devBuy ? { ...prev.devBuy } : undefined,
+        rewards: {
+          recipients: calculateFeeDistribution(address, prev.fees.userFeeBps)
+        },
+        rewardRecipients: calculateFeeDistribution(address, prev.fees.userFeeBps)
       }));
     }
-  }, [address, config.admin]);
+  }, [address, config.tokenAdmin]);
 
   const updateConfig = (updates: Partial<TokenConfig>) => {
     setConfig(prev => ({ ...prev, ...updates }));
@@ -111,8 +153,6 @@ export function TokenDeployWizard({
       setCurrentStep(currentStep - 1);
     }
   };
-
-
 
   const renderCurrentStep = () => {
     switch (currentStep) {

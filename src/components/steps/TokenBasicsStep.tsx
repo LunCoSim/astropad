@@ -1,15 +1,15 @@
-import type { TokenConfig } from '../TokenDeployWizard';
+import type { TokenConfig } from '../../../lib/types';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { addSocialUrl, removeSocialUrl, updateSocialUrl, addAuditUrl, removeAuditUrl, updateAuditUrl } from '../../../lib/array-utils';
 
-interface CoinBasicsStepProps {
+interface TokenBasicsStepProps {
   config: TokenConfig;
   updateConfig: (updates: Partial<TokenConfig>) => void;
   onNext: () => void;
 }
 
-export function CoinBasicsStep({ config, updateConfig, onNext }: CoinBasicsStepProps) {
-  const isValid = !!(config.name && config.symbol && config.admin);
+export function TokenBasicsStep({ config, updateConfig, onNext }: TokenBasicsStepProps) {
+  const isValid = !!(config.name && config.symbol && config.tokenAdmin);
 
   const handleAddSocialUrl = () => {
     updateConfig({
@@ -133,8 +133,11 @@ export function CoinBasicsStep({ config, updateConfig, onNext }: CoinBasicsStepP
           </label>
           <input
             type="text"
-            value={config.admin}
-            onChange={(e) => updateConfig({ admin: e.target.value })}
+            value={config.tokenAdmin}
+            onChange={(e) => updateConfig({ 
+              tokenAdmin: e.target.value,
+              admin: e.target.value // Update legacy field too
+            })}
             placeholder="0x... (defaults to your connected wallet)"
             className="input font-mono text-sm"
           />
@@ -301,7 +304,4 @@ export function CoinBasicsStep({ config, updateConfig, onNext }: CoinBasicsStepP
       </div>
     </div>
   );
-}
-
-// Export with the name expected by the wizard
-export { CoinBasicsStep as TokenBasicsStep }; 
+} 

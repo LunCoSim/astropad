@@ -3,8 +3,17 @@ import type { TokenConfig } from '../../../lib/types';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { usePublicClient, useWalletClient, useAccount } from 'wagmi';
 import { storeDeployedToken } from '../../../lib/deployed-tokens';
-import { Clanker, WETH_ADDRESS, POOL_POSITIONS, FEE_CONFIGS, TokenConfigV4Builder } from 'clanker-sdk';
-import { base } from 'viem/chains';
+import { Clanker } from 'clanker-sdk/v4';
+import { 
+  WETH_ADDRESS, 
+  FEE_CONFIGS, 
+  POOL_POSITIONS,
+  CLANKER_LOCKER_V4,
+  CLANKER_VAULT_V4,
+  CLANKER_AIRDROP_V4,
+  CLANKER_DEVBUY_V4
+} from 'clanker-sdk';
+import type { ClankerTokenV4 } from 'clanker-sdk';
 
 interface DeploymentStepProps {
   config: TokenConfig;
@@ -38,99 +47,104 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
         publicClient,
       });
 
-      // Build the token configuration using v4 format with proper required fields
-      const pairedToken = config.pairTokenType === 'WETH' 
-        ? WETH_ADDRESS 
-        : config.customPairTokenAddress as `0x${string}`;
-
-      const builder = new TokenConfigV4Builder()
-        .withName(config.name)
-        .withSymbol(config.symbol)
-        .withTokenAdmin(address)
-        .withImage(config.image || 'ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi')
-        .withMetadata({
+      // Build the Clanker v4 token configuration
+      const clankerV4Config: ClankerTokenV4 = {
+        type: 'v4',
+        name: config.name,
+        symbol: config.symbol,
+        image: config.image || '',
+        chainId: 8453, // Base chain
+        tokenAdmin: config.tokenAdmin as `0x${string}`,
+        
+        // Metadata
+        metadata: {
           description: config.description || 'Token deployed via Astropad',
-          socialMediaUrls: config.socialUrls.filter((url: string) => url.trim()),
-          auditUrls: config.auditUrls.filter((url: string) => url.trim()),
-        })
-        .withContext({
-          interface: config.interfaceName,
+          socialMediaUrls: config.socialUrls.filter(url => url.trim()),
+          auditUrls: config.auditUrls.filter(url => url.trim()),
+        },
+        
+        // Social context
+        context: {
+          interface: 'astropad',
           platform: config.platform || '',
           messageId: config.messageId || '',
           id: config.socialId || '',
-        })
-        .withPoolConfig({
-          pairedToken,
-          positions: config.poolPositionType === 'Standard' ? POOL_POSITIONS.Standard : POOL_POSITIONS.Project,
-        });
-
-      // Configure fees (required)
-      if (config.fees.type === 'static') {
-        builder.withStaticFeeConfig({
-          clankerFeeBps: config.fees.static.clankerFeeBps,
-          pairedFeeBps: config.fees.static.pairedFeeBps,
-        });
-      } else {
-        builder.withDynamicFeeConfig(FEE_CONFIGS.DynamicBasic);
-      }
-
-      // Configure rewards (required)
-      builder.withRewardsRecipients({
-        recipients: config.rewardRecipients.map((r: any) => ({
-          admin: r.admin as `0x${string}`,
-          recipient: r.recipient as `0x${string}`,
-          bps: r.bps,
-        })),
-      });
-
-      // Configure optional extensions
-      if (config.vault.enabled) {
-        builder.withVault({
-          percentage: config.vault.percentage,
-          lockupDuration: config.vault.lockupDuration,
-          vestingDuration: config.vault.vestingDuration,
-        });
-      }
-
-      if (config.devBuy.enabled && config.devBuy.ethAmount > 0) {
-        builder.withDevBuy({
-          ethAmount: config.devBuy.ethAmount,
-        });
-      }
-
-      const builtConfig = builder.build();
-      
-      // Add the v4 type field for the unified API
-      const tokenConfig = {
-        ...builtConfig,
-        type: 'v4' as const,
+        },
+        
+        // Pool configuration
+        pool: {
+          pairedToken: (config.pairTokenType === 'WETH' ? WETH_ADDRESS : config.customPairTokenAddress) as `0x${string}`,
+          positions: POOL_POSITIONS.Standard
+        },
+        
+        // Token locker (required for v4)
+        locker: {
+          locker: CLANKER_LOCKER_V4,
+          lockerData: '0x'
+        },
+        
+        // Fee configuration
+        fees: config.fees.type === 'static' ? {
+          type: 'static',
+          clankerFee: config.fees.userFeeBps,
+          pairedFee: config.fees.userFeeBps
+        } : FEE_CONFIGS.DynamicBasic,
+        
+        // Rewards
+        rewards: {
+          recipients: config.rewards.recipients.map(r => ({
+            admin: r.admin as `0x${string}`,
+            recipient: r.recipient as `0x${string}`,
+            bps: r.bps
+          }))
+        },
+        
+        // Vanity address
+        vanity: config.vanity.enabled
       };
 
-      // Simulate the deployment using real Clanker SDK
-      console.log('Simulating token deployment with config:', tokenConfig);
+      // Add extensions if enabled
+      if (config.vault?.enabled) {
+        clankerV4Config.vault = {
+          percentage: config.vault.percentage,
+          lockupDuration: config.vault.lockupDuration,
+          vestingDuration: config.vault.vestingDuration
+        };
+      }
       
-      const clankerSimulator = new Clanker({
-        publicClient: publicClient!,
-      });
-
-      const simulationResponse = await clankerSimulator.simulateDeployToken(tokenConfig, {
-        address,
-        type: 'json-rpc',
-      } as any);
-
-      if ('error' in simulationResponse) {
-        throw new Error((simulationResponse.error as any)?.message || 'Simulation failed');
+      if (config.airdrop?.enabled && config.airdrop.merkleRoot !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+        clankerV4Config.airdrop = {
+          merkleRoot: config.airdrop.merkleRoot as `0x${string}`,
+          amount: config.airdrop.amount,
+          lockupDuration: config.airdrop.lockupDuration,
+          vestingDuration: config.airdrop.vestingDuration
+        };
+      }
+      
+      if (config.devBuy?.enabled && config.devBuy.ethAmount > 0) {
+        clankerV4Config.devBuy = {
+          ethAmount: config.devBuy.ethAmount
+        };
       }
 
-      const { simulatedAddress } = simulationResponse;
-      const gasEstimate = BigInt(2000000); // Default estimate
-      const estimatedCost = '0.05 ETH'; // Default estimate
+      console.log('Simulating Clanker v4 token deployment with config:', clankerV4Config);
       
+      // Simulate the deployment
+      const simulation = await clanker.deploySimulate(clankerV4Config);
+      
+      if (simulation.error) {
+        throw new Error(simulation.error.message || 'Simulation failed');
+      }
+      
+      if (!simulation.result) {
+        throw new Error('No simulation result returned');
+      }
+
       setSimulationResult({
-        tokenConfig,
-        gasEstimate,
-        estimatedCost,
-        simulatedAddress,
+        tokenConfig: clankerV4Config,
+        simulatedAddress: simulation.result,
+        gasEstimate: 'Estimated by network',
+        estimatedCost: 'Variable gas cost'
       });
       
     } catch (error: any) {
@@ -152,40 +166,48 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
     
     try {
       // Initialize Clanker SDK
-      const clankerDeployer = new Clanker({
+      const clanker = new Clanker({
         wallet: walletClient,
-        publicClient: publicClient!,
+        publicClient,
       });
 
-      console.log('Deploying token with config:', simulationResult.tokenConfig);
+      console.log('Deploying token with v4 config:', simulationResult.tokenConfig);
 
-      // Deploy the token - v4 returns { txHash, waitForTransaction, error }
-      const deployResult = await clankerDeployer.deployToken(simulationResult.tokenConfig);
+      // Deploy the token
+      const deployment = await clanker.deploy(simulationResult.tokenConfig);
       
-      if ('error' in deployResult) {
-        throw new Error((deployResult.error as any)?.message || 'Deployment failed');
+      if (deployment.error) {
+        throw new Error(deployment.error.message || 'Deployment failed');
+      }
+      
+      if (!deployment.txHash) {
+        throw new Error('No transaction hash returned');
       }
 
-      const { txHash, waitForTransaction } = deployResult;
-      console.log(`Token deployment transaction: ${txHash}`);
+      console.log(`Token deployment transaction: ${deployment.txHash}`);
       
-      // Wait for the transaction to be mined and get the token address
-      const { address: tokenAddress } = await waitForTransaction();
+      // Wait for the transaction to be mined
+      const result = await deployment.waitForTransaction();
+      const tokenAddress = result.address;
+      
+      if (!tokenAddress) {
+        throw new Error('Token address not found in deployment result');
+      }
       
       console.log(`Token deployed successfully: ${tokenAddress}`);
       
       setDeployedTokenAddress(tokenAddress);
       
-      // Save the deployed token
+      // Save the deployed token to manual tracking
       const deployedToken = {
         address: tokenAddress,
         name: config.name,
         symbol: config.symbol,
         deployerAddress: address,
-        deploymentTxHash: txHash,
+        deploymentTxHash: deployment.txHash,
         deploymentTimestamp: Date.now(),
         isVerified: true,
-        source: 'blockchain' as const,
+        source: 'manual' as const,
       };
       storeDeployedToken(deployedToken);
       
@@ -227,8 +249,8 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
               <span className="ml-sm font-semibold text-primary">{config.symbol}</span>
             </div>
             <div className="text-sm">
-              <span className="text-muted">Market Cap:</span>
-              <span className="ml-sm font-semibold text-primary">{config.startingMarketCap} ETH</span>
+              <span className="text-muted">Token Admin:</span>
+              <span className="ml-sm font-semibold text-primary font-mono text-xs">{config.tokenAdmin}</span>
             </div>
             <div className="text-sm">
               <span className="text-muted">Pair Token:</span>
@@ -240,19 +262,19 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
             <div className="text-sm">
               <span className="text-muted">Vault:</span>
               <span className="ml-sm font-semibold text-primary">
-                {config.vault.enabled ? `${config.vault.percentage}%` : 'Disabled'}
+                {config.vault?.enabled ? `${config.vault.percentage}%` : 'Disabled'}
               </span>
             </div>
             <div className="text-sm">
               <span className="text-muted">Airdrop:</span>
               <span className="ml-sm font-semibold text-primary">
-                {config.airdrop.enabled ? `${config.airdrop.percentage}%` : 'Disabled'}
+                {config.airdrop?.enabled ? `${config.airdrop.amount} tokens` : 'Disabled'}
               </span>
             </div>
             <div className="text-sm">
               <span className="text-muted">Dev Buy:</span>
               <span className="ml-sm font-semibold text-primary">
-                {config.devBuy.enabled ? `${config.devBuy.ethAmount} ETH` : 'Disabled'}
+                {config.devBuy?.enabled ? `${config.devBuy.ethAmount} ETH` : 'Disabled'}
               </span>
             </div>
             <div className="text-sm">
@@ -300,15 +322,15 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
           {simulationResult && (
             <div className="card" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
               <div className="space-y-xs">
-                <div className="font-semibold text-primary">Simulation Results:</div>
+                <div className="font-semibold text-primary">✅ Simulation Successful!</div>
                 <div className="text-sm text-secondary">
-                  Estimated Gas: {simulationResult.gasEstimate?.toString() || 'N/A'}
+                  Estimated Token Address: {simulationResult.simulatedAddress || 'N/A'}
                 </div>
                 <div className="text-sm text-secondary">
-                  Estimated Cost: {simulationResult.estimatedCost || 'N/A'}
+                  Gas Cost: {simulationResult.estimatedCost || 'Variable'}
                 </div>
-                <div className="text-sm text-secondary">
-                  Token Address: {simulationResult.simulatedAddress || 'N/A'}
+                <div className="text-sm text-muted">
+                  Ready to deploy! Click "Confirm Deploy" to proceed.
                 </div>
               </div>
             </div>
@@ -317,9 +339,9 @@ export function DeploymentStep({ config, onPrevious }: DeploymentStepProps) {
           {deployedTokenAddress && (
             <div className="card" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
               <div className="space-y-xs">
-                <div className="font-semibold text-success">Token Deployed Successfully! 🎉</div>
+                <div className="font-semibold text-success">🎉 Token Deployed Successfully!</div>
                 <div className="text-sm text-secondary" style={{ wordBreak: 'break-all' }}>
-                  Address: {deployedTokenAddress}
+                  <strong>Address:</strong> {deployedTokenAddress}
                 </div>
                 <div className="flex space-x-md mt-md">
                   <button 

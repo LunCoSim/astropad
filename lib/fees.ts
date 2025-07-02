@@ -1,6 +1,7 @@
 import { formatUnits, type PublicClient, type WalletClient } from "viem";
 import { Clanker, WETH_ADDRESS } from "clanker-sdk";
 import { getTokenDecimals, getTokenSymbol } from "./token-validation.js";
+import type { RewardRecipient } from './types';
 
 export async function getAvailableFees(
   publicClient: PublicClient,
@@ -89,4 +90,120 @@ export async function claimFees(
       `https://www.clanker.world/clanker/${clankerTokenAddress}/admin`
     );
   }
+}
+
+/**
+ * Fee distribution utilities for Clanker v4 token deployment
+ * Implements automatic fee splitting: 60% user, 20% clanker, 20% astropad
+ */
+
+// Our fee collection address
+export const ASTROPAD_FEE_ADDRESS = '0x2eC50faa88b1CEeeB77bb36e7e31eb7C1FAeB348';
+
+// Clanker's official fee address (this should be confirmed)
+export const CLANKER_FEE_ADDRESS = '0x1234567890123456789012345678901234567890'; // TODO: Get actual address
+
+/**
+ * Calculate fee distribution for reward recipients
+ * @param userAddress - The user's address (gets 60% of fees)
+ * @param userFeeBps - The fee percentage the user wants to collect (in basis points)
+ * @returns Array of reward recipients with proper distribution
+ */
+export function calculateFeeDistribution(
+  userAddress: string,
+  userFeeBps: number
+): RewardRecipient[] {
+  // Calculate the distribution:
+  // User gets 60% of what they set
+  // Clanker gets 20% of what they set  
+  // We get 20% of what they set
+  
+  const userBps = Math.floor(userFeeBps * 0.6); // 60%
+  const clankerBps = Math.floor(userFeeBps * 0.2); // 20%
+  const astropadBps = userFeeBps - userBps - clankerBps; // Remaining (handles rounding)
+  
+  return [
+    {
+      recipient: userAddress,
+      admin: userAddress,
+      bps: userBps
+    },
+    {
+      recipient: CLANKER_FEE_ADDRESS,
+      admin: CLANKER_FEE_ADDRESS,
+      bps: clankerBps
+    },
+    {
+      recipient: ASTROPAD_FEE_ADDRESS,
+      admin: ASTROPAD_FEE_ADDRESS,
+      bps: astropadBps
+    }
+  ].filter(recipient => recipient.bps > 0); // Only include recipients with non-zero fees
+}
+
+/**
+ * Calculate the actual clanker and paired token fees from user input
+ * @param userFeeBps - The fee percentage the user wants to collect
+ * @param feeType - Whether using static or dynamic fees
+ * @returns Object with calculated fee values
+ */
+export function calculateTokenFees(
+  userFeeBps: number,
+  feeType: 'static' | 'dynamic'
+) {
+  if (feeType === 'static') {
+    return {
+      clankerFeeBps: userFeeBps,
+      pairedFeeBps: userFeeBps
+    };
+  } else {
+    // For dynamic fees, we use the userFeeBps as the base fee
+    return {
+      baseFee: Math.max(25, userFeeBps), // Minimum 25 bps
+      maxFee: Math.min(3000, userFeeBps * 3), // Max 3x the base fee or 30%
+    };
+  }
+}
+
+/**
+ * Get user-friendly fee display information
+ * @param userFeeBps - The fee percentage the user set
+ * @returns Object with display information
+ */
+export function getFeeDisplayInfo(userFeeBps: number) {
+  const userReceives = (userFeeBps * 0.6) / 100; // Convert to percentage
+  const clankerReceives = (userFeeBps * 0.2) / 100;
+  const astropadReceives = (userFeeBps * 0.2) / 100;
+  const totalFee = userFeeBps / 100;
+  
+  return {
+    totalFee: `${totalFee}%`,
+    userReceives: `${userReceives.toFixed(2)}%`,
+    clankerReceives: `${clankerReceives.toFixed(2)}%`,
+    astropadReceives: `${astropadReceives.toFixed(2)}%`,
+    userBps: Math.floor(userFeeBps * 0.6),
+    clankerBps: Math.floor(userFeeBps * 0.2),
+    astropadBps: userFeeBps - Math.floor(userFeeBps * 0.6) - Math.floor(userFeeBps * 0.2)
+  };
+}
+
+/**
+ * Validate fee percentage is within acceptable bounds
+ * @param feeBps - Fee in basis points
+ * @returns Validation result
+ */
+export function validateFeeBps(feeBps: number): { isValid: boolean; error?: string } {
+  if (feeBps < 0) {
+    return { isValid: false, error: 'Fee cannot be negative' };
+  }
+  
+  if (feeBps > 2000) { // 20% max
+    return { isValid: false, error: 'Fee cannot exceed 20%' };
+  }
+  
+  if (feeBps > 0 && feeBps < 25) {
+    return { isValid: false, error: 'Minimum fee is 0.25% (25 basis points)' };
+  }
+  
+  return { isValid: true };
 }

@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { usePublicClient } from 'wagmi';
-import type { TokenConfig } from '../TokenDeployWizard';
+import type { TokenConfig } from '../../../lib/types';
 import { InfoTooltip } from '../ui/InfoTooltip';
-import { WETH_ADDRESS, POOL_POSITIONS } from 'clanker-sdk';
+import { BASE_NETWORK, POOL_POSITIONS } from '../../../lib/constants';
 import { validatePairToken } from '../../../lib/token-validation';
-import { calculateTokenDistribution } from '../../../lib/calculations';
 import { addCustomPosition, removeCustomPosition, updateCustomPosition } from '../../../lib/array-utils';
 
 interface LiquiditySetupStepProps {
@@ -20,7 +19,7 @@ export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }:
   const [pairTokenValidating, setPairTokenValidating] = useState(false);
   const [pairTokenValid, setPairTokenValid] = useState(false);
 
-  const isValid = !!(config.startingMarketCap && config.startingMarketCap > 0);
+  const isValid = true; // Pool configuration is always valid with default values
 
   // Validate custom pair token
   useEffect(() => {
@@ -34,6 +33,13 @@ export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }:
           if (tokenInfo) {
             setPairTokenInfo(tokenInfo);
             setPairTokenValid(true);
+            // Update the pool configuration
+            updateConfig({
+              pool: {
+                ...config.pool,
+                pairedToken: tokenAddress
+              }
+            });
           } else {
             setPairTokenInfo(null);
             setPairTokenValid(false);
@@ -47,6 +53,15 @@ export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }:
       } else {
         setPairTokenInfo(null);
         setPairTokenValid(config.pairTokenType === 'WETH');
+        if (config.pairTokenType === 'WETH') {
+          // Update to WETH address
+          updateConfig({
+            pool: {
+              ...config.pool,
+              pairedToken: BASE_NETWORK.WETH_ADDRESS
+            }
+          });
+        }
       }
     };
 
@@ -71,7 +86,7 @@ export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }:
     });
   };
 
-  const distributions = calculateTokenDistribution(config);
+  // Token distribution calculation removed for v4 - handled automatically by extensions
 
   return (
     <div className="space-y-2xl animate-fade-in">
@@ -84,10 +99,10 @@ export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }:
           </svg>
         </div>
         <h2 className="text-4xl font-bold text-primary mb-md">
-          Liquidity <span className="text-gradient">Configuration</span>
+          Pool <span className="text-gradient">Configuration</span>
         </h2>
         <p className="text-lg text-secondary mx-auto" style={{ maxWidth: '48rem', lineHeight: '1.7' }}>
-          Configure your token's initial liquidity, trading pairs, and market parameters. This determines how your token will trade on DEXs.
+          Configure your token's liquidity pool settings. Choose the trading pair and liquidity position strategy for optimal market making.
         </p>
       </div>
 

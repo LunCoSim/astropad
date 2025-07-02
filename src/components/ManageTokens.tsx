@@ -41,15 +41,15 @@ export function ManageTokens() {
     setTokensError('');
     
     try {
-      // Use Alchemy API by default for faster loading
-      console.log('Loading deployed tokens via Alchemy API...');
-      const tokens = await syncTokensWithBlockchain(publicClient, address, true);
+      // Load only manually tracked tokens (no automatic detection)
+      console.log('Loading manually tracked tokens...');
+      const tokens = await syncTokensWithBlockchain(publicClient, address, false);
       
       setDeployedTokens(tokens);
       
-      // Automatically check admin status for manually added tokens
+      // Automatically check admin status for all manual tokens
       if (tokens.length > 0) {
-        await checkAdminStatusForTokens(tokens.filter(t => t.source === 'manual'));
+        await checkAdminStatusForTokens(tokens);
       }
     } catch (err: any) {
       setTokensError(err.message || 'Failed to load deployed tokens');
@@ -333,7 +333,7 @@ export function ManageTokens() {
           Manage Deployed Tokens
         </h2>
         <p className="text-secondary">
-          Automatically discover and manage your deployed Clanker tokens with reliable blockchain-based detection
+          Manage your deployed tokens manually. Add tokens by address to track fees and manage settings.
         </p>
       </div>
 
@@ -383,7 +383,7 @@ export function ManageTokens() {
                     className="input"
                   />
                   <div className="form-hint">
-                    Add a token that wasn't automatically detected (deployed outside this app)
+                    Add a token deployed with this or other interfaces to track fees and manage settings
                   </div>
                 </div>
                 <div className="flex items-center space-x-md">
