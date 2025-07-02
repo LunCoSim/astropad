@@ -100,8 +100,8 @@ export async function claimFees(
 // Our fee collection address
 export const ASTROPAD_FEE_ADDRESS = '0x2eC50faa88b1CEeeB77bb36e7e31eb7C1FAeB348';
 
-// Clanker's official fee address (this should be confirmed)
-export const CLANKER_FEE_ADDRESS = '0x1234567890123456789012345678901234567890'; // TODO: Get actual address
+// Clanker's official fee address 
+export const CLANKER_FEE_ADDRESS = '0x1eaf444ebDf6495C57aD52A04C61521bBf564ace'; // From SDK constants
 
 /**
  * Calculate fee distribution for reward recipients

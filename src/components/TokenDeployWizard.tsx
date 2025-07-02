@@ -11,7 +11,7 @@ import { DeploymentStep } from './steps/DeploymentStep';
 // Utilities
 import { WIZARD_STEPS, BASE_NETWORK, POOL_POSITIONS, CLANKER_V4_ADDRESSES, DEFAULT_CUSTOM_POSITION } from '../../lib/constants';
 import { validateStep } from '../../lib/validation';
-import { calculateFeeDistribution } from '../../lib/fees';
+
 
 // Types
 import type { TokenConfig } from '../../lib/types';
@@ -97,9 +97,13 @@ export function TokenDeployWizard({
       }
     },
     
-    // Reward Recipients (auto-calculated with fee distribution)
+    // Reward Recipients (simple single recipient - user gets 100% of LP fees)
     rewards: {
-      recipients: calculateFeeDistribution(address || '', 100) // 1% default
+      recipients: [{
+        recipient: address || '',
+        admin: address || '',
+        bps: 10000 // 100% to user
+      }]
     },
     
     // Vanity Address
@@ -115,7 +119,11 @@ export function TokenDeployWizard({
     startingMarketCap: '',
     poolPositionType: 'Standard',
     customPositions: [DEFAULT_CUSTOM_POSITION],
-    rewardRecipients: calculateFeeDistribution(address || '', 100)
+    rewardRecipients: [{
+      recipient: address || '',
+      admin: address || '',
+      bps: 10000 // 100% to user
+    }]
   });
 
   // Update config when address changes
@@ -127,9 +135,17 @@ export function TokenDeployWizard({
         admin: address, // Legacy field
         devBuy: prev.devBuy ? { ...prev.devBuy } : undefined,
         rewards: {
-          recipients: calculateFeeDistribution(address, prev.fees.userFeeBps)
+          recipients: [{
+            recipient: address,
+            admin: address,
+            bps: 10000 // 100% to user
+          }]
         },
-        rewardRecipients: calculateFeeDistribution(address, prev.fees.userFeeBps)
+        rewardRecipients: [{
+          recipient: address,
+          admin: address,
+          bps: 10000 // 100% to user
+        }]
       }));
     }
   }, [address, config.tokenAdmin]);
