@@ -1,7 +1,8 @@
 import { IncomingForm } from 'formidable';
 import type { Fields, Files } from 'formidable';
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync, unlinkSync, createReadStream } from 'fs';
 import { PinataSDK } from 'pinata';
+import path from 'path';
 // @ts-ignore: File is available in Node.js 20+ and in web-std, but if not, use a polyfill or Buffer workaround
 
 interface ImageUploadResult {
@@ -88,7 +89,7 @@ async function uploadToPinata(buffer: Buffer, filename: string): Promise<ImageUp
     const file = new File([buffer], filename, {
       type: filename.endsWith('.png') ? 'image/png' : 'image/jpeg',
     });
-    const upload = await pinata.upload.file(file);
+    const upload = await pinata.upload.public.file(file);
     // Compose gateway URL
     const ipfsUrl = `https://${process.env.PINATA_GATEWAY}/ipfs/${upload.cid}`;
     return {

@@ -49,31 +49,32 @@ ALCHEMY_API_KEY=your_alchemy_api_key_here
 
 ### Web3.Storage API Configuration
 
-This application supports image uploads to IPFS via Web3.Storage for token logos.
+This application supports image uploads to IPFS via Pinata for token logos.
 
 #### Local Development
 
-Add your Web3.Storage API key to `.env`:
+Add your Pinata API key to `.env`:
 ```env
-WEB3_STORAGE=your_web3_storage_api_key_here
+PINATA_JWT=your_pinata_jwt_here
+PINATA_GATEWAY=your_pinata_gateway_here
 ```
 
 #### Netlify Deployment
 
 1. In your Netlify dashboard, go to Site Settings → Environment Variables
-2. Add a new environment variable:
-   - **Key**: `WEB3_STORAGE`
-   - **Value**: Your Web3.Storage API key
+2. Add new environment variables:
+   - **Key**: `PINATA_JWT`
+   - **Value**: Your Pinata JWT
+   - **Key**: `PINATA_GATEWAY`
+   - **Value**: Your Pinata gateway domain
 
-#### Getting a Web3.Storage API Key
+#### Getting a Pinata JWT
 
-1. Visit [web3.storage](https://web3.storage/)
+1. Visit [pinata.cloud](https://pinata.cloud/)
 2. Sign up for a free account
 3. Go to your account settings
-4. Create a new API token
-5. Copy the API key
-
-**Free Tier**: Web3.Storage provides 5GB of free storage, which is more than sufficient for token images.
+4. Create a new JWT
+5. Copy the JWT
 
 **Image Requirements**:
 - Format: JPG or PNG
