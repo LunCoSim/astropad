@@ -239,7 +239,11 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                     min="0"
                     step="0.0001"
                     className="input font-mono"
+                    placeholder="0.0001"
                   />
+                  <div className="form-hint">
+                    Minimum: 0.0001 ETH (avoids precision issues)
+                  </div>
                 </div>
 
                 <div className="form-group">

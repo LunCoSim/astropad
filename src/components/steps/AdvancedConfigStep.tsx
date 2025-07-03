@@ -1,8 +1,9 @@
 import React from 'react';
-import type { TokenConfig, RewardRecipient } from '../../../lib/types.js';
+import type { TokenConfig, RewardRecipient, FeeDistributionValidation } from '../../../lib/types.js';
 import { VALIDATION_LIMITS } from '../../../lib/constants.js';
 import { calculateFeeDistribution, getFeeDisplayInfo } from '../../../lib/fees.js';
 import { InfoTooltip } from '../ui/InfoTooltip.js';
+import FeeCollectorsManager from '../ui/FeeCollectorsManager.js';
 
 interface AdvancedConfigStepProps {
   config: TokenConfig;
@@ -18,8 +19,25 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
   onPrevious
 }) => {
   const handleFeeChange = (userFeeBps: number) => {
-    // Calculate the fee distribution for reward recipients
-    const recipients = calculateFeeDistribution(config.tokenAdmin, userFeeBps);
+    // If using simple distribution, calculate the basic 3-way split
+    let recipients: RewardRecipient[];
+    
+    if (config.rewards.useSimpleDistribution) {
+      recipients = calculateFeeDistribution(config.tokenAdmin, userFeeBps);
+    } else {
+      // Keep existing custom recipients but update their proportions
+      const totalCurrentBps = config.rewards.recipients.reduce((sum, r) => sum + r.bps, 0);
+      if (totalCurrentBps > 0) {
+        // Scale existing distribution to new total
+        recipients = config.rewards.recipients.map(r => ({
+          ...r,
+          bps: Math.round((r.bps / totalCurrentBps) * userFeeBps)
+        }));
+      } else {
+        // Fallback to simple distribution
+        recipients = calculateFeeDistribution(config.tokenAdmin, userFeeBps);
+      }
+    }
     
     updateConfig({
       fees: {
@@ -28,7 +46,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
         static: {
           clankerFeeBps: userFeeBps,
           pairedFeeBps: userFeeBps,
-          customDistribution: false
+          customDistribution: !config.rewards.useSimpleDistribution
         },
         dynamic: {
           baseFee: Math.max(25, userFeeBps),
@@ -42,7 +60,37 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
       },
       rewards: {
         recipients,
-        customDistribution: false
+        customDistribution: !config.rewards.useSimpleDistribution,
+        useSimpleDistribution: config.rewards.useSimpleDistribution
+      }
+    });
+  };
+
+  const handleFeeTypeChange = (type: 'static' | 'dynamic') => {
+    updateConfig({
+      fees: {
+        ...config.fees,
+        type
+      }
+    });
+  };
+
+  const handleFeeCollectorsChange = (recipients: RewardRecipient[]) => {
+    updateConfig({
+      rewards: {
+        ...config.rewards,
+        recipients,
+        customDistribution: !config.rewards.useSimpleDistribution
+      }
+    });
+  };
+
+  const handleDistributionModeChange = (useSimple: boolean) => {
+    updateConfig({
+      rewards: {
+        ...config.rewards,
+        useSimpleDistribution: useSimple,
+        customDistribution: !useSimple
       }
     });
   };
@@ -101,64 +149,161 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
     });
   };
 
-  const handleFeeTypeChange = (type: 'static' | 'dynamic') => {
-    updateConfig({
-      fees: {
-        ...config.fees,
-        type
-      }
-    });
+  const validateFeeDistribution = (): FeeDistributionValidation => {
+    const totalBps = config.rewards.recipients.reduce((sum, r) => sum + r.bps, 0);
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    if (totalBps !== 10000) { // Must equal 100% for LP fee distribution
+      errors.push(`LP fee distribution must equal 100% (currently ${(totalBps / 100).toFixed(1)}%)`);
+    }
+
+    if (config.rewards.recipients.length > 7) {
+      errors.push('Maximum 7 fee collectors allowed');
+    }
+
+    if (config.rewards.recipients.length === 0) {
+      errors.push('At least one fee collector required');
+    }
+
+    // Check for duplicate addresses
+    const addresses = config.rewards.recipients.map(r => r.recipient.toLowerCase()).filter(addr => addr);
+    const duplicates = addresses.filter((addr, index) => addresses.indexOf(addr) !== index);
+    if (duplicates.length > 0) {
+      errors.push('Duplicate recipient addresses found');
+    }
+
+    // Check for zero allocations
+    const zeroAllocations = config.rewards.recipients.filter(r => r.bps === 0);
+    if (zeroAllocations.length > 0) {
+      warnings.push(`${zeroAllocations.length} recipients have 0% allocation`);
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+      totalBps,
+      maxCollectors: 7,
+      remainingBps: 10000 - totalBps
+    };
   };
 
-  const maxFeePercent = VALIDATION_LIMITS.MAX_FEE_BPS / 100;
-  const currentFeePercent = config.fees.userFeeBps / 100;
-  const feeDisplayInfo = getFeeDisplayInfo(config.fees.userFeeBps);
+  const feeInfo = getFeeDisplayInfo(config.fees.userFeeBps);
 
   return (
     <div className="space-y-2xl animate-fade-in">
       {/* Header */}
       <div className="text-center space-y-md">
         <h2 className="text-4xl font-bold text-primary mb-md">
-          <span className="text-gradient">Advanced Configuration</span>
+          Advanced <span className="text-gradient">Configuration</span>
         </h2>
         <p className="text-lg text-secondary mx-auto" style={{ maxWidth: '48rem', lineHeight: '1.7' }}>
-          Configure advanced features including MEV protection, pool settings, fee structure, and vanity addresses.
+          Configure advanced features including MEV protection, fee distribution, pool settings, and vanity addresses.
         </p>
       </div>
 
-      {/* MEV Protection Card */}
+      {/* Fee Configuration */}
       <div className="card card-hover">
         <div className="flex items-center space-x-md mb-lg">
-          <div style={{ width: '3rem', height: '3rem', background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))', borderRadius: 'var(--radius-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg style={{ width: '1.5rem', height: '1.5rem' }} className="text-primary" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-primary">MEV Protection</h3>
-            <p className="text-muted text-sm">Protect against front-running and sandwich attacks</p>
-          </div>
+          <h3 className="text-xl font-bold text-primary">Fee Configuration</h3>
+          <InfoTooltip content="Configure fee structure and distribution among up to 7 collectors" />
         </div>
 
         <div className="space-y-lg">
-          <label className="flex items-center space-x-md cursor-pointer">
-            <input
-              type="checkbox"
-              checked={config.mev.enabled}
-              onChange={(e) => handleMevToggle(e.target.checked)}
-              className="rounded"
-            />
-            <span className="form-label">
-              Enable MEV Protection (Recommended)
-              <InfoTooltip content="MEV protection prevents front-running attacks by adding a 2-block delay before trading can begin." />
-            </span>
-          </label>
+          {/* Fee Type Selection */}
+          <div>
+            <label className="block text-sm font-semibold text-primary mb-sm">Fee Type</label>
+            <div className="flex space-x-md">
+              <button
+                onClick={() => handleFeeTypeChange('static')}
+                className={`btn ${config.fees.type === 'static' ? 'btn-primary' : 'btn-secondary'}`}
+              >
+                Static Fees
+              </button>
+              <button
+                onClick={() => handleFeeTypeChange('dynamic')}
+                className={`btn ${config.fees.type === 'dynamic' ? 'btn-primary' : 'btn-secondary'}`}
+              >
+                Dynamic Fees
+              </button>
+            </div>
+            <div className="text-xs text-muted mt-sm">
+              {config.fees.type === 'static' 
+                ? 'Fixed fee percentage for all transactions'
+                : 'Variable fees based on volatility (more MEV protection)'}
+            </div>
+          </div>
+
+          {/* Total Fee Percentage */}
+          <div>
+            <label className="block text-sm font-semibold text-primary mb-sm">
+              Total Fee Percentage
+            </label>
+            <div className="flex items-center space-x-md">
+              <input
+                type="range"
+                min={VALIDATION_LIMITS.MIN_FEE_BPS}
+                max={VALIDATION_LIMITS.MAX_FEE_BPS}
+                step="25"
+                value={config.fees.userFeeBps}
+                onChange={(e) => handleFeeChange(parseInt(e.target.value))}
+                className="flex-1"
+              />
+              <div className="flex items-center space-x-sm">
+                <input
+                  type="number"
+                  value={config.fees.userFeeBps / 100}
+                  onChange={(e) => handleFeeChange(Math.round(parseFloat(e.target.value || '0') * 100))}
+                  step="0.25"
+                  min={VALIDATION_LIMITS.MIN_FEE_BPS / 100}
+                  max={VALIDATION_LIMITS.MAX_FEE_BPS / 100}
+                  className="input w-20"
+                />
+                <span className="text-sm text-muted">%</span>
+              </div>
+            </div>
+                         <div className="text-xs text-muted mt-sm">
+               Total fee: {feeInfo.totalFee} | Protocol: {feeInfo.protocolFee} (automatic) | LP Distribution: {feeInfo.lpDistributable} (You: {feeInfo.userReceives}, Platform: {feeInfo.astropadReceives})
+             </div>
+          </div>
+
+          {/* Fee Collectors Manager */}
+          <FeeCollectorsManager
+            recipients={config.rewards.recipients}
+            useSimpleDistribution={config.rewards.useSimpleDistribution}
+            onRecipientsChange={handleFeeCollectorsChange}
+            onUseSimpleDistributionChange={handleDistributionModeChange}
+            validation={validateFeeDistribution()}
+          />
+        </div>
+      </div>
+
+      {/* MEV Protection */}
+      <div className="card card-hover">
+        <div className="flex items-center space-x-md mb-lg">
+          <h3 className="text-xl font-bold text-primary">MEV Protection</h3>
+          <InfoTooltip content="Protect against MEV attacks with block delays and custom modules" />
+        </div>
+
+        <div className="space-y-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-semibold text-primary">Enable MEV Protection</div>
+              <div className="text-sm text-muted">Recommended for all new tokens</div>
+            </div>
+            <button
+              onClick={() => handleMevToggle(!config.mev.enabled)}
+              className={`btn ${config.mev.enabled ? 'btn-primary' : 'btn-secondary'}`}
+            >
+              {config.mev.enabled ? 'Enabled' : 'Disabled'}
+            </button>
+          </div>
 
           {config.mev.enabled && (
-            <div className="form-group">
-              <label className="form-label">
+            <div>
+              <label className="block text-sm font-semibold text-primary mb-sm">
                 Block Delay
-                <InfoTooltip content="Number of blocks to prevent trading after deployment. 2 blocks (~4 seconds) is recommended." />
               </label>
               <div className="flex items-center space-x-md">
                 <input
@@ -166,225 +311,114 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
                   min="1"
                   max="5"
                   value={config.mev.blockDelay || 2}
-                  onChange={(e) => handleMevBlockDelayChange(Number(e.target.value))}
+                  onChange={(e) => handleMevBlockDelayChange(parseInt(e.target.value))}
                   className="flex-1"
                 />
-                <div className="text-sm font-semibold text-primary min-w-[3rem]">
-                  {config.mev.blockDelay || 2} blocks
+                <div className="flex items-center space-x-sm">
+                  <input
+                    type="number"
+                    value={config.mev.blockDelay || 2}
+                    onChange={(e) => handleMevBlockDelayChange(parseInt(e.target.value || '2'))}
+                    min="1"
+                    max="5"
+                    className="input w-16"
+                  />
+                  <span className="text-sm text-muted">blocks</span>
                 </div>
+              </div>
+              <div className="text-xs text-muted mt-sm">
+                Number of blocks to delay transactions (higher = more protection, slower trading)
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Pool Configuration Card */}
+      {/* Pool Configuration */}
       <div className="card card-hover">
         <div className="flex items-center space-x-md mb-lg">
-          <div style={{ width: '3rem', height: '3rem', background: 'linear-gradient(135deg, var(--color-secondary), var(--color-secondary-dark))', borderRadius: 'var(--radius-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg style={{ width: '1.5rem', height: '1.5rem' }} className="text-primary" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-primary">Pool Settings</h3>
-            <p className="text-muted text-sm">Advanced Uniswap V4 pool configuration</p>
-          </div>
+          <h3 className="text-xl font-bold text-primary">Pool Configuration</h3>
+          <InfoTooltip content="Advanced Uniswap V4 pool settings for optimal trading" />
         </div>
 
         <div className="grid grid-2 gap-lg">
-          <div className="form-group">
-            <label className="form-label">
+          <div>
+            <label className="block text-sm font-semibold text-primary mb-sm">
               Tick Spacing
-              <InfoTooltip content="Tick spacing determines price granularity. Lower values allow more precise pricing but higher gas costs." />
             </label>
             <select
               value={config.pool.tickSpacing}
-              onChange={(e) => handleTickSpacingChange(Number(e.target.value))}
+              onChange={(e) => handleTickSpacingChange(parseInt(e.target.value))}
               className="input"
             >
-              <option value={10}>10 (Highest precision)</option>
-              <option value={60}>60 (High precision)</option>
-              <option value={200}>200 (Standard)</option>
-              <option value={2000}>2000 (Low precision)</option>
+              <option value={10}>10 (0.01% precision)</option>
+              <option value={60}>60 (0.06% precision)</option>
+              <option value={200}>200 (0.20% precision)</option>
+              <option value={2000}>2000 (2.00% precision)</option>
             </select>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">
-              Starting Price (Tick)
-              <InfoTooltip content="The initial price tick for your token pool. -230400 is a common starting point." />
-            </label>
-            <input
-              type="number"
-              value={config.pool.tickIfToken0IsClanker}
-              onChange={(e) => handleStartingTickChange(Number(e.target.value))}
-              className="input font-mono"
-              step="1000"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Fee Configuration Card */}
-      <div className="card card-hover">
-        <div className="flex items-center space-x-md mb-lg">
-          <div style={{ width: '3rem', height: '3rem', background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent-dark))', borderRadius: 'var(--radius-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg style={{ width: '1.5rem', height: '1.5rem' }} className="text-primary" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-primary">Fee Structure</h3>
-            <p className="text-muted text-sm">Configure trading fees and distribution</p>
-          </div>
-        </div>
-
-        <div className="space-y-lg">
-          <div className="form-group">
-            <label className="form-label">Fee Type</label>
-            <div className="grid grid-2 gap-md">
-              <label className="flex items-center space-x-md cursor-pointer card p-md">
-                <input
-                  type="radio"
-                  name="feeType"
-                  value="static"
-                  checked={config.fees.type === 'static'}
-                  onChange={() => handleFeeTypeChange('static')}
-                  className="rounded"
-                />
-                <div>
-                  <div className="font-semibold text-primary">Static Fees</div>
-                  <div className="text-xs text-muted">Fixed percentage fee</div>
-                </div>
-              </label>
-              
-              <label className="flex items-center space-x-md cursor-pointer card p-md">
-                <input
-                  type="radio"
-                  name="feeType"
-                  value="dynamic"
-                  checked={config.fees.type === 'dynamic'}
-                  onChange={() => handleFeeTypeChange('dynamic')}
-                  className="rounded"
-                />
-                <div>
-                  <div className="font-semibold text-primary">Dynamic Fees</div>
-                  <div className="text-xs text-muted">Adjusts with volatility</div>
-                </div>
-              </label>
+            <div className="text-xs text-muted mt-sm">
+              Smaller values = higher precision, higher gas costs
             </div>
           </div>
 
           <div>
-            <label htmlFor="fee-slider" className="form-label mb-md">
-              Total Trading Fee: {currentFeePercent.toFixed(2)}%
+            <label className="block text-sm font-semibold text-primary mb-sm">
+              Starting Tick
             </label>
             <input
-              id="fee-slider"
-              type="range"
-              min="0"
-              max={VALIDATION_LIMITS.MAX_FEE_BPS}
-              step="25"
-              value={config.fees.userFeeBps}
-              onChange={(e) => handleFeeChange(Number(e.target.value))}
-              className="w-full h-2 rounded-lg appearance-none cursor-pointer"
-              style={{
-                background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${(config.fees.userFeeBps / VALIDATION_LIMITS.MAX_FEE_BPS) * 100}%, var(--bg-surface) ${(config.fees.userFeeBps / VALIDATION_LIMITS.MAX_FEE_BPS) * 100}%, var(--bg-surface) 100%)`
-              }}
+              type="number"
+              value={config.pool.tickIfToken0IsClanker}
+              onChange={(e) => handleStartingTickChange(parseInt(e.target.value || '-230400'))}
+              className="input"
+              step={config.pool.tickSpacing}
             />
-            <div className="flex justify-between text-xs text-muted mt-sm">
-              <span>0%</span>
-              <span>{maxFeePercent}%</span>
+            <div className="text-xs text-muted mt-sm">
+              Initial price position (must be multiple of tick spacing)
             </div>
           </div>
+        </div>
+      </div>
 
-          {config.fees.userFeeBps > 0 && (
-            <div className="card" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-              <h4 className="font-semibold text-primary mb-md">Fee Distribution</h4>
-              <div className="space-y-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-secondary">Your share (60%)</span>
-                  <span className="font-semibold text-success">
-                    {feeDisplayInfo.userReceives}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-secondary">Clanker protocol (20%)</span>
-                  <span className="font-semibold text-primary">
-                    {feeDisplayInfo.clankerReceives}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-secondary">AstroPad (20%)</span>
-                  <span className="font-semibold" style={{ color: 'var(--color-accent)' }}>
-                    {feeDisplayInfo.astropadReceives}
-                  </span>
-                </div>
+      {/* Vanity Address */}
+      <div className="card card-hover">
+        <div className="flex items-center space-x-md mb-lg">
+          <h3 className="text-xl font-bold text-primary">Vanity Address</h3>
+          <InfoTooltip content="Generate a custom token address with desired suffix" />
+        </div>
+
+        <div className="space-y-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-semibold text-primary">Enable Vanity Address</div>
+              <div className="text-sm text-muted">Generate custom address suffix</div>
+            </div>
+            <button
+              onClick={() => handleVanityToggle(!config.vanity.enabled)}
+              className={`btn ${config.vanity.enabled ? 'btn-primary' : 'btn-secondary'}`}
+            >
+              {config.vanity.enabled ? 'Enabled' : 'Disabled'}
+            </button>
+          </div>
+
+          {config.vanity.enabled && (
+            <div>
+              <label className="block text-sm font-semibold text-primary mb-sm">
+                Desired Suffix
+              </label>
+              <input
+                type="text"
+                value={config.vanity.suffix}
+                onChange={(e) => handleVanitySuffixChange(e.target.value)}
+                placeholder="e.g., 4b07"
+                className="input font-mono"
+                maxLength={8}
+              />
+              <div className="text-xs text-muted mt-sm">
+                Token address will end with: 0x...{config.vanity.suffix}
               </div>
             </div>
           )}
         </div>
-      </div>
-
-      {/* Vanity Address Card */}
-      <div className="card card-hover">
-        <div className="flex items-center space-x-md mb-lg">
-          <div style={{ width: '3rem', height: '3rem', background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))', borderRadius: 'var(--radius-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg style={{ width: '1.5rem', height: '1.5rem' }} className="text-primary" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-primary">Vanity Address</h3>
-            <p className="text-muted text-sm">Generate a custom token address</p>
-          </div>
-        </div>
-        
-        <div className="space-y-lg">
-          <label className="flex items-center space-x-md cursor-pointer">
-            <input
-              type="checkbox"
-              checked={config.vanity.enabled}
-              onChange={(e) => handleVanityToggle(e.target.checked)}
-              className="rounded"
-            />
-            <span className="form-label">Generate vanity address</span>
-          </label>
-          
-          {config.vanity.enabled && (
-            <div className="form-group">
-              <label htmlFor="vanity-suffix" className="form-label">
-                Desired suffix (4 hex characters)
-              </label>
-              <input
-                id="vanity-suffix"
-                type="text"
-                value={config.vanity.suffix}
-                onChange={(e) => handleVanitySuffixChange(e.target.value.toLowerCase())}
-                placeholder="0x1234"
-                maxLength={6}
-                pattern="0x[0-9a-f]{4}"
-                className="input font-mono"
-              />
-              <p className="text-xs text-muted mt-xs">
-                Example: 0x1234 will create an address ending in ...1234
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Tips */}
-      <div className="card" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-        <h4 className="font-semibold text-primary mb-md">💡 Advanced Configuration Tips</h4>
-        <ul className="text-sm text-secondary space-y-xs">
-          <li>• MEV protection is highly recommended for new token launches</li>
-          <li>• Lower tick spacing provides more precise pricing but higher gas costs</li>
-          <li>• Dynamic fees can increase revenue during high volatility periods</li>
-          <li>• Vanity addresses are purely cosmetic and cost extra gas to generate</li>
-          <li>• Most successful tokens use fees between 0.5% - 2%</li>
-        </ul>
       </div>
 
       {/* Navigation */}

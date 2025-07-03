@@ -95,7 +95,16 @@ export async function claimFees(
 
 /**
  * Fee distribution utilities for Clanker v4 token deployment
- * Implements automatic fee splitting: 60% user, 20% clanker, 20% astropad
+ * 
+ * IMPORTANT: Clanker v4 has a two-layer fee system:
+ * 1. Protocol Fee: 20% is automatically deducted by the hook during swaps (goes to Clanker)
+ * 2. LP Fee Distribution: The remaining 80% goes to LP, and recipients array controls how LP fees are distributed
+ * 
+ * The recipients array must sum to 100% (10,000 bps) as it represents distribution of LP fees only.
+ * 
+ * Example: If user sets 1% total fee:
+ * - 0.2% automatically goes to Clanker (protocol fee, handled at hook level)
+ * - 0.8% goes to LP (distributed according to recipients array)
  */
 
 // Our fee collection address
@@ -104,40 +113,43 @@ export const ASTROPAD_FEE_ADDRESS = '0x2eC50faa88b1CEeeB77bb36e7e31eb7C1FAeB348'
 // Clanker's official fee address 
 export const CLANKER_FEE_ADDRESS = '0x1eaf444ebDf6495C57aD52A04C61521bBf564ace'; // From SDK constants
 
+// Protocol constants from the contracts
+export const PROTOCOL_FEE_PERCENTAGE = 0.2; // 20% automatic protocol fee
+export const LP_FEE_PERCENTAGE = 0.8; // 80% goes to LP
+
 /**
  * Calculate fee distribution for reward recipients
- * @param userAddress - The user's address (gets 60% of fees)
- * @param userFeeBps - The fee percentage the user wants to collect (in basis points)
- * @returns Array of reward recipients with proper distribution
+ * This reflects the actual Clanker v4 fee structure where:
+ * - 20% is automatically taken by protocol at hook level (not in recipients array)
+ * - Recipients array controls distribution of LP fees and must sum to 100%
+ * 
+ * @param userAddress - The user's address
+ * @param userFeeBps - The total fee percentage the user wants to set (in basis points)
+ * @returns Array of reward recipients with proper distribution (sums to 10,000 bps)
  */
 export function calculateFeeDistribution(
   userAddress: string,
   userFeeBps: number
 ): RewardRecipient[] {
-  // Calculate the distribution:
-  // User gets 60% of what they set
-  // Clanker gets 20% of what they set  
-  // We get 20% of what they set
-  
-  const userBps = Math.floor(userFeeBps * 0.6); // 60%
-  const clankerBps = Math.floor(userFeeBps * 0.2); // 20%
-  const astropadBps = userFeeBps - userBps - clankerBps; // Remaining (handles rounding)
+  // Recipients array represents distribution of LP fees only
+  // Default split: 75% to user, 25% to platform (of LP fees)
+  const userBps = 7500; // 75% of LP fees
+  const astropadBps = 2500; // 25% of LP fees
   
   return [
     {
       recipient: userAddress,
       admin: userAddress,
-      bps: userBps
-    },
-    {
-      recipient: CLANKER_FEE_ADDRESS,
-      admin: CLANKER_FEE_ADDRESS,
-      bps: clankerBps
+      bps: userBps,
+      label: 'You',
+      isDefault: true
     },
     {
       recipient: ASTROPAD_FEE_ADDRESS,
       admin: ASTROPAD_FEE_ADDRESS,
-      bps: astropadBps
+      bps: astropadBps,
+      label: 'Platform',
+      isDefault: true
     }
   ].filter(recipient => recipient.bps > 0); // Only include recipients with non-zero fees
 }
@@ -167,24 +179,33 @@ export function calculateTokenFees(
 }
 
 /**
- * Get user-friendly fee display information
+ * Get user-friendly fee display information showing the actual fee structure
  * @param userFeeBps - The fee percentage the user set
  * @returns Object with display information
  */
 export function getFeeDisplayInfo(userFeeBps: number) {
-  const userReceives = (userFeeBps * 0.6) / 100; // Convert to percentage
-  const clankerReceives = (userFeeBps * 0.2) / 100;
-  const astropadReceives = (userFeeBps * 0.2) / 100;
   const totalFee = userFeeBps / 100;
   
+  // Protocol automatically takes 20%
+  const protocolFee = (userFeeBps * PROTOCOL_FEE_PERCENTAGE) / 100;
+  
+  // Remaining 80% goes to LP
+  const lpFee = (userFeeBps * LP_FEE_PERCENTAGE) / 100;
+  
+  // LP fee distribution (based on default 75/25 split)
+  const userReceives = (lpFee * 0.75); // 75% of LP fees
+  const astropadReceives = (lpFee * 0.25); // 25% of LP fees
+  
   return {
-    totalFee: `${totalFee}%`,
+    totalFee: `${totalFee.toFixed(2)}%`,
+    protocolFee: `${protocolFee.toFixed(2)}%`,
+    lpDistributable: `${lpFee.toFixed(2)}%`,
     userReceives: `${userReceives.toFixed(2)}%`,
-    clankerReceives: `${clankerReceives.toFixed(2)}%`,
     astropadReceives: `${astropadReceives.toFixed(2)}%`,
-    userBps: Math.floor(userFeeBps * 0.6),
-    clankerBps: Math.floor(userFeeBps * 0.2),
-    astropadBps: userFeeBps - Math.floor(userFeeBps * 0.6) - Math.floor(userFeeBps * 0.2)
+    // Basis points for contract usage
+    protocolBps: Math.floor(userFeeBps * PROTOCOL_FEE_PERCENTAGE),
+    userBps: 7500, // 75% of LP fees
+    astropadBps: 2500 // 25% of LP fees
   };
 }
 

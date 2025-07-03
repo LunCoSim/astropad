@@ -28,38 +28,37 @@ export interface TokenConfig {
   
   // Pool Configuration (enhanced for v4)
   pool: {
-    pairedToken: string; // Token to pair with (defaults to WETH)
-    tickIfToken0IsClanker: number; // Starting tick of the pool
-    tickSpacing: number; // Tick spacing (10, 60, 200, etc.)
-    positions: CustomPosition[]; // Initial liquidity positions
-    poolData?: string; // Custom pool data for hooks
+    pairedToken: string; // Address of the token to pair with (usually WETH)
+    tickIfToken0IsClanker: number; // Starting tick position
+    tickSpacing: number; // Tick spacing for the pool (10, 60, 200, 2000)
+    positions: PoolPosition[]; // Array of liquidity positions
   };
   
-  // MEV Protection Configuration (NEW)
+  // Token Locker (required for v4)
+  locker: {
+    locker: string; // Address of the locker contract
+    lockerData: string; // Encoded locker data
+  };
+  
+  // MEV Protection (NEW for v4)
   mev: {
     enabled: boolean;
     moduleType: 'block-delay' | 'custom'; // Type of MEV protection
-    blockDelay?: number; // Number of blocks to delay (for block-delay type)
-    customModule?: string; // Custom MEV module address
-    customData?: string; // Custom MEV module data
+    blockDelay?: number; // Number of blocks to delay (1-5, default 2)
+    customModule?: string; // Address of custom MEV module
+    customData?: string; // Encoded data for custom module
   };
   
-  // Token Locker (enhanced)
-  locker: {
-    locker: string; // Locker extension address
-    lockerData: string; // Hex encoded locker data
-    customRewardDistribution: boolean; // Whether to use custom reward distribution
-  };
-  
-  // Extensions (enhanced with more options)
+  // Vault Extension (enhanced)
   vault?: {
     enabled: boolean;
-    percentage: number; // 0-90% of total supply
+    percentage: number; // Percentage of tokens to vault (1-30%)
     lockupDuration: number; // Minimum 7 days in seconds
     vestingDuration: number; // Linear vesting duration in seconds
     msgValue?: number; // Custom message value for vault extension
   };
   
+  // Airdrop Extension (enhanced)
   airdrop?: {
     enabled: boolean;
     merkleRoot: string; // Root of merkle tree
@@ -70,6 +69,7 @@ export interface TokenConfig {
     msgValue?: number; // Custom message value for airdrop extension
   };
   
+  // DevBuy Extension (enhanced)
   devBuy?: {
     enabled: boolean;
     ethAmount: number; // ETH amount to spend on initial buy
@@ -84,11 +84,11 @@ export interface TokenConfig {
     recipient?: string; // Who receives the dev buy tokens (defaults to tokenAdmin)
   };
   
-  // Fee Configuration (enhanced for v4)
+  // Fee Configuration (enhanced for v4 with multiple collectors)
   fees: {
     type: 'static' | 'dynamic';
-    // User-facing fee percentage (we'll calculate the actual distribution)
-    userFeeBps: number; // What user sets (will be split: 60% user, 20% clanker, 20% us)
+    // User-facing fee percentage (can be distributed among up to 7 collectors)
+    userFeeBps: number; // Total fee percentage in basis points
     static?: {
       clankerFeeBps: number; // Fee on clanker token
       pairedFeeBps: number; // Fee on paired token
@@ -105,126 +105,102 @@ export interface TokenConfig {
     };
   };
   
-  // Reward Recipients (enhanced)
+  // Reward Recipients (enhanced to support up to 7 collectors)
   rewards: {
-    recipients: RewardRecipient[]; // Will include user, clanker, and our addresses
+    recipients: RewardRecipient[]; // Up to 7 fee collectors
     customDistribution: boolean; // Whether user has customized the distribution
+    useSimpleDistribution: boolean; // Whether to use the 60/20/20 split vs custom
   };
   
   // Vanity Address (enhanced)
   vanity: {
     enabled: boolean;
-    suffix?: string; // e.g., "0x4b07" for vanity ending
-    customSalt?: string; // Custom salt for address generation
+    suffix: string; // Desired vanity suffix (e.g., '0x4b07')
+    customSalt?: string; // Custom salt for vanity generation
   };
   
   // Advanced Configuration (NEW)
   advanced: {
     customHookData: boolean; // Whether to use custom hook data
-    hookData?: string; // Custom hook data
-    customExtensions: CustomExtension[]; // Custom extensions beyond vault/airdrop/devbuy
+    hookData?: string; // Custom hook data if enabled
+    customExtensions: string[]; // Array of custom extension addresses
     gasOptimization: boolean; // Whether to optimize for gas
   };
   
   // Legacy fields for backwards compatibility
-  admin: string; // Alias for tokenAdmin
-  pairTokenType: 'WETH' | 'custom';
+  admin: string;
+  pairTokenType: string;
   customPairTokenAddress: string;
-  startingMarketCap: number | '';
-  poolPositionType: 'Standard' | 'Project' | 'Custom';
-  customPositions: CustomPosition[];
+  startingMarketCap: string;
+  poolPositionType: string;
+  customPositions: PoolPosition[];
   rewardRecipients: RewardRecipient[];
 }
 
-// ===== ARRAY UTILITY INTERFACES =====
+// ===== SUPPORTING TYPES =====
+
+export interface PoolPosition {
+  tickLower: number;
+  tickUpper: number;
+  positionBps: number; // Basis points of total liquidity
+}
 
 export interface AirdropEntry {
   address: string;
-  amount: number;
-}
-
-export interface CustomPosition {
-  tickLower: number;
-  tickUpper: number;
-  positionBps: number;
+  amount: number; // Tokens to airdrop to this address
 }
 
 export interface RewardRecipient {
-  recipient: string;
-  admin: string;
-  bps: number;
+  recipient: string; // Address that receives the fees
+  admin: string; // Address that can modify this recipient
+  bps: number; // Basis points (out of 10000) this recipient gets
+  label?: string; // Optional label for UI display (e.g., "Team", "Marketing")
+  isDefault?: boolean; // Whether this is a default recipient (user, clanker, astropad)
 }
 
-// NEW: Custom Extension Interface
-export interface CustomExtension {
-  extension: string; // Extension contract address
-  msgValue: number; // ETH value to send
-  extensionBps: number; // Percentage of token supply
-  extensionData: string; // ABI-encoded extension data
-  name: string; // Human-readable name
-  description: string; // Description of what this extension does
-}
+// ===== FEE COLLECTOR MANAGEMENT =====
 
-// ===== TOKEN METADATA =====
-
-export interface TokenInfo {
-  symbol: string;
-  decimals: number;
-}
-
-export interface TokenMetadata {
+export interface FeeCollectorTemplate {
+  id: string;
   name: string;
-  symbol: string;
-  decimals: number;
-  totalSupply: string;
+  description: string;
+  recipients: Omit<RewardRecipient, 'recipient' | 'admin'>[]; // Template without addresses
 }
+
+export interface CustomFeeCollector {
+  address: string;
+  adminAddress: string;
+  percentage: number; // Percentage of total fees (0-100)
+  label: string;
+  description?: string;
+}
+
+// ===== VALIDATION =====
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface FeeDistributionValidation extends ValidationResult {
+  totalBps: number;
+  maxCollectors: number;
+  remainingBps: number;
+}
+
+// ===== DEPLOYED TOKEN TRACKING =====
 
 export interface DeployedToken {
   address: string;
   name: string;
   symbol: string;
   deployerAddress: string;
-  deploymentTxHash?: string;
-  deploymentBlockNumber?: number;
+  deploymentTxHash: string;
   deploymentTimestamp: number;
-  adminAddress?: string;
-  isVerified?: boolean;
-  source: 'manual' | 'blockchain'; // Track how token was discovered
+  isVerified: boolean;
+  source: 'automatic' | 'manual';
 }
-
-// ===== CALCULATION INTERFACES =====
-
-export interface DevBuyResult {
-  tokensReceived: number;
-  priceImpact: number;
-  newPrice: number;
-  effectivePrice: number;
-}
-
-export interface TokenDistribution {
-  name: string;
-  amount: number;
-  percentage: number;
-}
-
-// ===== WIZARD INTERFACES =====
-
-export interface WizardStep {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  required: boolean;
-}
-
-// ===== VALIDATION RETURN TYPES =====
-
-export interface ValidationResult {
-  isValid: boolean;
-  error?: string;
-}
-
-// ===== FEE DATA =====
 
 export interface FeeData {
   [symbol: string]: string;

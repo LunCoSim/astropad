@@ -6,7 +6,7 @@ import { TokenBasicsStep } from './steps/TokenBasicsStep';
 import { LiquiditySetupStep } from './steps/LiquiditySetupStep';
 import { ExtensionsStep } from './steps/ExtensionsStep';
 import { AdvancedConfigStep } from './steps/AdvancedConfigStep';
-import { DeploymentStep } from './steps/DeploymentStep';
+import DeploymentStep from './steps/DeploymentStep';
 
 // Utilities
 import { WIZARD_STEPS, BASE_NETWORK, POOL_POSITIONS, CLANKER_V4_ADDRESSES, DEFAULT_CUSTOM_POSITION } from '../../lib/constants';
@@ -57,7 +57,7 @@ export function TokenDeployWizard({
       tickIfToken0IsClanker: -230400, // Default starting tick
       tickSpacing: 200, // Default tick spacing
       positions: POOL_POSITIONS.Standard,
-      poolData: undefined // Custom pool data for hooks
+
     },
     
     // MEV Protection Configuration (NEW)
@@ -72,8 +72,7 @@ export function TokenDeployWizard({
     // Token Locker (enhanced)
     locker: {
       locker: CLANKER_V4_ADDRESSES.LOCKER,
-      lockerData: '0x', // Default empty data
-      customRewardDistribution: false
+      lockerData: '0x' // Default empty data
     },
     
     // Extensions (enhanced with more options)
@@ -97,7 +96,7 @@ export function TokenDeployWizard({
     
     devBuy: {
       enabled: false,
-      ethAmount: 0.1, // 0.1 ETH default
+      ethAmount: 0.0001, // 0.0001 ETH default (safe amount that avoids BigInt precision issues)
       amountOutMin: 0, // No slippage protection by default
       recipient: address || '' // Defaults to token admin
     },
@@ -120,7 +119,8 @@ export function TokenDeployWizard({
         admin: address || '',
         bps: 10000 // 100% to user
       }],
-      customDistribution: false
+      customDistribution: false,
+      useSimpleDistribution: true // Default to simple 60/20/20 split
     },
     
     // Vanity Address (enhanced)
@@ -166,7 +166,8 @@ export function TokenDeployWizard({
             admin: address,
             bps: 10000 // 100% to user
           }],
-          customDistribution: false
+          customDistribution: false,
+          useSimpleDistribution: true
         },
         rewardRecipients: [{
           recipient: address,
@@ -239,6 +240,7 @@ export function TokenDeployWizard({
           <DeploymentStep
             config={config}
             onPrevious={prevStep}
+            updateConfig={updateConfig}
           />
         );
       default:
