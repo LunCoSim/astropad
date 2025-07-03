@@ -4,6 +4,7 @@ import { createPublicClient, http, type PublicClient } from 'viem';
 import { base } from 'viem/chains';
 import { getAvailableFees } from '../lib/fees';
 import { fetchDeployedTokensViaAlchemy } from './alchemy-tokens';
+import uploadImageHandler from './upload-image';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -89,6 +90,9 @@ app.get('/api/alchemy-tokens', async (req, res) => {
     });
   }
 });
+
+// Image upload endpoint
+app.post('/api/upload-image', (req, res) => uploadImageHandler(req, res));
 
 app.listen(PORT, () => {
   console.log(`API server running on port ${PORT}`);

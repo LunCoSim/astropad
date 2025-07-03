@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import type { TokenConfig } from '../../../lib/types';
 import { InfoTooltip } from '../ui/InfoTooltip';
+import { ImageUpload } from '../ui/ImageUpload';
 import { addSocialUrl, removeSocialUrl, updateSocialUrl, addAuditUrl, removeAuditUrl, updateAuditUrl } from '../../../lib/array-utils';
 
 interface TokenBasicsStepProps {
@@ -9,7 +11,18 @@ interface TokenBasicsStepProps {
 }
 
 export function TokenBasicsStep({ config, updateConfig, onNext }: TokenBasicsStepProps) {
+  const [uploadError, setUploadError] = useState<string>('');
   const isValid = !!(config.name && config.symbol && config.tokenAdmin);
+
+  const handleImageUploadSuccess = (ipfsUrl: string) => {
+    updateConfig({ image: ipfsUrl });
+    setUploadError(''); // Clear any previous errors
+  };
+
+  const handleImageUploadError = (error: string) => {
+    console.error('Image upload error:', error);
+    setUploadError(error);
+  };
 
   const handleAddSocialUrl = () => {
     updateConfig({
@@ -146,25 +159,36 @@ export function TokenBasicsStep({ config, updateConfig, onNext }: TokenBasicsSte
         <div className="form-group mt-xl">
           <label className="form-label">
             <span>Token Image</span>
-            <InfoTooltip content="IPFS URL for your token's logo. This will appear in wallets, DEX interfaces, and token lists." />
+            <InfoTooltip content="Upload your token's logo image. It will be stored on IPFS and appear in wallets, DEX interfaces, and token lists." />
           </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={config.image}
-              onChange={(e) => updateConfig({ image: e.target.value })}
-              placeholder="ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf..."
-              className="input font-mono text-sm"
-              style={{ paddingRight: '3.5rem' }}
-            />
-            <div className="absolute" style={{ top: '50%', right: 'var(--spacing-md)', transform: 'translateY(-50%)' }}>
-              <div className="rounded-lg transition" style={{ padding: 'var(--spacing-sm)', background: 'var(--bg-surface)' }}>
-                <svg style={{ width: '1.25rem', height: '1.25rem' }} className="text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+          <ImageUpload
+            onUploadSuccess={handleImageUploadSuccess}
+            onUploadError={handleImageUploadError}
+            currentImageUrl={config.image}
+          />
+          {uploadError && (
+            <div className="card" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: 'var(--spacing-md)', marginTop: 'var(--spacing-md)' }}>
+              <div className="text-sm" style={{ color: '#ef4444' }}>
+                <div className="font-semibold mb-xs">❌ Upload Error</div>
+                <div>{uploadError}</div>
               </div>
             </div>
-          </div>
+          )}
+          {config.image && (
+            <div className="mt-md">
+              <label className="form-label text-sm">
+                <span>IPFS URL</span>
+                <InfoTooltip content="The IPFS URL of your uploaded image. You can also manually enter an IPFS URL here." />
+              </label>
+              <input
+                type="text"
+                value={config.image}
+                onChange={(e) => updateConfig({ image: e.target.value })}
+                placeholder="ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf..."
+                className="input font-mono text-sm"
+              />
+            </div>
+          )}
         </div>
       </div>
 

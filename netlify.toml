@@ -14,4 +14,5 @@
   NODE_VERSION = "18"
 
 # Example environment variables - these should be set in Netlify UI
-# ALCHEMY_API_KEY = "your_alchemy_api_key_here" 
+# ALCHEMY_API_KEY = "your_alchemy_api_key_here"
+# WEB3_STORAGE = "your_web3_storage_api_key_here" 

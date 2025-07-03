@@ -47,6 +47,40 @@ ALCHEMY_API_KEY=your_alchemy_api_key_here
 
 **Free Tier**: Alchemy provides 300M compute units per month on their free tier, which is sufficient for most use cases.
 
+### Web3.Storage API Configuration
+
+This application supports image uploads to IPFS via Web3.Storage for token logos.
+
+#### Local Development
+
+Add your Web3.Storage API key to `.env`:
+```env
+WEB3_STORAGE=your_web3_storage_api_key_here
+```
+
+#### Netlify Deployment
+
+1. In your Netlify dashboard, go to Site Settings → Environment Variables
+2. Add a new environment variable:
+   - **Key**: `WEB3_STORAGE`
+   - **Value**: Your Web3.Storage API key
+
+#### Getting a Web3.Storage API Key
+
+1. Visit [web3.storage](https://web3.storage/)
+2. Sign up for a free account
+3. Go to your account settings
+4. Create a new API token
+5. Copy the API key
+
+**Free Tier**: Web3.Storage provides 5GB of free storage, which is more than sufficient for token images.
+
+**Image Requirements**:
+- Format: JPG or PNG
+- Aspect ratio: Square (1:1)
+- File size: Maximum 1MB
+- Automatically uploaded to IPFS
+
 ## Installation
 
 ```bash
