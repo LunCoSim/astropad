@@ -2,10 +2,11 @@ import { useAccount, useDisconnect } from 'wagmi';
 import { useAppKit } from '@reown/appkit/react';
 import { TokenDeployWizard } from './components/TokenDeployWizard';
 import { ManageTokens } from './components/ManageTokens';
+import { MarketingGuide } from './components/MarketingGuide';
 import { useState } from 'react';
 import './App.css';
 
-type AppView = 'dashboard' | 'deploy' | 'manage-tokens';
+type AppView = 'dashboard' | 'deploy' | 'manage-tokens' | 'marketing-guide';
 
 function App() {
   const { address, isConnected } = useAccount();
@@ -36,6 +37,17 @@ function App() {
         </svg>
       ),
       color: 'secondary'
+    },
+    {
+      id: 'marketing-guide' as const,
+      title: 'Marketing & Builder Guide',
+      description: 'Essential tips and best practices for launching and promoting your token',
+      icon: (
+        <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z" clipRule="evenodd" />
+        </svg>
+      ),
+      color: 'success'
     }
   ];
 
@@ -124,6 +136,21 @@ function App() {
               </button>
             </div>
             <ManageTokens />
+          </div>
+        );
+      case 'marketing-guide':
+        return (
+          <div className="space-y-lg">
+            <div className="flex items-center justify-between">
+              <h2 className="text-3xl font-bold text-primary">Marketing & Builder Guide</h2>
+              <button
+                onClick={() => setCurrentView('dashboard')}
+                className="btn btn-secondary"
+              >
+                ← Back to Dashboard
+              </button>
+            </div>
+            <MarketingGuide />
           </div>
         );
       default:

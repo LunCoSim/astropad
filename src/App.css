@@ -167,6 +167,8 @@ body {
 .text-secondary { color: var(--text-secondary); }
 .text-muted { color: var(--text-muted); }
 .text-subtle { color: var(--text-subtle); }
+.text-success { color: var(--color-success); }
+.text-danger { color: var(--color-danger); }
 
 .text-gradient {
   background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
@@ -649,6 +651,16 @@ body {
 
 /* Additional spacing utilities */
 .py-md { padding-top: var(--spacing-md); padding-bottom: var(--spacing-md); }
+.py-lg { padding-top: var(--spacing-lg); padding-bottom: var(--spacing-lg); }
 
 /* Grid gap utilities */
 .gap-md { gap: var(--spacing-md); }
+
+/* Spacing utilities for y-axis */
+.space-y-xs > * + * { margin-top: var(--spacing-xs); }
+
+/* Flex utilities */
+.flex-shrink-0 { flex-shrink: 0; }
+
+/* Font utilities */
+.font-mono { font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; }
