@@ -1,5 +1,8 @@
+import axios from 'axios';
+import FormData from 'form-data';
+
 export async function uploadToPinata(
-  file: Buffer | File,
+  file: Buffer, // Only accept Buffer in Node.js
   filename?: string
 ): Promise<{ success: boolean; ipfsUrl?: string; error?: string }> {
   const pinataJwt = process.env.PINATA_JWT;
@@ -9,26 +12,20 @@ export async function uploadToPinata(
   }
 
   try {
-    const { PinataSDK } = await import('pinata');
-    let fileObj: File;
-    let name = filename;
+    const formData = new FormData();
+    formData.append('file', file, filename || 'image.png');
 
-    if (typeof Buffer !== 'undefined' && file instanceof Buffer) {
-      name = filename || 'image.png';
-      fileObj = new File([file], name, {
-        type: name.endsWith('.png') ? 'image/png' : 'image/jpeg',
-      });
-    } else {
-      fileObj = file as File;
-      name = filename || fileObj.name || 'image.png';
-    }
-
-    const pinata = new PinataSDK({
-      pinataJwt,
-      pinataGateway,
-    });
-    const upload = await pinata.upload.public.file(fileObj);
-    const ipfsUrl = `ipfs://${upload.cid}`;
+    const res = await axios.post(
+      'https://api.pinata.cloud/pinning/pinFileToIPFS',
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+          Authorization: `Bearer ${pinataJwt}`,
+        },
+      }
+    );
+    const ipfsUrl = `ipfs://${res.data.IpfsHash}`;
     return { success: true, ipfsUrl };
   } catch (error: any) {
     console.error('Error uploading to Pinata:', error);
