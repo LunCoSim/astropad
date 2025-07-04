@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
-import { syncTokensWithBlockchain, addTokenByAddress, removeStoredToken } from '../../lib/deployed-tokens';
+import { addTokenByAddress, removeStoredToken } from '../../lib/deployed-tokens';
 import { getAvailableFees, claimFees } from '../../lib/fees';
 import type { DeployedToken, FeeData } from '../../lib/types';
 
