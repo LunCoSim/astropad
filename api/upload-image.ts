@@ -2,19 +2,6 @@
 
 import { uploadToPinata } from '../lib/pinata-upload';
 
-interface ImageUploadResult {
-  success: boolean;
-  ipfsUrl?: string;
-  error?: string;
-}
-
-interface ImageValidationResult {
-  isValid: boolean;
-  error?: string;
-  buffer?: Buffer;
-  originalName?: string;
-}
-
 /**
  * Validate image file meets requirements:
  * - Must be JPG or PNG
