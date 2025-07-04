@@ -2,7 +2,7 @@ import { uploadToPinata } from '../../lib/pinata-upload';
 import { Buffer } from 'buffer';
 
 // Helper to parse multipart form data (simple, for single file)
-function parseMultipart(event) {
+function parseMultipart(event: any) {
   const logs: string[] = [];
   const contentType = event.headers['content-type'] || event.headers['Content-Type'];
   logs.push(`[parseMultipart] Content-Type: ${contentType}`);
@@ -39,7 +39,7 @@ function parseMultipart(event) {
   return { error: 'No file found in form data', logs };
 }
 
-export const handler = async (event, context) => {
+export const handler = async (event: any, context: any) => {
   const logs: string[] = [];
   logs.push('[handler] Function invoked');
   logs.push(`[handler] Method: ${event.httpMethod}`);
@@ -63,7 +63,7 @@ export const handler = async (event, context) => {
   }
 
   // Parse multipart form data
-  let fileBuffer, filename, fileType, parseLogs;
+  let fileBuffer: Buffer | undefined, filename: string | undefined, fileType: string | undefined, parseLogs;
   try {
     const parsed = parseMultipart(event);
     parseLogs = parsed.logs;
@@ -79,6 +79,14 @@ export const handler = async (event, context) => {
     fileBuffer = parsed.file;
     filename = parsed.filename;
     fileType = parsed.contentType;
+    if (!fileBuffer || !filename || !fileType) {
+      logs.push('[handler] Missing file, filename, or fileType after parsing');
+      return {
+        statusCode: 400,
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({ error: 'Missing file, filename, or fileType', logs }),
+      };
+    }
   } catch (err) {
     logs.push(`[handler] Exception parsing form: ${String(err)}`);
     return {
@@ -96,7 +104,7 @@ export const handler = async (event, context) => {
 
   let result;
   try {
-    result = await uploadToPinata(fileBuffer, filename);
+    result = await uploadToPinata(fileBuffer, filename, fileType);
     logs.push(`[handler] Pinata upload result: ${JSON.stringify(result)}`);
   } catch (err) {
     logs.push(`[handler] Pinata upload exception: ${String(err)}`);

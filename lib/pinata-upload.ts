@@ -1,5 +1,5 @@
 import { PinataSDK } from 'pinata';
-import { File } from 'file-api';
+import { Blob, File } from 'buffer';
 
 const pinata = new PinataSDK({
   pinataJwt: process.env.PINATA_JWT!,
@@ -8,12 +8,12 @@ const pinata = new PinataSDK({
 
 export async function uploadToPinata(
   file: Buffer,
-  filename?: string,
-  mimeType: string = 'application/octet-stream'
+  filename: string,
+  mimeType: string
 ): Promise<{ success: boolean; ipfsUrl?: string; error?: string }> {
   try {
-    // Create a File object using the polyfill
-    const fileObj = new File([file], filename || 'image.png', { type: mimeType });
+    const blob = new Blob([file], { type: mimeType });
+    const fileObj = new File([blob], filename, { type: mimeType });
     const upload = await pinata.upload.public.file(fileObj);
     const ipfsUrl = `ipfs://${upload.cid}`;
     return { success: true, ipfsUrl };

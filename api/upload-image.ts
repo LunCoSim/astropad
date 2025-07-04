@@ -61,9 +61,10 @@ export default async function(req: any, res: any) {
 
     const buffer = readFileSync(imageFile.filepath);
     const originalFilename = imageFile.originalFilename || 'image.png';
+    const mimeType = imageFile.mimetype || 'application/octet-stream';
 
     try {
-      const result = await uploadToPinata(buffer, originalFilename);
+      const result = await uploadToPinata(buffer, originalFilename, mimeType);
       console.log('[UPLOAD] Pinata result', result);
       if (result.success) {
         return res.status(200).json({ success: true, ipfsUrl: result.ipfsUrl });
