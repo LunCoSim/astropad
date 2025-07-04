@@ -63,7 +63,7 @@ export async function validatePairToken(
       getTokenSymbol(publicClient, tokenAddress)
     ]);
 
-    return { symbol, decimals };
+    return { address: tokenAddress, name: symbol, symbol, decimals };
   } catch (error) {
     console.error(`Error validating token ${tokenAddress}:`, error);
     return null;
