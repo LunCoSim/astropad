@@ -13,11 +13,6 @@ interface AlchemyAssetTransfer {
   };
 }
 
-interface AlchemyResponse {
-  transfers: AlchemyAssetTransfer[];
-  pageKey?: string;
-}
-
 interface AlchemyTokenBalance {
   contractAddress: string;
   tokenBalance: string;
@@ -33,7 +28,6 @@ interface AlchemyTokenMetadata {
 
 // Clanker v4.0 contract addresses on Base (from official repo)
 const CLANKER_CONTRACT_ADDRESS = '0xE85A59c628F7d27878ACeB4bf3b35733630083a9';
-const CLANKER_FEE_LOCKER_ADDRESS = '0xF3622742b1E446D92e45E22923Ef11C2fcD55D68';
 
 /**
  * Fetch deployed tokens using Alchemy API
@@ -195,10 +189,9 @@ async function checkIfClankerTokenFast(
       symbol: metadata.symbol,
       deployerAddress: walletAddress, // The wallet that owns the token
       deploymentTxHash: foundEvent.transactionHash,
-      deploymentBlockNumber: parseInt(foundEvent.blockNumber, 16),
       deploymentTimestamp: deploymentTx?.timestamp || 0,
       isVerified: true,
-      source: 'blockchain' as const,
+      source: 'automatic' as const,
     };
 
   } catch (error) {

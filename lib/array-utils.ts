@@ -2,7 +2,7 @@
  * Generic array manipulation utilities for managing dynamic lists in forms
  */
 
-import type { AirdropEntry, CustomPosition, RewardRecipient } from './types.js';
+import type { AirdropEntry, RewardRecipient, PoolPosition as CustomPosition } from './types.js';
 
 /**
  * Generic function to add an item to an array

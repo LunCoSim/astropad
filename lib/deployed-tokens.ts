@@ -1,8 +1,16 @@
 import type { PublicClient } from 'viem';
 import { ERC20_ABI } from './abis.js';
-import type { DeployedToken, TokenMetadata } from './types.js';
+import type { DeployedToken } from './types.js';
 
 const STORAGE_KEY = 'astropad_deployed_tokens';
+
+// Local definition for TokenMetadata
+interface TokenMetadata {
+  name: string;
+  symbol: string;
+  decimals: number;
+  totalSupply: string;
+}
 
 /**
  * Get all stored deployed tokens for the connected wallet
@@ -191,7 +199,7 @@ export async function addTokenByAddress(
       name: metadata.name,
       symbol: metadata.symbol,
       deployerAddress: walletAddress,
-      deploymentTxHash,
+      deploymentTxHash: deploymentTxHash || '',
       deploymentTimestamp: Date.now(),
       isVerified: false, // Manually added tokens are not auto-verified
       source: 'manual',

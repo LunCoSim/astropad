@@ -2,9 +2,7 @@
  * Constants and configuration data for the token deployment wizard
  */
 
-import type { WizardStep } from './types.js';
-
-export const WIZARD_STEPS: WizardStep[] = [
+export const WIZARD_STEPS = [
   {
     id: 'basics',
     title: 'Token Details',

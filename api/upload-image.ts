@@ -1,8 +1,7 @@
 import { IncomingForm } from 'formidable';
 import type { Fields, Files } from 'formidable';
-import { readFileSync, writeFileSync, unlinkSync, createReadStream } from 'fs';
+import { readFileSync } from 'fs';
 import { PinataSDK } from 'pinata';
-import path from 'path';
 // @ts-ignore: File is available in Node.js 20+ and in web-std, but if not, use a polyfill or Buffer workaround
 
 interface ImageUploadResult {
@@ -106,7 +105,7 @@ async function uploadToPinata(buffer: Buffer, filename: string): Promise<ImageUp
 }
 
 // Netlify Function handler
-export const handler = async (event: any, context: any) => {
+export const handler = async (event: any) => {
   // Handle CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -149,7 +148,7 @@ export default async function(req: any, res: any) {
 
   const form = new IncomingForm({ maxFileSize: 1024 * 1024, maxFiles: 1, allowEmptyFiles: false });
 
-  form.parse(req, async (err, fields, files) => {
+  form.parse(req, async (err, _fields, files) => {
     if (err) return res.status(400).json({ error: 'Error parsing upload' });
 
     const imageFile = Array.isArray(files.image) ? files.image[0] : files.image;

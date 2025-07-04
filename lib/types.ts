@@ -3,8 +3,6 @@
  * This file contains all shared interfaces to prevent duplication
  */
 
-import type { PublicClient } from 'viem';
-
 // ===== CORE TOKEN CONFIGURATION =====
 
 export interface TokenConfig {
@@ -204,4 +202,18 @@ export interface DeployedToken {
 
 export interface FeeData {
   [symbol: string]: string;
+}
+
+// ===== CALCULATION TYPES =====
+export interface DevBuyResult {
+  tokensReceived: number;
+  priceImpact: number;
+  newPrice: number;
+  effectivePrice: number;
+}
+
+export interface TokenDistribution {
+  name: string;
+  amount: number;
+  percentage: number;
 }

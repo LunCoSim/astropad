@@ -2,10 +2,8 @@
  * Validation utilities for token configuration steps
  */
 
-import type { PublicClient } from 'viem';
-import { parseUnits, formatUnits } from 'viem';
 import { VALIDATION_LIMITS } from './constants.js';
-import type { TokenConfig, RewardRecipient, ValidationResult } from './types.js';
+import type { TokenConfig, ValidationResult } from './types.js';
 
 /**
  * Validate step 0: Token Basics
@@ -98,12 +96,12 @@ export function getStepValidationErrors(stepIndex: number, config: TokenConfig):
  */
 export function validateTokenName(name: string): ValidationResult {
   if (!name.trim()) {
-    return { isValid: false, error: 'Token name is required' };
+    return { isValid: false, errors: ['Token name is required'], warnings: [] };
   }
   if (name.length > VALIDATION_LIMITS.NAME_MAX_LENGTH) {
-    return { isValid: false, error: `Token name must be ${VALIDATION_LIMITS.NAME_MAX_LENGTH} characters or less` };
+    return { isValid: false, errors: [`Token name must be ${VALIDATION_LIMITS.NAME_MAX_LENGTH} characters or less`], warnings: [] };
   }
-  return { isValid: true };
+  return { isValid: true, errors: [], warnings: [] };
 }
 
 /**
@@ -111,15 +109,15 @@ export function validateTokenName(name: string): ValidationResult {
  */
 export function validateTokenSymbol(symbol: string): ValidationResult {
   if (!symbol.trim()) {
-    return { isValid: false, error: 'Token symbol is required' };
+    return { isValid: false, errors: ['Token symbol is required'], warnings: [] };
   }
   if (symbol.length > VALIDATION_LIMITS.SYMBOL_MAX_LENGTH) {
-    return { isValid: false, error: `Token symbol must be ${VALIDATION_LIMITS.SYMBOL_MAX_LENGTH} characters or less` };
+    return { isValid: false, errors: [`Token symbol must be ${VALIDATION_LIMITS.SYMBOL_MAX_LENGTH} characters or less`], warnings: [] };
   }
   if (!/^[A-Z0-9]+$/.test(symbol)) {
-    return { isValid: false, error: 'Token symbol must contain only uppercase letters and numbers' };
+    return { isValid: false, errors: ['Token symbol must contain only uppercase letters and numbers'], warnings: [] };
   }
-  return { isValid: true };
+  return { isValid: true, errors: [], warnings: [] };
 }
 
 /**
@@ -127,12 +125,12 @@ export function validateTokenSymbol(symbol: string): ValidationResult {
  */
 export function validateEthereumAddress(address: string): ValidationResult {
   if (!address.trim()) {
-    return { isValid: false, error: 'Address is required' };
+    return { isValid: false, errors: ['Address is required'], warnings: [] };
   }
   if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
-    return { isValid: false, error: 'Invalid Ethereum address format' };
+    return { isValid: false, errors: ['Invalid Ethereum address format'], warnings: [] };
   }
-  return { isValid: true };
+  return { isValid: true, errors: [], warnings: [] };
 }
 
 /**
@@ -140,10 +138,10 @@ export function validateEthereumAddress(address: string): ValidationResult {
  */
 export function validatePercentage(value: number, min: number = 0, max: number = 100): ValidationResult {
   if (value < min) {
-    return { isValid: false, error: `Percentage must be at least ${min}%` };
+    return { isValid: false, errors: [`Percentage must be at least ${min}%`], warnings: [] };
   }
   if (value > max) {
-    return { isValid: false, error: `Percentage must be no more than ${max}%` };
+    return { isValid: false, errors: [`Percentage must be no more than ${max}%`], warnings: [] };
   }
-  return { isValid: true };
+  return { isValid: true, errors: [], warnings: [] };
 } 

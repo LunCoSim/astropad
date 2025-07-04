@@ -2,7 +2,7 @@
  * AMM and DeFi calculation utilities for token deployment
  */
 
-import type { DevBuyResult, TokenDistribution, TokenConfig } from './types.js';
+import type { DevBuyResult, TokenDistribution } from './types.js';
 
 /**
  * AMM calculation function using constant product formula (x * y = k)

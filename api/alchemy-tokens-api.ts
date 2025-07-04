@@ -1,7 +1,7 @@
 import { fetchDeployedTokensViaAlchemy } from './alchemy-tokens.js';
 
 // Netlify Function handler
-export const handler = async (event: any, context: any) => {
+export const handler = async (event: any) => {
   // Handle CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',
