@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import express from 'express';
 import { createPublicClient, http, type PublicClient } from 'viem';
 import { base } from 'viem/chains';
@@ -9,10 +8,7 @@ import uploadImageHandler from './upload-image';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
 app.use(express.json());
-
-// CORS middleware for development
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -24,12 +20,10 @@ app.use((req, res, next) => {
   }
 });
 
-// Health check endpoint
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Fee checking endpoint
 app.get('/api/check-fees', async (req, res) => {
   const publicClient = createPublicClient({
     chain: base,
@@ -55,24 +49,17 @@ app.get('/api/check-fees', async (req, res) => {
   }
 });
 
-// Alchemy tokens endpoint (consolidated functionality)
 app.get('/api/alchemy-tokens', async (req, res) => {
   try {
     const { wallet } = req.query;
-
     if (!wallet) {
       return res.status(400).json({ error: 'wallet parameter is required' });
     }
-
-    // Validate wallet address format
     if (!/^0x[a-fA-F0-9]{40}$/.test(wallet as string)) {
       return res.status(400).json({ error: 'Invalid wallet address format' });
     }
-
     console.log(`Fetching tokens for wallet: ${wallet}`);
-    
     const tokens = await fetchDeployedTokensViaAlchemy(wallet as string);
-
     res.status(200).json({
       success: true,
       tokens,
@@ -81,7 +68,6 @@ app.get('/api/alchemy-tokens', async (req, res) => {
       source: 'alchemy',
       query_time: new Date().toISOString(),
     });
-
   } catch (error: any) {
     console.error('Error in alchemy-tokens API:', error);
     res.status(500).json({
@@ -91,19 +77,8 @@ app.get('/api/alchemy-tokens', async (req, res) => {
   }
 });
 
-// Image upload endpoint
 app.post('/api/upload-image', (req, res) => uploadImageHandler(req, res));
 
-// Only start the server locally, otherwise export the app for Netlify
-if (process.env.NETLIFY) {
-  module.exports = app;
-} else {
-  app.listen(PORT, () => {
-    console.log(`API server running on port ${PORT}`);
-  });
-}
-
-export default app;
-
-// Netlify Function handler only. Express app moved to api/server.ts for local dev.
-export { handler } from './upload-image';
+app.listen(PORT, () => {
+  console.log(`API server running on port ${PORT}`);
+}); 

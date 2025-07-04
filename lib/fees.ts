@@ -6,7 +6,7 @@ import type { RewardRecipient } from './types';
 
 export async function getAvailableFees(
   publicClient: PublicClient,
-  feeOwnerAddress: `0x${string}`,
+  _feeOwnerAddress: `0x${string}`,
   clankerTokenAddress: `0x${string}`,
 ) {
   const clanker = new Clanker({ publicClient });
@@ -14,7 +14,7 @@ export async function getAvailableFees(
 
   // Get fees for Clanker Token
   const clankerRawFees = await clanker.availableRewards(
-    feeOwnerAddress,
+    _feeOwnerAddress,
     clankerTokenAddress,
   );
   const clankerDecimals = await getTokenDecimals(
@@ -29,7 +29,7 @@ export async function getAvailableFees(
 
   // Get fees for WETH
   const wethRawFees = await clanker.availableRewards(
-    feeOwnerAddress,
+    _feeOwnerAddress,
     wethTokenAddress,
   );
   const wethDecimals = await getTokenDecimals(publicClient, wethTokenAddress);
@@ -45,7 +45,7 @@ export async function getAvailableFees(
 export async function claimFees(
   publicClient: PublicClient,
   walletClient: WalletClient | null,
-  feeOwnerAddress: `0x${string}`,
+  _feeOwnerAddress: `0x${string}`,
   clankerTokenAddress: `0x${string}`,
 ): Promise<string> {
   if (!walletClient) {
@@ -129,7 +129,7 @@ export const LP_FEE_PERCENTAGE = 0.8; // 80% goes to LP
  */
 export function calculateFeeDistribution(
   userAddress: string,
-  userFeeBps: number
+  _userFeeBps: number
 ): RewardRecipient[] {
   // Recipients array represents distribution of LP fees only
   // Default split: 75% to user, 25% to platform (of LP fees)
@@ -161,19 +161,19 @@ export function calculateFeeDistribution(
  * @returns Object with calculated fee values
  */
 export function calculateTokenFees(
-  userFeeBps: number,
+  _userFeeBps: number,
   feeType: 'static' | 'dynamic'
 ) {
   if (feeType === 'static') {
     return {
-      clankerFeeBps: userFeeBps,
-      pairedFeeBps: userFeeBps
+      clankerFeeBps: _userFeeBps,
+      pairedFeeBps: _userFeeBps
     };
   } else {
     // For dynamic fees, we use the userFeeBps as the base fee
     return {
-      baseFee: Math.max(25, userFeeBps), // Minimum 25 bps
-      maxFee: Math.min(3000, userFeeBps * 3), // Max 3x the base fee or 30%
+      baseFee: Math.max(25, _userFeeBps), // Minimum 25 bps
+      maxFee: Math.min(3000, _userFeeBps * 3), // Max 3x the base fee or 30%
     };
   }
 }
