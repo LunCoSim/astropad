@@ -6,11 +6,11 @@
   "description": "",
   "scripts": {
     "start-vite": "vite",
-    "start-api": "tsx api/index.ts",
+    "start-api": "tsx backend/server.ts",
     "dev": "concurrently \"pnpm start-vite\" \"pnpm start-api\"",
     "cli:check-fees": "tsx cli/check-fees.ts",
     "build": "vite build && tsc -p tsconfig.api.json",
-    "start": "node dist-api/api/index.js",
+    "start": "node dist-api/backend/server.js",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",

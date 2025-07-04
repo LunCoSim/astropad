@@ -34,7 +34,7 @@ The project is organized into the following top-level directories:
     - This command will first build the frontend UI into the `/dist` directory.
     - It will then compile the API server's TypeScript code into JavaScript in the `/dist-api` directory.
 2.  **Starting the Server:** Run `pnpm start`.
-    - This runs the compiled API server from `/dist-api/index.js`.
+    - This runs the compiled API server from `/dist-api/backend/index.js`.
     - In this mode, the server will both handle API requests and serve the built static files from the `/dist` directory.
 
 ## 5. The Hybrid Model (Frontend)

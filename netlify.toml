@@ -10,6 +10,10 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+  from = "/api/upload-image"
+  to = "/.netlify/functions/upload-image"
+  status = 200
+
 [build.environment]
   NODE_VERSION = "18"
 

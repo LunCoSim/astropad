@@ -1,5 +1,7 @@
 // (All top-level Node-only imports removed)
 
+import { uploadToPinata } from '../lib/pinata-upload';
+
 interface ImageUploadResult {
   success: boolean;
   ipfsUrl?: string;
@@ -63,42 +65,6 @@ async function validateImageBuffer(buffer: Buffer, originalName: string): Promis
   }
 }
 
-/**
- * Upload image to Pinata using the SDK
- */
-async function uploadToPinata(buffer: Buffer, filename: string): Promise<ImageUploadResult> {
-  const { PinataSDK } = await import('pinata');
-  const pinata = new PinataSDK({
-    pinataJwt: process.env.PINATA_JWT!,
-    pinataGateway: process.env.PINATA_GATEWAY!,
-  });
-  try {
-    if (!process.env.PINATA_JWT || !process.env.PINATA_GATEWAY) {
-      return {
-        success: false,
-        error: 'Pinata credentials not configured',
-      };
-    }
-    // Use the native File class (Node.js 20+)
-    const file = new File([buffer], filename, {
-      type: filename.endsWith('.png') ? 'image/png' : 'image/jpeg',
-    });
-    const upload = await pinata.upload.public.file(file);
-    // Always return IPFS URI as ipfs://<cid> (no filename)
-    const ipfsUrl = `ipfs://${upload.cid}`;
-    return {
-      success: true,
-      ipfsUrl,
-    };
-  } catch (error: any) {
-    console.error('Error uploading to Pinata:', error);
-    return {
-      success: false,
-      error: error.message || 'Unknown error occurred',
-    };
-  }
-}
-
 // Netlify Function handler
 export const handler = async (event: any) => {
   // Handle CORS
@@ -152,12 +118,8 @@ export default async function(req: any, res: any) {
     if (!imageFile) return res.status(400).json({ error: 'No image file provided' });
 
     const buffer = readFileSync(imageFile.filepath);
-    // Ensure originalFilename is always a string
     const originalFilename = imageFile.originalFilename || 'image.png';
-    const validation = await validateImageBuffer(buffer, originalFilename);
-    if (!validation.isValid) {
-      return res.status(400).json({ error: validation.error });
-    }
+
     try {
       const result = await uploadToPinata(buffer, originalFilename);
       if (result.success) {
