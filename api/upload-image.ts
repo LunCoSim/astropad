@@ -2,56 +2,6 @@
 
 import { uploadToPinata } from '../lib/pinata-upload';
 
-/**
- * Validate image file meets requirements:
- * - Must be JPG or PNG
- * - Must be no more than 1MB
- */
-async function validateImageBuffer(buffer: Buffer, originalName: string): Promise<ImageValidationResult> {
-  try {
-    // Check file size (1MB = 1024 * 1024 bytes)
-    const maxSize = 1024 * 1024;
-    if (buffer.length > maxSize) {
-      return {
-        isValid: false,
-        error: `File size must be no more than 1MB (current: ${(buffer.length / 1024 / 1024).toFixed(2)}MB)`
-      };
-    }
-
-    // Check file type by extension and magic bytes
-    const ext = originalName.toLowerCase().split('.').pop();
-    if (!ext || !['jpg', 'jpeg', 'png'].includes(ext)) {
-      return {
-        isValid: false,
-        error: 'File must be a JPG or PNG image'
-      };
-    }
-
-    // Check magic bytes
-    const isPNG = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
-    const isJPEG = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
-    
-    if (!isPNG && !isJPEG) {
-      return {
-        isValid: false,
-        error: 'File must be a valid JPG or PNG image'
-      };
-    }
-
-    return {
-      isValid: true,
-      buffer,
-      originalName
-    };
-
-  } catch (error) {
-    return {
-      isValid: false,
-      error: 'Unable to validate image file'
-    };
-  }
-}
-
 // Netlify Function handler
 export const handler = async (event: any) => {
   // Handle CORS
