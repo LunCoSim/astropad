@@ -1,4 +1,4 @@
-import { formatUnits, type PublicClient, type WalletClient } from "viem";
+import { formatUnits, type PublicClient } from "viem";
 import { WETH_ADDRESS } from "clanker-sdk";
 import { Clanker } from "clanker-sdk/v4";
 import { getTokenDecimals, getTokenSymbol } from "./token-validation.js";
