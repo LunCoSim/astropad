@@ -104,6 +104,3 @@ if (process.env.NETLIFY) {
 }
 
 export default app;
-
-// Netlify Function handler only. Express app moved to api/server.ts for local dev.
-export { handler } from './upload-image';
