@@ -1,9 +1,4 @@
-// Only keep imports needed for the Netlify handler at the top
-import { IncomingForm } from 'formidable';
-import type { Fields, Files } from 'formidable';
-import { readFileSync } from 'fs';
-import { PinataSDK } from 'pinata';
-// @ts-ignore: File is available in Node.js 20+ and in web-std, but if not, use a polyfill or Buffer workaround
+// (All top-level Node-only imports removed)
 
 interface ImageUploadResult {
   success: boolean;
@@ -68,16 +63,15 @@ async function validateImageBuffer(buffer: Buffer, originalName: string): Promis
   }
 }
 
-// Pinata SDK setup
-const pinata = new PinataSDK({
-  pinataJwt: process.env.PINATA_JWT!,
-  pinataGateway: process.env.PINATA_GATEWAY!,
-});
-
 /**
  * Upload image to Pinata using the SDK
  */
 async function uploadToPinata(buffer: Buffer, filename: string): Promise<ImageUploadResult> {
+  const { PinataSDK } = await import('pinata');
+  const pinata = new PinataSDK({
+    pinataJwt: process.env.PINATA_JWT!,
+    pinataGateway: process.env.PINATA_GATEWAY!,
+  });
   try {
     if (!process.env.PINATA_JWT || !process.env.PINATA_GATEWAY) {
       return {
@@ -140,10 +134,8 @@ export const handler = async (event: any) => {
 
 // For local development (Express.js)
 export default async function(req: any, res: any) {
-  // Move Node-only imports here
   const { IncomingForm } = await import('formidable');
   const { readFileSync } = await import('fs');
-  const { PinataSDK } = await import('pinata');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');

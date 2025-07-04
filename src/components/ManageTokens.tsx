@@ -35,28 +35,7 @@ export function ManageTokens() {
   }, [address, publicClient]);
 
   const loadDeployedTokens = async () => {
-    if (!address || !publicClient) return;
-    
-    setLoadingTokens(true);
-    setTokensError('');
-    
-    try {
-      // Load only manually tracked tokens (no automatic detection)
-      console.log('Loading manually tracked tokens...');
-      const tokens = await syncTokensWithBlockchain(publicClient, address, false);
-      
-      setDeployedTokens(tokens);
-      
-      // Automatically check admin status for all manual tokens
-      if (tokens.length > 0) {
-        await checkAdminStatusForTokens(tokens);
-      }
-    } catch (err: any) {
-      setTokensError(err.message || 'Failed to load deployed tokens');
-      console.error('Error loading deployed tokens:', err);
-    } finally {
-      setLoadingTokens(false);
-    }
+    setDeployedTokens([]);
   };
 
   // Check admin status for multiple tokens
@@ -262,49 +241,6 @@ export function ManageTokens() {
       alert(`Error checking fees: ${error.message}`);
     } finally {
       setLoadingFees(prev => ({ ...prev, [token.address]: false }));
-    }
-  };
-
-  // Claim fees for a specific token
-  const claimTokenFees = async (token: DeployedToken) => {
-    if (!publicClient || !address) return;
-    
-    setClaimingFees(prev => ({ ...prev, [token.address]: true }));
-    
-    try {
-      // Check if user is admin first
-      const adminAddress = tokenAdmins[token.address];
-      if (!adminAddress || adminAddress.toLowerCase() !== address.toLowerCase()) {
-        alert('You must be the admin of this token to claim fees.');
-        return;
-      }
-
-      // Try to claim fees
-      try {
-        const txHash = await claimFees(publicClient, walletClient, address as `0x${string}`, token.address as `0x${string}`);
-        alert(`Fees claimed successfully!\nTransaction: ${txHash}`);
-        // Refresh fees after claiming
-        await checkTokenFees(token);
-      } catch (error: any) {
-        // If the Clanker SDK method isn't available, show manual claim option
-        if (error.message.includes('not yet available')) {
-          const shouldOpenAdmin = confirm(
-            error.message
-          );
-          
-          if (shouldOpenAdmin) {
-            window.open(`https://www.clanker.world/clanker/${token.address}/admin`, '_blank');
-          }
-        } else {
-          throw error;
-        }
-      }
-      
-    } catch (error: any) {
-      console.error('Error claiming fees:', error);
-      alert(`Error claiming fees: ${error.message}`);
-    } finally {
-      setClaimingFees(prev => ({ ...prev, [token.address]: false }));
     }
   };
 
