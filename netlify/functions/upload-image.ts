@@ -1,105 +1,125 @@
-import { IncomingForm } from 'formidable';
 import { uploadToPinata } from '../../lib/pinata-upload';
+import { Buffer } from 'buffer';
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-export default async (request: Request) => {
+// Helper to parse multipart form data (simple, for single file)
+function parseMultipart(event) {
   const logs: string[] = [];
-  const log = (msg: string, ...args: any[]) => {
-    const line = `[upload-image] ${msg} ${args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ')}`;
-    logs.push(line);
-    if (typeof console !== 'undefined') console.log(line);
-  };
-  const logErr = (msg: string, ...args: any[]) => {
-    const line = `[upload-image] ERROR: ${msg} ${args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ')}`;
-    logs.push(line);
-    if (typeof console !== 'undefined') console.error(line);
-  };
-
-  log('Function invoked');
-  log('Request method:', request.method);
-  // Log headers
-  const headerArr: [string, string][] = [];
-  for (const pair of request.headers as any) {
-    headerArr.push(pair);
+  const contentType = event.headers['content-type'] || event.headers['Content-Type'];
+  logs.push(`[parseMultipart] Content-Type: ${contentType}`);
+  if (!contentType || !contentType.startsWith('multipart/form-data')) {
+    logs.push('[parseMultipart] Not multipart/form-data');
+    return { error: 'Invalid content-type', logs };
   }
-  log('Request headers:', JSON.stringify(headerArr));
+  const boundaryMatch = contentType.match(/boundary=(.*)$/);
+  if (!boundaryMatch) {
+    logs.push('[parseMultipart] No boundary found');
+    return { error: 'No boundary in content-type', logs };
+  }
+  const boundary = boundaryMatch[1];
+  const bodyBuffer = event.isBase64Encoded ? Buffer.from(event.body, 'base64') : Buffer.from(event.body);
+  const parts = bodyBuffer.toString().split(`--${boundary}`);
+  for (const part of parts) {
+    if (part.includes('Content-Disposition') && part.includes('filename=')) {
+      // Extract filename
+      const nameMatch = part.match(/name="([^"]+)"/);
+      const filenameMatch = part.match(/filename="([^"]+)"/);
+      const typeMatch = part.match(/Content-Type: ([^\r\n]+)/);
+      if (!filenameMatch) continue;
+      const filename = filenameMatch[1];
+      const contentType = typeMatch ? typeMatch[1] : 'application/octet-stream';
+      // Extract file data (after double CRLF)
+      const fileDataMatch = part.match(/\r\n\r\n([\s\S]*)\r\n$/);
+      if (!fileDataMatch) continue;
+      const fileData = Buffer.from(fileDataMatch[1], 'binary');
+      logs.push(`[parseMultipart] Found file: ${filename}, type: ${contentType}, size: ${fileData.length}`);
+      return { file: fileData, filename, contentType, logs };
+    }
+  }
+  logs.push('[parseMultipart] No file part found');
+  return { error: 'No file found in form data', logs };
+}
 
+export const handler = async (event, context) => {
+  const logs: string[] = [];
+  logs.push('[handler] Function invoked');
+  logs.push(`[handler] Method: ${event.httpMethod}`);
+  logs.push(`[handler] Headers: ${JSON.stringify(event.headers)}`);
+
+  if (event.httpMethod === 'OPTIONS') {
+    logs.push('[handler] Handling OPTIONS');
+    return {
+      statusCode: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': 'POST,OPTIONS' },
+      body: '',
+    };
+  }
+  if (event.httpMethod !== 'POST') {
+    logs.push('[handler] Method Not Allowed');
+    return {
+      statusCode: 405,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ error: 'Method Not Allowed', logs }),
+    };
+  }
+
+  // Parse multipart form data
+  let fileBuffer, filename, fileType, parseLogs;
   try {
-    if (request.method === 'OPTIONS') {
-      log('Handling OPTIONS request');
-      return new Response('', { status: 200, headers: { 'Access-Control-Allow-Origin': '*' } });
+    const parsed = parseMultipart(event);
+    parseLogs = parsed.logs;
+    logs.push(...parseLogs);
+    if (parsed.error) {
+      logs.push(`[handler] Parse error: ${parsed.error}`);
+      return {
+        statusCode: 400,
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({ error: parsed.error, logs }),
+      };
     }
-    if (request.method !== 'POST') {
-      logErr('Method Not Allowed:', request.method);
-      return new Response(JSON.stringify({ error: 'Method Not Allowed', logs }), { status: 405, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
-    }
-
-    // Parse multipart form data using formidable
-    let fileBuffer: Buffer | null = null;
-    let fileName = '';
-    let fileType = '';
-    try {
-      log('Parsing form data with formidable');
-      // Netlify provides the raw body as a ReadableStream
-      // Convert Request to Node.js IncomingMessage using a workaround
-      // This is a hack, but Netlify Functions are Node.js, so we can use req/res
-      // @ts-ignore
-      const req = request as any;
-      const form = new IncomingForm();
-      const formParse: Promise<any> = new Promise((resolve, reject) => {
-        form.parse(req, (err, fields, files) => {
-          if (err) return reject(err);
-          resolve({ fields, files });
-        });
-      });
-      const { files } = await formParse;
-      log('Formidable files:', JSON.stringify(Object.keys(files)));
-      const imageFile = files.image;
-      if (!imageFile) {
-        logErr('No file uploaded');
-        return new Response(JSON.stringify({ error: 'No file uploaded', logs }), { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
-      }
-      fileBuffer = imageFile[0]?.buffer || null;
-      fileName = imageFile[0]?.originalFilename || 'image.png';
-      fileType = imageFile[0]?.mimetype || 'application/octet-stream';
-      log('File details:', JSON.stringify({ fileName, fileType, size: fileBuffer?.length }));
-    } catch (err) {
-      logErr('Failed to parse form data:', String(err));
-      return new Response(JSON.stringify({ error: 'Failed to parse form data', details: String(err), logs }), { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
-    }
-
-    // Check Pinata env vars presence (not values)
-    const pinataJwtPresent = !!process.env.PINATA_JWT;
-    const pinataGatewayPresent = !!process.env.PINATA_GATEWAY;
-    log('Pinata JWT present:', String(pinataJwtPresent));
-    log('Pinata Gateway present:', String(pinataGatewayPresent));
-
-    let result;
-    try {
-      result = await uploadToPinata(fileBuffer, fileName);
-      log('Pinata upload result:', JSON.stringify(result));
-    } catch (err) {
-      logErr('Error uploading to Pinata:', String(err));
-      return new Response(JSON.stringify({ error: 'Pinata upload failed', details: String(err), logs }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
-    }
-
-    if (!result.success) {
-      logErr('Pinata upload error:', result.error || 'Unknown error from Pinata');
-      return new Response(JSON.stringify({ error: result.error || 'Unknown error from Pinata', logs }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
-    }
-
-    log('Upload successful, returning result');
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-    });
+    fileBuffer = parsed.file;
+    filename = parsed.filename;
+    fileType = parsed.contentType;
   } catch (err) {
-    logErr('Unexpected server error:', String(err));
-    return new Response(JSON.stringify({ error: 'Unexpected server error', details: String(err), logs }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    logs.push(`[handler] Exception parsing form: ${String(err)}`);
+    return {
+      statusCode: 400,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ error: 'Failed to parse form data', details: String(err), logs }),
+    };
   }
+
+  // Check Pinata env vars presence (not values)
+  const pinataJwtPresent = !!process.env.PINATA_JWT;
+  const pinataGatewayPresent = !!process.env.PINATA_GATEWAY;
+  logs.push(`[handler] Pinata JWT present: ${pinataJwtPresent}`);
+  logs.push(`[handler] Pinata Gateway present: ${pinataGatewayPresent}`);
+
+  let result;
+  try {
+    result = await uploadToPinata(fileBuffer, filename);
+    logs.push(`[handler] Pinata upload result: ${JSON.stringify(result)}`);
+  } catch (err) {
+    logs.push(`[handler] Pinata upload exception: ${String(err)}`);
+    return {
+      statusCode: 500,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ error: 'Pinata upload failed', details: String(err), logs }),
+    };
+  }
+
+  if (!result.success) {
+    logs.push(`[handler] Pinata upload error: ${result.error || 'Unknown error from Pinata'}`);
+    return {
+      statusCode: 500,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ error: result.error || 'Unknown error from Pinata', logs }),
+    };
+  }
+
+  logs.push('[handler] Upload successful, returning result');
+  return {
+    statusCode: 200,
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    body: JSON.stringify({ ...result, logs }),
+  };
 }; 
