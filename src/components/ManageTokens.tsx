@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import { addTokenByAddress, removeStoredToken } from '../../lib/deployed-tokens';
-import { getAvailableFees, claimFees } from '../../lib/fees';
+import { getAvailableFees } from '../../lib/fees';
 import type { DeployedToken, FeeData } from '../../lib/types';
 
 export function ManageTokens() {
