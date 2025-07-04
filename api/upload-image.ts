@@ -1,3 +1,4 @@
+// Only keep imports needed for the Netlify handler at the top
 import { IncomingForm } from 'formidable';
 import type { Fields, Files } from 'formidable';
 import { readFileSync } from 'fs';
@@ -139,6 +140,10 @@ export const handler = async (event: any) => {
 
 // For local development (Express.js)
 export default async function(req: any, res: any) {
+  // Move Node-only imports here
+  const { IncomingForm } = await import('formidable');
+  const { readFileSync } = await import('fs');
+  const { PinataSDK } = await import('pinata');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');

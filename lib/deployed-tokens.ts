@@ -120,30 +120,6 @@ export async function fetchTokenMetadata(
 }
 
 /**
- * Simplified token sync - only returns manually tracked tokens
- */
-export async function syncTokensWithBlockchain(
-  publicClient: PublicClient,
-  walletAddress: string
-): Promise<DeployedToken[]> {
-  try {
-    console.log(`Loading manually tracked tokens for wallet: ${walletAddress}`);
-    
-    // Only get manually tracked tokens from storage
-    const storedTokens = getStoredTokens(walletAddress);
-    const manualTokens = storedTokens.filter(token => token.source === 'manual');
-
-    // Sort by deployment timestamp (newest first)
-    const sortedTokens = manualTokens.sort((a, b) => b.deploymentTimestamp - a.deploymentTimestamp);
-    
-    return sortedTokens;
-  } catch (error) {
-    console.error('Error loading tokens:', error);
-    return getStoredTokens(walletAddress); // Fall back to stored tokens
-  }
-}
-
-/**
  * Update stored token with fresh metadata from blockchain
  */
 export async function refreshTokenMetadata(
