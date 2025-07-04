@@ -124,8 +124,7 @@ export async function fetchTokenMetadata(
  */
 export async function syncTokensWithBlockchain(
   publicClient: PublicClient,
-  walletAddress: string,
-  useAlchemyApi: boolean = false // Disabled automatic detection
+  walletAddress: string
 ): Promise<DeployedToken[]> {
   try {
     console.log(`Loading manually tracked tokens for wallet: ${walletAddress}`);

@@ -217,3 +217,12 @@ export interface TokenDistribution {
   amount: number;
   percentage: number;
 }
+
+// ===== TOKEN INFO (for validation) =====
+export interface TokenInfo {
+  address: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  [key: string]: any;
+}

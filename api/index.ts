@@ -94,6 +94,13 @@ app.get('/api/alchemy-tokens', async (req, res) => {
 // Image upload endpoint
 app.post('/api/upload-image', (req, res) => uploadImageHandler(req, res));
 
-app.listen(PORT, () => {
-  console.log(`API server running on port ${PORT}`);
-});
+// Only start the server locally, otherwise export the app for Netlify
+if (process.env.NETLIFY) {
+  module.exports = app;
+} else {
+  app.listen(PORT, () => {
+    console.log(`API server running on port ${PORT}`);
+  });
+}
+
+export default app;

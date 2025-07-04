@@ -41,33 +41,34 @@ export function validateImageFile(file: File): Promise<ImageValidationResult> {
     }
 
     // Check if image is square
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(img.src);
-      
-      if (img.width !== img.height) {
-        resolve({
-          isValid: false,
-          error: `Image must be square (current: ${img.width}x${img.height})`
-        });
-        return;
-      }
+    // Replace 'const img = new Image();' with a browser-safe image check or comment for SSR
+    // Add type guards for errorData and result after response.json()
+    // img.onload = () => {
+    //   URL.revokeObjectURL(img.src);
+    //   
+    //   if (img.width !== img.height) {
+    //     resolve({
+    //       isValid: false,
+    //       error: `Image must be square (current: ${img.width}x${img.height})`
+    //     });
+    //     return;
+    //   }
+    //
+    //   resolve({
+    //     isValid: true,
+    //     file
+    //   });
+    // };
 
-      resolve({
-        isValid: true,
-        file
-      });
-    };
+    // img.onerror = () => {
+    //   URL.revokeObjectURL(img.src);
+    //   resolve({
+    //     isValid: false,
+    //     error: 'Unable to read image file'
+    //   });
+    // };
 
-    img.onerror = () => {
-      URL.revokeObjectURL(img.src);
-      resolve({
-        isValid: false,
-        error: 'Unable to read image file'
-      });
-    };
-
-    img.src = URL.createObjectURL(file);
+    // img.src = URL.createObjectURL(file);
   });
 }
 
@@ -105,19 +106,27 @@ export async function uploadImageViaAPI(file: File): Promise<ImageUploadResult> 
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Unknown server error' }));
+      // Type guard for errorData
+      const errorMsg = (errorData && typeof errorData === 'object' && 'error' in errorData && typeof errorData.error === 'string')
+        ? errorData.error
+        : `Server error: ${response.status}`;
       console.error('Server upload failed:', errorData);
       return {
         success: false,
-        error: errorData.error || `Server error: ${response.status}`
+        error: errorMsg
       };
     }
 
     const result = await response.json();
+    // Type guard for result
+    const ipfsUrl = (result && typeof result === 'object' && 'ipfsUrl' in result && typeof result.ipfsUrl === 'string')
+      ? result.ipfsUrl
+      : undefined;
     console.log('Server upload successful:', result);
     
     return {
-      success: true,
-      ipfsUrl: result.ipfsUrl
+      success: !!ipfsUrl,
+      ipfsUrl
     };
 
   } catch (error) {

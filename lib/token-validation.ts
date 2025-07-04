@@ -1,5 +1,6 @@
 import type { PublicClient } from "viem";
 import { ERC20_ABI } from './abis.js';
+import type { TokenInfo } from './types';
 
 /**
  * Token validation utilities for ERC20 contracts

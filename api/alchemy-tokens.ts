@@ -1,18 +1,5 @@
 import type { DeployedToken } from '../lib/types';
 
-interface AlchemyAssetTransfer {
-  from: string;
-  to: string | null;
-  value: string;
-  hash: string;
-  blockNum: string;
-  asset: string;
-  category: string;
-  metadata: {
-    blockTimestamp: string;
-  };
-}
-
 interface AlchemyTokenBalance {
   contractAddress: string;
   tokenBalance: string;
