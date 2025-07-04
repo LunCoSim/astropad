@@ -6,9 +6,9 @@ import { cookieStorage, createStorage } from 'wagmi';
 export const projectId = '03cafb3be79ba7760436a3741199a564';
 
 const metadata = {
-  name: 'Clanker Token Tools',
-  description: 'Deploy tokens and check fees',
-  url: 'https://clanker.xyz',
+  name: 'Astropad - UI for Clanker v4 coin minting',
+  description: 'Send your coin to the Moon',
+  url: 'https://astropad.lunco.space',
   icons: ['https://avatars.githubusercontent.com/u/37784886'],
 };
 
