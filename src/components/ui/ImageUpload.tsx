@@ -29,9 +29,11 @@ export function ImageUpload({
 
     try {
       console.log('Starting image upload for file:', file.name, 'Size:', file.size, 'Type:', file.type);
-      
+      // Extra log before validation
+      console.log('[ImageUpload] Before validateImageFile');
       // Validate file first
       const validation = await validateImageFile(file);
+      console.log('[ImageUpload] After validateImageFile', validation);
       if (!validation.isValid) {
         console.error('Image validation failed:', validation.error);
         onUploadError(validation.error || 'Invalid image file');
@@ -41,25 +43,18 @@ export function ImageUpload({
       }
 
       console.log('Image validation passed');
-
       // Show preview
       const preview = URL.createObjectURL(file);
       setPreviewUrl(preview);
-      
       setUploadProgress('Uploading to IPFS via Web3.Storage...');
-
       // Always use server-side upload to keep API key secure
-      console.log('Using server-side upload...');
+      console.log('[ImageUpload] Before uploadImageViaAPI');
       const result = await uploadImageViaAPI(file);
-
-      console.log('Upload result:', result);
-
+      console.log('[ImageUpload] After uploadImageViaAPI', result);
       if (result.success && result.ipfsUrl) {
         console.log('Upload successful:', result.ipfsUrl);
         onUploadSuccess(result.ipfsUrl);
         setUploadProgress('✅ Uploaded to IPFS successfully!');
-        
-        // Clear progress after delay
         setTimeout(() => {
           setUploadProgress('');
         }, 3000);
@@ -68,9 +63,8 @@ export function ImageUpload({
         onUploadError(result.error || 'Upload failed');
         setUploadProgress('');
       }
-
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('[ImageUpload] Upload error:', error);
       onUploadError(error instanceof Error ? error.message : 'Upload failed');
       setUploadProgress('');
     } finally {

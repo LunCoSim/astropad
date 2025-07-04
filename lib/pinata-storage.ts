@@ -40,35 +40,11 @@ export function validateImageFile(file: File): Promise<ImageValidationResult> {
       return;
     }
 
-    // Check if image is square
-    // Replace 'const img = new Image();' with a browser-safe image check or comment for SSR
-    // Add type guards for errorData and result after response.json()
-    // img.onload = () => {
-    //   URL.revokeObjectURL(img.src);
-    //   
-    //   if (img.width !== img.height) {
-    //     resolve({
-    //       isValid: false,
-    //       error: `Image must be square (current: ${img.width}x${img.height})`
-    //     });
-    //     return;
-    //   }
-    //
-    //   resolve({
-    //     isValid: true,
-    //     file
-    //   });
-    // };
-
-    // img.onerror = () => {
-    //   URL.revokeObjectURL(img.src);
-    //   resolve({
-    //     isValid: false,
-    //     error: 'Unable to read image file'
-    //   });
-    // };
-
-    // img.src = URL.createObjectURL(file);
+    // At the end, if all checks pass:
+    resolve({
+      isValid: true,
+      file
+    });
   });
 }
 
