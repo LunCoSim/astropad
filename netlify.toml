@@ -10,6 +10,7 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+[[redirects]]
   from = "/api/upload-image"
   to = "/.netlify/functions/upload-image"
   status = 200
