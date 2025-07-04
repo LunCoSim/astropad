@@ -90,8 +90,8 @@ async function uploadToPinata(buffer: Buffer, filename: string): Promise<ImageUp
       type: filename.endsWith('.png') ? 'image/png' : 'image/jpeg',
     });
     const upload = await pinata.upload.public.file(file);
-    // Compose gateway URL
-    const ipfsUrl = `https://${process.env.PINATA_GATEWAY}/ipfs/${upload.cid}`;
+    // Always return IPFS URI as ipfs://<cid> (no filename)
+    const ipfsUrl = `ipfs://${upload.cid}`;
     return {
       success: true,
       ipfsUrl,
