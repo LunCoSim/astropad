@@ -191,6 +191,10 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
 
   const feeInfo = getFeeDisplayInfo(config.fees.userFeeBps);
 
+  // Helper defaults for static/dynamic fee config
+  const defaultStatic = { clankerFeeBps: 100, pairedFeeBps: 100, customDistribution: false };
+  const defaultDynamic = { baseFee: 100, maxFee: 300, referenceTickFilterPeriod: 3600, resetPeriod: 86400, resetTickFilter: 500, feeControlNumerator: 100, decayFilterBps: 9500 };
+
   return (
     <div className="space-y-2xl animate-fade-in">
       {/* Header */}
@@ -301,35 +305,70 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
           </div>
 
           {config.mev.enabled && (
-            <div>
-              <label className="block text-sm font-semibold text-primary mb-sm">
-                Block Delay
-              </label>
-              <div className="flex items-center space-x-md">
-                <input
-                  type="range"
-                  min="1"
-                  max="5"
-                  value={config.mev.blockDelay || 2}
-                  onChange={(e) => handleMevBlockDelayChange(parseInt(e.target.value))}
-                  className="flex-1"
-                />
-                <div className="flex items-center space-x-sm">
+            <>
+              <div>
+                <label className="block text-sm font-semibold text-primary mb-sm">
+                  Block Delay
+                  <InfoTooltip content="Number of blocks to delay transactions. Higher = more protection, but slower trading." />
+                </label>
+                <div className="flex items-center space-x-md">
                   <input
-                    type="number"
-                    value={config.mev.blockDelay || 2}
-                    onChange={(e) => handleMevBlockDelayChange(parseInt(e.target.value || '2'))}
+                    type="range"
                     min="1"
                     max="5"
-                    className="input w-16"
+                    value={config.mev.blockDelay || 2}
+                    onChange={(e) => handleMevBlockDelayChange(parseInt(e.target.value))}
+                    className="flex-1"
                   />
-                  <span className="text-sm text-muted">blocks</span>
+                  <div className="flex items-center space-x-sm">
+                    <input
+                      type="number"
+                      value={config.mev.blockDelay || 2}
+                      onChange={(e) => handleMevBlockDelayChange(parseInt(e.target.value || '2'))}
+                      min="1"
+                      max="5"
+                      className="input w-16"
+                    />
+                    <span className="text-sm text-muted">blocks</span>
+                  </div>
+                </div>
+                <div className="text-xs text-muted mt-sm">
+                  Number of blocks to delay transactions (higher = more protection, slower trading)
                 </div>
               </div>
-              <div className="text-xs text-muted mt-sm">
-                Number of blocks to delay transactions (higher = more protection, slower trading)
+              <div className="mt-lg">
+                <label className="block text-sm font-semibold text-primary mb-sm">
+                  Custom MEV Module Address
+                  <InfoTooltip content="(Advanced) Use a custom MEV module contract address. Leave blank for default block delay module." />
+                </label>
+                <input
+                  type="text"
+                  value={config.mev.customModule || ''}
+                  onChange={e => updateConfig({ mev: { ...config.mev, customModule: e.target.value } })}
+                  placeholder="0x... (optional)"
+                  className="input font-mono text-xs"
+                />
+                <div className="text-xs text-muted mt-sm">
+                  Leave blank to use the default block delay module.
+                </div>
               </div>
-            </div>
+              <div className="mt-lg">
+                <label className="block text-sm font-semibold text-primary mb-sm">
+                  Custom MEV Module Data (bytes)
+                  <InfoTooltip content="(Advanced) Pass custom data to the MEV module. Use only if your module requires it." />
+                </label>
+                <input
+                  type="text"
+                  value={config.mev.customData || ''}
+                  onChange={e => updateConfig({ mev: { ...config.mev, customData: e.target.value } })}
+                  placeholder="0x... (optional)"
+                  className="input font-mono text-xs"
+                />
+                <div className="text-xs text-muted mt-sm">
+                  Leave blank unless your custom module requires data.
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -338,7 +377,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
       <div className="card card-hover">
         <div className="flex items-center space-x-md mb-lg">
           <h3 className="text-xl font-bold text-primary">Pool Configuration</h3>
-          <InfoTooltip content="Advanced Uniswap V4 pool settings for optimal trading" />
+          <InfoTooltip content="Advanced Uniswap V4 pool settings for optimal trading. You can customize all pool and fee parameters here." />
         </div>
 
         <div className="grid grid-2 gap-lg">
@@ -377,6 +416,176 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Advanced Pool/Hook Config */}
+        <div className="mt-lg">
+          <label className="flex items-center space-x-md cursor-pointer">
+            <input
+              type="checkbox"
+              checked={config.advanced.customHookData}
+              onChange={e => updateConfig({ advanced: { ...config.advanced, customHookData: e.target.checked } })}
+              className="rounded"
+            />
+            <span className="form-label">Enable Advanced Pool/Hook Configuration</span>
+            <InfoTooltip content="Expose all static/dynamic fee parameters and custom poolData for advanced users." />
+          </label>
+        </div>
+        {config.advanced.customHookData && (
+          <div className="space-y-lg mt-lg">
+            <div>
+              <label className="block text-sm font-semibold text-primary mb-sm">
+                Custom Pool Data (bytes)
+                <InfoTooltip content="(Advanced) Pass custom poolData bytes to the pool/hook. Use only if you know what you're doing." />
+              </label>
+              <input
+                type="text"
+                value={config.advanced.hookData || ''}
+                onChange={e => updateConfig({ advanced: { ...config.advanced, hookData: e.target.value } })}
+                placeholder="0x... (optional)"
+                className="input font-mono text-xs"
+              />
+              <div className="text-xs text-muted mt-sm">
+                Leave blank unless you need to pass custom data to the pool/hook.
+              </div>
+            </div>
+            {config.fees.type === 'static' && (
+              <div className="grid grid-2 gap-lg">
+                <div>
+                  <label className="block text-sm font-semibold text-primary mb-sm">
+                    Clanker Fee (bps)
+                    <InfoTooltip content="Fee on the Clanker token. Units are in basis points (1% = 100 bps)." />
+                  </label>
+                  <input
+                    type="number"
+                    value={config.fees.static?.clankerFeeBps || 100}
+                    onChange={e => updateConfig({ fees: { ...config.fees, static: { ...defaultStatic, ...config.fees.static, clankerFeeBps: Number(e.target.value) } } })}
+                    min={0}
+                    max={2000}
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-primary mb-sm">
+                    Paired Fee (bps)
+                    <InfoTooltip content="Fee on the paired token. Units are in basis points (1% = 100 bps)." />
+                  </label>
+                  <input
+                    type="number"
+                    value={config.fees.static?.pairedFeeBps || 100}
+                    onChange={e => updateConfig({ fees: { ...config.fees, static: { ...defaultStatic, ...config.fees.static, pairedFeeBps: Number(e.target.value) } } })}
+                    min={0}
+                    max={2000}
+                    className="input"
+                  />
+                </div>
+              </div>
+            )}
+            {config.fees.type === 'dynamic' && (
+              <div className="space-y-lg">
+                <div className="grid grid-2 gap-lg">
+                  <div>
+                    <label className="block text-sm font-semibold text-primary mb-sm">
+                      Base Fee (bps)
+                      <InfoTooltip content="Minimum fee in basis points (1% = 100 bps)." />
+                    </label>
+                    <input
+                      type="number"
+                      value={config.fees.dynamic?.baseFee || 100}
+                      onChange={e => updateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, baseFee: Number(e.target.value) } } })}
+                      min={25}
+                      max={2000}
+                      className="input"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-primary mb-sm">
+                      Max Fee (bps)
+                      <InfoTooltip content="Maximum fee in basis points (1% = 100 bps)." />
+                    </label>
+                    <input
+                      type="number"
+                      value={config.fees.dynamic?.maxFee || 300}
+                      onChange={e => updateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, maxFee: Number(e.target.value) } } })}
+                      min={0}
+                      max={3000}
+                      className="input"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-2 gap-lg">
+                  <div>
+                    <label className="block text-sm font-semibold text-primary mb-sm">
+                      Reference Tick Filter Period (seconds)
+                      <InfoTooltip content="Period for reference tick filter. Controls volatility window." />
+                    </label>
+                    <input
+                      type="number"
+                      value={config.fees.dynamic?.referenceTickFilterPeriod || 3600}
+                      onChange={e => updateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, referenceTickFilterPeriod: Number(e.target.value) } } })}
+                      min={1}
+                      className="input"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-primary mb-sm">
+                      Reset Period (seconds)
+                      <InfoTooltip content="How often the fee resets to base. Controls fee decay." />
+                    </label>
+                    <input
+                      type="number"
+                      value={config.fees.dynamic?.resetPeriod || 86400}
+                      onChange={e => updateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, resetPeriod: Number(e.target.value) } } })}
+                      min={1}
+                      className="input"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-2 gap-lg">
+                  <div>
+                    <label className="block text-sm font-semibold text-primary mb-sm">
+                      Reset Tick Filter (bps)
+                      <InfoTooltip content="Basis points for reset tick filter. Controls fee reset sensitivity." />
+                    </label>
+                    <input
+                      type="number"
+                      value={config.fees.dynamic?.resetTickFilter || 500}
+                      onChange={e => updateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, resetTickFilter: Number(e.target.value) } } })}
+                      min={0}
+                      className="input"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-primary mb-sm">
+                      Fee Control Numerator
+                      <InfoTooltip content="Controls how quickly fees increase with volatility." />
+                    </label>
+                    <input
+                      type="number"
+                      value={config.fees.dynamic?.feeControlNumerator || 100}
+                      onChange={e => updateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, feeControlNumerator: Number(e.target.value) } } })}
+                      min={1}
+                      className="input"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-primary mb-sm">
+                    Decay Filter Bps
+                    <InfoTooltip content="Decay rate for previous volatility (e.g., 9500 = 95%)." />
+                  </label>
+                  <input
+                    type="number"
+                    value={config.fees.dynamic?.decayFilterBps || 9500}
+                    onChange={e => updateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, decayFilterBps: Number(e.target.value) } } })}
+                    min={0}
+                    max={10000}
+                    className="input"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Vanity Address */}
@@ -418,6 +627,135 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Advanced TokenConfig Fields */}
+      <div className="card card-hover">
+        <div className="flex items-center space-x-md mb-lg">
+          <h3 className="text-xl font-bold text-primary">Advanced TokenConfig Fields</h3>
+          <InfoTooltip content="Set advanced deployment fields like salt (for deterministic/vanity deploys) and arbitrary context (for provenance, metadata, or integrations)." />
+        </div>
+        <div className="space-y-lg">
+          <div className="form-group">
+            <label className="form-label">
+              Salt (bytes32, optional)
+              <InfoTooltip content="Advanced: Set a custom salt for deterministic or vanity address deployment. Leave blank for random. Use 0x... format (32 bytes)." />
+            </label>
+            <input
+              type="text"
+              value={config.salt || ''}
+              onChange={e => updateConfig({ salt: e.target.value })}
+              placeholder="0x... (optional, 32 bytes)"
+              className="input font-mono text-xs"
+              maxLength={66}
+            />
+            <div className="form-hint">Leave blank unless you want a specific deterministic or vanity address. Must be 0x-prefixed, 64 hex chars (32 bytes).</div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">
+              Context (JSON, optional)
+              <InfoTooltip content={'Advanced: Arbitrary context for provenance, metadata, or integrations. Example: {"interface":"SDK","platform":"twitter"}'} />
+            </label>
+            <textarea
+              value={config.context || ''}
+              onChange={e => updateConfig({ context: e.target.value })}
+              placeholder='{"interface":"SDK","platform":"twitter"} (optional)'
+              className="input font-mono text-xs"
+              rows={3}
+            />
+            <div className="form-hint">Leave blank for default. Must be valid JSON if set. Used for provenance and integrations.</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Locker Configuration */}
+      <div className="card card-hover">
+        <div className="flex items-center space-x-md mb-lg">
+          <h3 className="text-xl font-bold text-primary">Locker Configuration</h3>
+          <InfoTooltip content="Configure the locker contract, locker data, and reward admins/recipients for advanced liquidity management." />
+        </div>
+        <div className="space-y-lg">
+          <div>
+            <label className="block text-sm font-semibold text-primary mb-sm">
+              Locker Address
+              <InfoTooltip content="Address of the locker contract. Defaults to the recommended Clanker locker." />
+            </label>
+            <input
+              type="text"
+              value={config.locker.locker}
+              onChange={e => updateConfig({ locker: { ...config.locker, locker: e.target.value } })}
+              className="input font-mono text-xs"
+              placeholder="0x..."
+            />
+            <div className="text-xs text-muted mt-sm">
+              Use the default unless you have a custom locker contract.
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-primary mb-sm">
+              Locker Data (bytes)
+              <InfoTooltip content="(Advanced) Encoded locker data for custom logic. Leave blank for default behavior." />
+            </label>
+            <input
+              type="text"
+              value={config.locker.lockerData}
+              onChange={e => updateConfig({ locker: { ...config.locker, lockerData: e.target.value } })}
+              className="input font-mono text-xs"
+              placeholder="0x... (optional)"
+            />
+            <div className="text-xs text-muted mt-sm">
+              Leave blank unless your locker requires custom data.
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-primary mb-sm">
+              Reward Admins (comma-separated addresses)
+              <InfoTooltip content="Addresses that can manage reward recipients. Separate multiple addresses with commas." />
+            </label>
+            <input
+              type="text"
+              value={config.rewards.recipients.map(r => r.admin).join(', ')}
+              onChange={e => {
+                const admins = e.target.value.split(',').map(a => a.trim());
+                updateConfig({
+                  rewards: {
+                    ...config.rewards,
+                    recipients: config.rewards.recipients.map((r, i) => ({ ...r, admin: admins[i] || r.admin }))
+                  }
+                });
+              }}
+              className="input font-mono text-xs"
+              placeholder="0x..., 0x..., ..."
+            />
+            <div className="text-xs text-muted mt-sm">
+              Each reward recipient should have an admin address.
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-primary mb-sm">
+              Reward Recipients (comma-separated addresses)
+              <InfoTooltip content="Addresses that receive rewards from the locker. Separate multiple addresses with commas." />
+            </label>
+            <input
+              type="text"
+              value={config.rewards.recipients.map(r => r.recipient).join(', ')}
+              onChange={e => {
+                const recipients = e.target.value.split(',').map(a => a.trim());
+                updateConfig({
+                  rewards: {
+                    ...config.rewards,
+                    recipients: config.rewards.recipients.map((r, i) => ({ ...r, recipient: recipients[i] || r.recipient }))
+                  }
+                });
+              }}
+              className="input font-mono text-xs"
+              placeholder="0x..., 0x..., ..."
+            />
+            <div className="text-xs text-muted mt-sm">
+              Each reward recipient address will receive a share of rewards.
+            </div>
+          </div>
         </div>
       </div>
 

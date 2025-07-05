@@ -13,28 +13,19 @@ interface ExtensionsStepProps {
 export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: ExtensionsStepProps) {
   const handleAddAirdropEntry = () => {
     updateConfig({
-      airdrop: {
-        ...config.airdrop,
-        entries: addAirdropEntry(config.airdrop.entries)
-      }
+      airdrop: { ...defaultAirdrop, ...airdrop, entries: addAirdropEntry(airdrop.entries) }
     });
   };
 
   const handleRemoveAirdropEntry = (index: number) => {
     updateConfig({
-      airdrop: {
-        ...config.airdrop,
-        entries: removeAirdropEntry(config.airdrop.entries, index)
-      }
+      airdrop: { ...defaultAirdrop, ...airdrop, entries: removeAirdropEntry(airdrop.entries, index) }
     });
   };
 
   const handleUpdateAirdropEntry = (index: number, field: 'address' | 'amount', value: string | number) => {
     updateConfig({
-      airdrop: {
-        ...config.airdrop,
-        entries: updateAirdropEntry(config.airdrop.entries, index, field, value)
-      }
+      airdrop: { ...defaultAirdrop, ...airdrop, entries: updateAirdropEntry(airdrop.entries, index, field, value) }
     });
   };
 
@@ -42,6 +33,39 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
     config.devBuy.ethAmount,
     Number(config.startingMarketCap)
   );
+
+  // Ensure all extension configs are always defined for safe access
+  const presale = config.presale || {
+    enabled: false,
+    minEthGoal: 1,
+    maxEthGoal: 10,
+    presaleDuration: 7 * 24 * 60 * 60,
+    recipient: config.tokenAdmin || '',
+    lockupDuration: 0,
+    vestingDuration: 0,
+  };
+  const vault = config.vault || {
+    enabled: false,
+    percentage: 5,
+    lockupDuration: 7 * 24 * 60 * 60,
+    vestingDuration: 0,
+  };
+  const defaultAirdrop = {
+    enabled: false,
+    merkleRoot: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    amount: 1000,
+    lockupDuration: 24 * 60 * 60,
+    vestingDuration: 0,
+    entries: [{ address: '', amount: 1 }],
+  };
+  const airdrop = { ...defaultAirdrop, ...(config.airdrop ?? {}) };
+  const defaultDevBuy = {
+    enabled: false,
+    ethAmount: 0.1,
+    amountOutMin: 0,
+    recipient: config.tokenAdmin || '',
+  };
+  const devBuy = { ...defaultDevBuy, ...(config.devBuy ?? {}) };
 
   return (
     <div className="space-y-2xl animate-fade-in">
@@ -55,6 +79,132 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
         </p>
       </div>
 
+      {/* Presale Extension Configuration */}
+      <div className="card card-hover">
+        <div className="flex items-center space-x-md mb-lg">
+          <h3 className="text-xl font-bold text-primary">Presale Extension</h3>
+          <InfoTooltip content="Enable a presale for your token. Users can buy in with ETH before launch. Tokens are distributed after the presale ends and goals are met. Supports lockup and vesting." />
+        </div>
+        <div className="space-y-lg">
+          <label className="flex items-center space-x-md cursor-pointer">
+            <input
+              type="checkbox"
+              checked={presale.enabled}
+              onChange={e => updateConfig({ presale: { ...presale, enabled: e.target.checked } })}
+              className="rounded"
+            />
+            <span className="form-label">Enable Presale</span>
+          </label>
+          {presale.enabled && (
+            <div className="space-y-lg">
+              <div className="grid grid-2 gap-lg">
+                <div className="form-group">
+                  <label className="form-label">
+                    Min ETH Goal
+                    <InfoTooltip content="Minimum ETH required for the presale to succeed. If not reached, presale fails and funds are refundable." />
+                  </label>
+                  <input
+                    type="number"
+                    value={presale.minEthGoal}
+                    onChange={e => updateConfig({ presale: { ...presale, minEthGoal: Number(e.target.value) } })}
+                    min="0"
+                    step="0.01"
+                    className="input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">
+                    Max ETH Cap
+                    <InfoTooltip content="Maximum ETH that can be raised. Presale ends early if this is reached." />
+                  </label>
+                  <input
+                    type="number"
+                    value={presale.maxEthGoal}
+                    onChange={e => updateConfig({ presale: { ...presale, maxEthGoal: Number(e.target.value) } })}
+                    min={presale.minEthGoal}
+                    step="0.01"
+                    className="input"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-2 gap-lg">
+                <div className="form-group">
+                  <label className="form-label">
+                    Presale Duration (days)
+                    <InfoTooltip content="How long the presale will last. Users can buy in during this period." />
+                  </label>
+                  <input
+                    type="number"
+                    value={presale.presaleDuration / (24 * 60 * 60)}
+                    onChange={e => updateConfig({ presale: { ...presale, presaleDuration: Number(e.target.value) * 24 * 60 * 60 } })}
+                    min="1"
+                    max="42"
+                    className="input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">
+                    Presale Recipient
+                    <InfoTooltip content="Address that will receive the raised ETH if the presale succeeds." />
+                  </label>
+                  <input
+                    type="text"
+                    value={presale.recipient}
+                    onChange={e => updateConfig({ presale: { ...presale, recipient: e.target.value } })}
+                    placeholder="0x... recipient address"
+                    className="input font-mono text-sm"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-2 gap-lg">
+                <div className="form-group">
+                  <label className="form-label">
+                    Lockup Duration (days)
+                    <InfoTooltip content="How long presale tokens are locked before claimable." />
+                  </label>
+                  <input
+                    type="number"
+                    value={presale.lockupDuration / (24 * 60 * 60)}
+                    onChange={e => updateConfig({ presale: { ...presale, lockupDuration: Number(e.target.value) * 24 * 60 * 60 } })}
+                    min="0"
+                    className="input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">
+                    Vesting Duration (days)
+                    <InfoTooltip content="After lockup, tokens vest linearly over this period." />
+                  </label>
+                  <input
+                    type="number"
+                    value={presale.vestingDuration / (24 * 60 * 60)}
+                    onChange={e => updateConfig({ presale: { ...presale, vestingDuration: Number(e.target.value) * 24 * 60 * 60 } })}
+                    min="0"
+                    className="input"
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">
+                  ETH Value to Send (msg.value)
+                  <InfoTooltip content="Advanced: Amount of ETH to send with the presale extension call. Usually 0. Only change if instructed by advanced documentation." />
+                </label>
+                <input
+                  type="number"
+                  value={presale.msgValue ?? 0}
+                  onChange={e => updateConfig({ presale: { ...presale, msgValue: Number(e.target.value) } })}
+                  min="0"
+                  step="0.0001"
+                  className="input font-mono"
+                  placeholder="0"
+                />
+                <div className="form-hint">Leave as 0 unless you know you need to send ETH with the presale extension.</div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Vault Configuration */}
       <div className="card card-hover">
         <div className="flex items-center space-x-md mb-lg">
@@ -66,22 +216,22 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
           <label className="flex items-center space-x-md cursor-pointer">
             <input
               type="checkbox"
-              checked={config.vault.enabled}
-              onChange={(e) => updateConfig({ vault: { ...config.vault, enabled: e.target.checked } })}
+              checked={vault.enabled}
+              onChange={(e) => updateConfig({ vault: { ...vault, enabled: e.target.checked } })}
               className="rounded"
             />
             <span className="form-label">Enable Token Vault</span>
           </label>
 
-          {config.vault.enabled && (
+          {vault.enabled && (
             <div className="space-y-lg">
               <div className="grid grid-2 gap-lg">
                 <div className="form-group">
                   <label className="form-label">Vault Percentage (%)</label>
                   <input
                     type="number"
-                    value={config.vault.percentage}
-                    onChange={(e) => updateConfig({ vault: { ...config.vault, percentage: Number(e.target.value) } })}
+                    value={vault.percentage}
+                    onChange={(e) => updateConfig({ vault: { ...vault, percentage: Number(e.target.value) } })}
                     min="0"
                     max="50"
                     step="0.1"
@@ -93,8 +243,8 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                   <label className="form-label">Lockup Duration (days)</label>
                   <input
                     type="number"
-                    value={config.vault.lockupDuration / (24 * 60 * 60)}
-                    onChange={(e) => updateConfig({ vault: { ...config.vault, lockupDuration: Number(e.target.value) * 24 * 60 * 60 } })}
+                    value={vault.lockupDuration / (24 * 60 * 60)}
+                    onChange={(e) => updateConfig({ vault: { ...vault, lockupDuration: Number(e.target.value) * 24 * 60 * 60 } })}
                     min="0"
                     className="input"
                   />
@@ -105,11 +255,27 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                 <label className="form-label">Vesting Duration (days)</label>
                 <input
                   type="number"
-                  value={config.vault.vestingDuration / (24 * 60 * 60)}
-                  onChange={(e) => updateConfig({ vault: { ...config.vault, vestingDuration: Number(e.target.value) * 24 * 60 * 60 } })}
+                  value={vault.vestingDuration / (24 * 60 * 60)}
+                  onChange={(e) => updateConfig({ vault: { ...vault, vestingDuration: Number(e.target.value) * 24 * 60 * 60 } })}
                   min="0"
                   className="input"
                 />
+              </div>
+              <div className="form-group">
+                <label className="form-label">
+                  ETH Value to Send (msg.value)
+                  <InfoTooltip content="Advanced: Amount of ETH to send with the vault extension call. Usually 0. Only change if instructed by advanced documentation." />
+                </label>
+                <input
+                  type="number"
+                  value={vault.msgValue ?? 0}
+                  onChange={e => updateConfig({ vault: { ...vault, msgValue: Number(e.target.value) } })}
+                  min="0"
+                  step="0.0001"
+                  className="input font-mono"
+                  placeholder="0"
+                />
+                <div className="form-hint">Leave as 0 unless you know you need to send ETH with the vault extension.</div>
               </div>
             </div>
           )}
@@ -122,50 +288,44 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
           <h3 className="text-xl font-bold text-primary">Token Airdrop</h3>
           <InfoTooltip content="Distribute tokens to specific addresses" />
         </div>
-
         <div className="space-y-lg">
           <label className="flex items-center space-x-md cursor-pointer">
             <input
               type="checkbox"
-              checked={config.airdrop.enabled}
-              onChange={(e) => updateConfig({ airdrop: { ...config.airdrop, enabled: e.target.checked } })}
+              checked={airdrop.enabled}
+              onChange={(e) => updateConfig({ airdrop: { ...defaultAirdrop, ...airdrop, enabled: e.target.checked } })}
               className="rounded"
             />
             <span className="form-label">Enable Airdrop</span>
           </label>
-
-          {config.airdrop.enabled && (
+          {airdrop.enabled && (
             <div className="space-y-lg">
               <div className="grid grid-2 gap-lg">
                 <div className="form-group">
-                  <label className="form-label">Airdrop Percentage (%)</label>
+                  <label className="form-label">Airdrop Amount (tokens)</label>
                   <input
                     type="number"
-                    value={config.airdrop.percentage}
-                    onChange={(e) => updateConfig({ airdrop: { ...config.airdrop, percentage: Number(e.target.value) } })}
+                    value={airdrop.amount}
+                    onChange={(e) => updateConfig({ airdrop: { ...defaultAirdrop, ...airdrop, amount: Number(e.target.value) } })}
                     min="0"
-                    max="25"
-                    step="0.1"
                     className="input"
                   />
                 </div>
-
                 <div className="form-group">
                   <label className="form-label">Lockup Duration (days)</label>
                   <input
                     type="number"
-                    value={config.airdrop.lockupDuration / (24 * 60 * 60)}
-                    onChange={(e) => updateConfig({ airdrop: { ...config.airdrop, lockupDuration: Number(e.target.value) * 24 * 60 * 60 } })}
+                    value={airdrop.lockupDuration / (24 * 60 * 60)}
+                    onChange={(e) => updateConfig({ airdrop: { ...defaultAirdrop, ...airdrop, lockupDuration: Number(e.target.value) * 24 * 60 * 60 } })}
                     min="0"
                     className="input"
                   />
                 </div>
               </div>
-
               <div className="form-group">
                 <label className="form-label">Airdrop Recipients</label>
                 <div className="space-y-md">
-                  {config.airdrop.entries.map((entry, index) => (
+                  {airdrop.entries.map((entry, index) => (
                     <div key={index} className="flex gap-md">
                       <input
                         type="text"
@@ -189,7 +349,7 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                         onClick={() => handleRemoveAirdropEntry(index)}
                         className="btn btn-secondary"
                         style={{ padding: 'var(--spacing-sm)' }}
-                        disabled={config.airdrop.entries.length <= 1}
+                        disabled={airdrop.entries.length <= 1}
                       >
                         ✕
                       </button>
@@ -203,6 +363,22 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                     + Add Recipient
                   </button>
                 </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">
+                  ETH Value to Send (msg.value)
+                  <InfoTooltip content="Advanced: Amount of ETH to send with the airdrop extension call. Usually 0. Only change if instructed by advanced documentation." />
+                </label>
+                <input
+                  type="number"
+                  value={airdrop.msgValue ?? 0}
+                  onChange={e => updateConfig({ airdrop: { ...defaultAirdrop, ...airdrop, msgValue: Number(e.target.value) } })}
+                  min="0"
+                  step="0.0001"
+                  className="input font-mono"
+                  placeholder="0"
+                />
+                <div className="form-hint">Leave as 0 unless you know you need to send ETH with the airdrop extension.</div>
               </div>
             </div>
           )}
@@ -220,22 +396,22 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
           <label className="flex items-center space-x-md cursor-pointer">
             <input
               type="checkbox"
-              checked={config.devBuy.enabled}
-              onChange={(e) => updateConfig({ devBuy: { ...config.devBuy, enabled: e.target.checked } })}
+              checked={devBuy.enabled}
+              onChange={(e) => updateConfig({ devBuy: { ...devBuy, enabled: e.target.checked } })}
               className="rounded"
             />
             <span className="form-label">Enable Dev Buy</span>
           </label>
 
-          {config.devBuy.enabled && (
+          {devBuy.enabled && (
             <div className="space-y-lg">
               <div className="grid grid-2 gap-lg">
                 <div className="form-group">
                   <label className="form-label">ETH Amount</label>
                   <input
                     type="number"
-                    value={config.devBuy.ethAmount}
-                    onChange={(e) => updateConfig({ devBuy: { ...config.devBuy, ethAmount: Number(e.target.value) } })}
+                    value={devBuy.ethAmount}
+                    onChange={(e) => updateConfig({ devBuy: { ...devBuy, ethAmount: Number(e.target.value) } })}
                     min="0"
                     step="0.0001"
                     className="input font-mono"
@@ -250,8 +426,8 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                   <label className="form-label">Recipient Address</label>
                   <input
                     type="text"
-                    value={config.devBuy.recipient}
-                    onChange={(e) => updateConfig({ devBuy: { ...config.devBuy, recipient: e.target.value } })}
+                    value={devBuy.recipient}
+                    onChange={(e) => updateConfig({ devBuy: { ...devBuy, recipient: e.target.value } })}
                     placeholder="0x... recipient address"
                     className="input font-mono text-sm"
                   />

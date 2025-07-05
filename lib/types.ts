@@ -133,6 +133,24 @@ export interface TokenConfig {
   poolPositionType: string;
   customPositions: PoolPosition[];
   rewardRecipients: RewardRecipient[];
+  
+  // Presale Extension (NEW for v4)
+  presale?: {
+    enabled: boolean; // Whether presale is enabled
+    minEthGoal: number; // Minimum ETH goal for presale success
+    maxEthGoal: number; // Maximum ETH cap for presale
+    presaleDuration: number; // Duration in seconds
+    recipient: string; // ETH recipient if presale succeeds
+    lockupDuration: number; // Lockup period for presale tokens (seconds)
+    vestingDuration: number; // Vesting period after lockup (seconds)
+    msgValue?: number; // Custom msg.value for presale extension (if needed)
+    // UI helpers
+    status?: 'not_started' | 'active' | 'successful_minimum' | 'successful_maximum' | 'failed' | 'claimable';
+    ethRaised?: number; // ETH raised so far
+    userContribution?: number; // ETH contributed by current user
+    claimableTokens?: number; // Tokens user can claim
+    presaleId?: number; // Presale ID (if tracked)
+  };
 }
 
 // ===== SUPPORTING TYPES =====

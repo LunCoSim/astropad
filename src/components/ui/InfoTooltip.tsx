@@ -39,68 +39,73 @@ export function InfoTooltip({ content, position = 'top', size = 'md' }: InfoTool
         onMouseLeave={() => setIsVisible(false)}
         onFocus={() => setIsVisible(true)}
         onBlur={() => setIsVisible(false)}
-        className="rounded-full flex items-center justify-center text-primary font-bold transition cursor-pointer"
+        className="rounded-full flex items-center justify-center font-bold transition cursor-pointer"
         style={{
-          width: currentSize.width,
-          height: currentSize.height,
-          fontSize: currentSize.fontSize,
-          background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))',
-          marginLeft: 'var(--spacing-sm)',
+          width: '2rem',
+          height: '2rem',
+          fontSize: '1.1rem',
+          background: 'linear-gradient(135deg, #2563eb 60%, #7c3aed 100%)',
+          marginLeft: '0.5rem',
           border: 'none',
-          boxShadow: 'var(--shadow-md)'
+          boxShadow: '0 2px 8px rgba(60,60,120,0.10)',
+          color: '#fff',
+          outline: isVisible ? '2px solid #2563eb' : 'none',
+          transition: 'transform 0.15s, box-shadow 0.15s',
         }}
-        onMouseOver={(e) => {
-          e.currentTarget.style.transform = 'scale(1.1)';
-          e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
+        onMouseOver={e => {
+          e.currentTarget.style.transform = 'scale(1.15)';
+          e.currentTarget.style.boxShadow = '0 4px 16px rgba(60,60,120,0.18)';
         }}
-        onMouseOut={(e) => {
+        onMouseOut={e => {
           e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+          e.currentTarget.style.boxShadow = '0 2px 8px rgba(60,60,120,0.10)';
         }}
         aria-label="More information"
         aria-describedby={isVisible ? 'tooltip-content' : undefined}
       >
-        <svg 
-          style={{ width: '75%', height: '75%' }}
-          fill="currentColor" 
-          viewBox="0 0 20 20"
-          aria-hidden="true"
-        >
-          <path 
-            fillRule="evenodd" 
-            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" 
-            clipRule="evenodd" 
-          />
+        <svg style={{ width: '70%', height: '70%' }} fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+          <circle cx="10" cy="10" r="9" stroke="#fff" strokeWidth="2" fill="#2563eb" />
+          <text x="10" y="15" textAnchor="middle" fontSize="12" fill="#fff">i</text>
         </svg>
       </button>
       
       {isVisible && (
-        <div 
+        <div
           id="tooltip-content"
           role="tooltip"
-          className="absolute z-50 animate-fade-in"
+          className="absolute z-[9999] animate-fade-in"
           style={{
             ...tooltipPositionClasses[position],
-            maxWidth: '18rem',
-            padding: 'var(--spacing-md)',
-            background: 'var(--bg-surface)',
-            backdropFilter: 'blur(10px)',
-            color: 'var(--text-primary)',
-            fontSize: '0.875rem',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: 'var(--shadow-xl)',
-            border: '1px solid var(--border-secondary)',
-            whiteSpace: 'normal'
+            maxWidth: '22rem',
+            minWidth: '12rem',
+            padding: '1rem',
+            background: '#fff',
+            color: '#222',
+            fontSize: '1rem',
+            fontWeight: 500,
+            borderRadius: '0.75rem',
+            boxShadow: '0 6px 32px rgba(60,60,120,0.18)',
+            border: '1px solid #e0e7ef',
+            whiteSpace: 'normal',
+            lineHeight: 1.5,
+            wordBreak: 'break-word',
+            transition: 'opacity 0.2s, transform 0.2s',
+            opacity: isVisible ? 1 : 0,
+            transform: isVisible ? 'scale(1)' : 'scale(0.98)',
           }}
         >
           <div className="relative">
             {content}
-            <div 
+            <div
               className="absolute"
               style={{
                 ...arrowStyles[position],
                 width: 0,
-                height: 0
+                height: 0,
+                borderTop: position === 'top' ? '8px solid #fff' : undefined,
+                borderBottom: position === 'bottom' ? '8px solid #fff' : undefined,
+                borderLeft: position === 'left' ? '8px solid #fff' : undefined,
+                borderRight: position === 'right' ? '8px solid #fff' : undefined,
               }}
             />
           </div>
