@@ -21,7 +21,7 @@ interface TokenDeployWizardProps {
   address: string | undefined;
 }
 
-const getDraftKey = (address?: string) => address ? `astropad_wizard_draft_${address.toLowerCase()}` : undefined;
+const getDraftKey = (address?: string) => address ? `astropad_wizard_draft_${address.toLowerCase()}` : 'astropad_wizard_draft_anonymous';
 
 export function TokenDeployWizard({ 
   connected,
@@ -35,15 +35,13 @@ export function TokenDeployWizard({
   
   // Configuration state using updated TokenConfig interface for Clanker v4
   const [config, setConfig] = useState<TokenConfig>(() => {
-    if (address) {
-      const draftKey = getDraftKey(address);
-      if (draftKey) {
-        const draft = localStorage.getItem(draftKey);
-        if (draft) {
-          try {
-            return JSON.parse(draft);
-          } catch {}
-        }
+    const draftKey = getDraftKey(address);
+    if (draftKey) {
+      const draft = localStorage.getItem(draftKey);
+      if (draft) {
+        try {
+          return JSON.parse(draft);
+        } catch {}
       }
     }
     // Default config if no draft
@@ -152,7 +150,6 @@ export function TokenDeployWizard({
 
   // Load draft config on mount if available
   useEffect(() => {
-    if (!address) return;
     const draftKey = getDraftKey(address);
     if (!draftKey) return;
     const draft = localStorage.getItem(draftKey);
@@ -164,7 +161,6 @@ export function TokenDeployWizard({
 
   // Auto-save config to localStorage on change, unless deployed
   useEffect(() => {
-    if (!address) return;
     const draftKey = getDraftKey(address);
     if (!draftKey) return;
     if (isFirstLoad.current) {
@@ -178,7 +174,6 @@ export function TokenDeployWizard({
 
   // Function to clear draft (to be called after deployment)
   const clearDraft = () => {
-    if (!address) return;
     const draftKey = getDraftKey(address);
     if (draftKey) localStorage.removeItem(draftKey);
   };
@@ -190,7 +185,6 @@ export function TokenDeployWizard({
 
   // Handler for starting new
   const handleStartNew = () => {
-    if (!address) return;
     const draftKey = getDraftKey(address);
     if (draftKey) localStorage.removeItem(draftKey);
     // Reset config to defaults
@@ -360,11 +354,12 @@ export function TokenDeployWizard({
     }
   };
 
-  if (!connected) {
+  if (!connected && currentStep === 4) {
     return (
       <div className="text-center" style={{ padding: 'var(--spacing-3xl) 0' }}>
-        <h2 className="text-2xl font-bold text-primary mb-md">Wallet Required</h2>
-        <p className="text-secondary">Please connect your wallet to use the token deployment wizard.</p>
+        <h2 className="text-2xl font-bold text-primary mb-md">Wallet Required for Deployment</h2>
+        <p className="text-secondary mb-md">Please connect your wallet to deploy your token. You can configure everything else without a wallet.</p>
+        <button className="btn btn-primary btn-lg" onClick={() => window?.open?.()}>Connect Wallet</button>
       </div>
     );
   }

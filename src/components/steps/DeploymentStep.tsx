@@ -3,11 +3,10 @@ import type { TokenConfig } from '../../../lib/types';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { usePublicClient, useWalletClient, useAccount } from 'wagmi';
 import { storeDeployedToken } from '../../../lib/deployed-tokens';
-import { 
-  WETH_ADDRESS,
-  POOL_POSITIONS
-} from 'clanker-sdk';
+import { POOL_POSITIONS } from 'clanker-sdk';
 import { Clanker } from 'clanker-sdk/v4';
+import { getTokenPairByAddress, getDesiredPriceAndPairAddress, WETH_ADDRESS } from '../../../lib/clanker-utils';
+import { ERC20_ABI } from '../../../lib/abis';
 
 interface DeploymentStepProps {
   config: TokenConfig;
@@ -45,8 +44,16 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
   const [isSimulating, setIsSimulating] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [error, setError] = useState<string>('');
+  const [pairedTokenBalance, setPairedTokenBalance] = useState<number | null>(null);
+  const [pairedTokenSymbol, setPairedTokenSymbol] = useState<string>('');
 
   const buildFullClankerV4Config = () => {
+    // Determine the correct paired token and price logic using SDK utilities
+    const pairTokenAddress = (config.pool.pairedToken || WETH_ADDRESS) as `0x${string}`;
+    const pairType = getTokenPairByAddress(pairTokenAddress);
+    const marketCap = Number(config.startingMarketCap) || 10;
+    const { pairAddress } = getDesiredPriceAndPairAddress(pairType, marketCap);
+
     // Build comprehensive v4 configuration using ALL user settings
     const baseConfig: any = {
       type: 'v4' as const,
@@ -68,7 +75,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
       },
       // Use advanced pool configuration
       pool: {
-        pairedToken: (config.pool.pairedToken || WETH_ADDRESS) as `0x${string}`,
+        pairedToken: pairAddress,
         tickIfToken0IsClanker: config.pool.tickIfToken0IsClanker,
         tickSpacing: config.pool.tickSpacing,
         positions: config.pool.positions || POOL_POSITIONS.Standard
@@ -123,18 +130,34 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
 
     // Add dev buy extension if enabled
     if (config.devBuy?.enabled && config.devBuy.amount > 0) {
-      baseConfig.devBuy = {
-        ethAmount: config.devBuy.amount, // for SDK compatibility
-        amount: config.devBuy.amount,    // for future-proofing
-        poolKey: {
-          currency0: '0x0000000000000000000000000000000000000000', // Zero address for ETH
-          currency1: '0x0000000000000000000000000000000000000000', // Zero address for ETH  
-          fee: 0,
-          tickSpacing: 0,
-          hooks: '0x0000000000000000000000000000000000000000', // Zero address for no hooks
-        },
-        amountOutMin: config.devBuy.amountOutMin || 0,
-      };
+      // If paired token is not WETH, set up poolKey and amountOutMin
+      if (pairType !== 'WETH') {
+        baseConfig.devBuy = {
+          ethAmount: config.devBuy.amount, // for SDK compatibility
+          amount: config.devBuy.amount,    // for future-proofing
+          poolKey: {
+            currency0: '0x0000000000000000000000000000000000000000', // ETH (default)
+            currency1: pairAddress,
+            fee: 500, // Default UniswapV3 fee tier, adjust as needed
+            tickSpacing: config.pool.tickSpacing || 10,
+            hooks: '0x0000000000000000000000000000000000000000', // No hooks by default
+          },
+          amountOutMin: config.devBuy.amountOutMin || 0,
+        };
+      } else {
+        baseConfig.devBuy = {
+          ethAmount: config.devBuy.amount, // for SDK compatibility
+          amount: config.devBuy.amount,    // for future-proofing
+          poolKey: {
+            currency0: '0x0000000000000000000000000000000000000000', // ETH
+            currency1: '0x0000000000000000000000000000000000000000', // ETH
+            fee: 0,
+            tickSpacing: 0,
+            hooks: '0x0000000000000000000000000000000000000000',
+          },
+          amountOutMin: config.devBuy.amountOutMin || 0,
+        };
+      }
     }
 
     return baseConfig;
@@ -198,6 +221,44 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
     return summary;
   };
 
+  // Fetch paired token balance and symbol on simulate
+  const fetchPairedTokenBalance = async (tokenAddress: `0x${string}`) => {
+    if (!publicClient || !address) return;
+    try {
+      // ETH/WETH: use getBalance, else use ERC20
+      if (tokenAddress.toLowerCase() === WETH_ADDRESS.toLowerCase()) {
+        const balance = await publicClient.getBalance({ address: address as `0x${string}` });
+        setPairedTokenBalance(Number(balance) / 1e18);
+        setPairedTokenSymbol('ETH');
+      } else {
+        // ERC20 balance
+        const [balance, decimals, symbol] = await Promise.all([
+          publicClient.readContract({
+            address: tokenAddress,
+            abi: ERC20_ABI,
+            functionName: 'balanceOf',
+            args: [address as `0x${string}`],
+          }),
+          publicClient.readContract({
+            address: tokenAddress,
+            abi: ERC20_ABI,
+            functionName: 'decimals',
+          }),
+          publicClient.readContract({
+            address: tokenAddress,
+            abi: ERC20_ABI,
+            functionName: 'symbol',
+          }),
+        ]);
+        setPairedTokenBalance(Number(balance) / 10 ** Number(decimals));
+        setPairedTokenSymbol(symbol as string);
+      }
+    } catch (e) {
+      setPairedTokenBalance(null);
+      setPairedTokenSymbol('TOKEN');
+    }
+  };
+
   const handleSimulateToken = async () => {
     if (!publicClient || !walletClient || !address) {
       setError('Wallet not connected properly');
@@ -206,6 +267,8 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
 
     setIsSimulating(true);
     setError('');
+    setPairedTokenBalance(null);
+    setPairedTokenSymbol('');
     
     try {
       // Initialize Clanker SDK
@@ -263,6 +326,9 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
       
       console.log('Configuration validated successfully');
       console.log(`Balance: ${balanceEth.toFixed(4)} ETH available, ${totalETHRequired.toFixed(4)} ETH estimated (will attempt deployment regardless)`);
+      
+      // Fetch paired token balance
+      await fetchPairedTokenBalance(fullConfig.pool.pairedToken);
       
       setSimulationResult({
         tokenConfig: fullConfig,
@@ -585,11 +651,20 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
             </div>
           )}
           
+          {/* Wallet connection required message */}
+          {(!address || !walletClient) && (
+            <div className="card" style={{ background: 'rgba(253, 224, 71, 0.15)', border: '1px solid rgba(253, 224, 71, 0.3)' }}>
+              <div className="text-sm text-yellow-700">
+                <div className="font-semibold mb-sm">Wallet Not Connected</div>
+                <div>Please connect your wallet to simulate or deploy your token.</div>
+              </div>
+            </div>
+          )}
           <div className="flex space-x-md">
             <button
               onClick={handleSimulateToken}
               className="btn btn-secondary"
-              disabled={isSimulating}
+              disabled={isSimulating || !address || !walletClient}
             >
               {isSimulating ? 'Simulating...' : 'Simulate Full Deployment'}
             </button>
@@ -597,7 +672,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
             <button
               onClick={handleConfirmDeploy}
               className="btn btn-primary"
-              disabled={!simulationResult || isDeploying}
+              disabled={!simulationResult || isDeploying || !address || !walletClient}
             >
               {isDeploying ? 'Deploying...' : 'Deploy with Full Configuration'}
             </button>
@@ -627,16 +702,16 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
                 <div className="mb-lg p-md rounded" style={{ background: 'rgba(255, 255, 255, 0.5)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
                   <div className="flex justify-between items-center">
                     <div>
-                      <div className="font-semibold text-secondary">Your Wallet Balance:</div>
-                      <div className="text-xs text-secondary">Current ETH available for deployment</div>
+                      <div className="font-semibold text-secondary">Your Paired Token Balance:</div>
+                      <div className="text-xs text-secondary">Current {pairedTokenSymbol || getPairedTokenSymbol()} available for deployment</div>
                     </div>
                     <div className="text-right">
                       <div className="font-mono font-bold text-lg">
-                        {(simulationResult as any).walletBalance ? 
-                          `${(simulationResult as any).walletBalance} ETH` : 
-                          'Checking...'
-                        }
+                        {pairedTokenBalance !== null ? `${pairedTokenBalance} ${pairedTokenSymbol || getPairedTokenSymbol()}` : 'Checking...'}
                       </div>
+                      {config.devBuy?.enabled && config.devBuy.amount > 0 && pairedTokenBalance !== null && pairedTokenBalance < config.devBuy.amount && (
+                        <div className="text-xs text-danger font-bold">Insufficient {pairedTokenSymbol || getPairedTokenSymbol()} for Dev Buy</div>
+                      )}
                       <div className="text-xs text-secondary">
                         Deployment will proceed regardless of balance
                       </div>
