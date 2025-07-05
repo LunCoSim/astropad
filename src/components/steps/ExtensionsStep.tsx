@@ -2,6 +2,9 @@ import type { TokenConfig } from '../../../lib/types';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { addAirdropEntry, removeAirdropEntry, updateAirdropEntry } from '../../../lib/array-utils';
 import { calculateDevBuyEstimate } from '../../../lib/calculations';
+import { useState, useEffect } from 'react';
+import { usePublicClient } from 'wagmi';
+import { validatePairToken } from '../../../lib/token-validation';
 
 interface ExtensionsStepProps {
   config: TokenConfig;
@@ -11,6 +14,34 @@ interface ExtensionsStepProps {
 }
 
 export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: ExtensionsStepProps) {
+  const publicClient = usePublicClient();
+  const [pairTokenInfo, setPairTokenInfo] = useState<{symbol: string, decimals: number} | null>(null);
+  const [pairTokenValidating, setPairTokenValidating] = useState(false);
+
+  useEffect(() => {
+    const validateToken = async () => {
+      if (config.pairTokenType === 'custom' && config.customPairTokenAddress && publicClient) {
+        try {
+          setPairTokenValidating(true);
+          const tokenAddress = config.customPairTokenAddress as `0x${string}`;
+          const tokenInfo = await validatePairToken(publicClient, tokenAddress);
+          if (tokenInfo) {
+            setPairTokenInfo(tokenInfo);
+          } else {
+            setPairTokenInfo(null);
+          }
+        } catch (error) {
+          setPairTokenInfo(null);
+        } finally {
+          setPairTokenValidating(false);
+        }
+      } else {
+        setPairTokenInfo(null);
+      }
+    };
+    validateToken();
+  }, [config.pairTokenType, config.customPairTokenAddress, publicClient]);
+
   const handleAddAirdropEntry = () => {
     updateConfig({
       airdrop: { ...defaultAirdrop, ...airdrop, entries: addAirdropEntry(airdrop.entries) }
@@ -30,9 +61,16 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
   };
 
   const devBuyEstimate = calculateDevBuyEstimate(
-    config.devBuy.ethAmount,
+    config.devBuy?.amount ?? 0,
     Number(config.startingMarketCap)
   );
+
+  // Save estimated tokens to config for later use (if dev buy is enabled)
+  useEffect(() => {
+    if (config.devBuy?.enabled && devBuyEstimate) {
+      updateConfig({ devBuy: { ...devBuy, estimatedTokens: devBuyEstimate.tokensReceived } });
+    }
+  }, [config.devBuy?.enabled, devBuyEstimate?.tokensReceived]);
 
   // Ensure all extension configs are always defined for safe access
   const presale = config.presale || {
@@ -61,7 +99,7 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
   const airdrop = { ...defaultAirdrop, ...(config.airdrop ?? {}) };
   const defaultDevBuy = {
     enabled: false,
-    ethAmount: 0.1,
+    amount: 0.1,
     amountOutMin: 0,
     recipient: config.tokenAdmin || '',
   };
@@ -407,18 +445,20 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
             <div className="space-y-lg">
               <div className="grid grid-2 gap-lg">
                 <div className="form-group">
-                  <label className="form-label">ETH Amount</label>
+                  <label className="form-label">
+                    {config.pairTokenType === 'WETH' ? 'ETH Amount' : `${pairTokenInfo?.symbol || 'Token'} Amount`}
+                  </label>
                   <input
                     type="number"
-                    value={devBuy.ethAmount}
-                    onChange={(e) => updateConfig({ devBuy: { ...devBuy, ethAmount: Number(e.target.value) } })}
+                    value={(config.devBuy?.amount ?? defaultDevBuy.amount)}
+                    onChange={(e) => updateConfig({ devBuy: { ...defaultDevBuy, ...(config.devBuy ?? {}), amount: Number(e.target.value) } })}
                     min="0"
                     step="0.0001"
                     className="input font-mono"
-                    placeholder="0.0001"
+                    placeholder={config.pairTokenType === 'WETH' ? '0.0001' : '1000'}
                   />
                   <div className="form-hint">
-                    Minimum: 0.0001 ETH (avoids precision issues)
+                    Minimum: 0.0001 {config.pairTokenType === 'WETH' ? 'ETH' : (pairTokenInfo?.symbol || 'TOKEN')} (avoids precision issues)
                   </div>
                 </div>
 

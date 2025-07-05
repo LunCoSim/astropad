@@ -52,20 +52,26 @@ export function calculateDevBuyTokens(
 /**
  * Calculate estimated token amounts for dev buy (simplified version)
  */
-export function calculateDevBuyEstimate(
-  ethAmount: number,
-  marketCapEth: number,
-  totalSupply: number = 100_000_000_000
-): { tokensReceived: number; priceImpact: number } | null {
-  if (!marketCapEth || !ethAmount) return null;
-  
-  // Simple estimation assuming tokens = (devBuyEth / marketCapEth) * totalSupply
-  const estimatedTokens = (ethAmount / marketCapEth) * totalSupply;
-  const priceImpact = (ethAmount / marketCapEth) * 100;
-  
+export function calculateDevBuyEstimate(amount: number, marketCap: number) {
+  if (amount <= 0 || marketCap <= 0) {
+    return null;
+  }
+  // Assume total supply is 100,000,000,000 tokens
+  const totalSupply = 100_000_000_000;
+  // Initial pool is marketCap worth of paired token and totalSupply tokens
+  const initialReserve = marketCap;
+  const initialTokenReserve = totalSupply;
+  // New pool after dev buy
+  const newReserve = initialReserve + amount;
+  const newTokenReserve = initialTokenReserve - (amount / marketCap) * totalSupply;
+  const tokensReceived = (amount / marketCap) * totalSupply;
+  const priceImpact = (amount / marketCap) * 100;
+  const effectivePrice = amount / tokensReceived; // paired token per token
   return {
-    tokensReceived: estimatedTokens,
-    priceImpact
+    tokensReceived,
+    priceImpact,
+    newPrice: newReserve / newTokenReserve,
+    effectivePrice,
   };
 }
 

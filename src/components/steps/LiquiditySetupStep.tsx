@@ -209,7 +209,7 @@ export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }:
             <label className="form-label">
               Initial Market Cap
               <span className="required">*</span>
-              <InfoTooltip content="Starting market capitalization in ETH. This determines the initial price of your token." />
+              <InfoTooltip content={`Starting market capitalization in ${config.pairTokenType === 'WETH' ? 'ETH' : (pairTokenInfo?.symbol || 'the selected token')}. This determines the initial price of your token. You can use large values (e.g., billions).`} />
             </label>
             
             <div className="relative">
@@ -217,7 +217,7 @@ export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }:
                 type="number"
                 value={config.startingMarketCap || ''}
                 onChange={(e) => updateConfig({ startingMarketCap: parseFloat(e.target.value) || '' })}
-                placeholder="1.0"
+                placeholder={config.pairTokenType === 'WETH' ? '10.0' : '1000000000'}
                 step="0.001"
                 min="0.001"
                 className="input font-mono"
@@ -225,14 +225,14 @@ export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }:
               />
               <div className="absolute" style={{ top: '50%', right: 'var(--spacing-md)', transform: 'translateY(-50%)' }}>
                 <div style={{ background: 'var(--bg-surface)', padding: 'var(--spacing-xs) var(--spacing-md)', borderRadius: 'var(--radius-md)' }}>
-                  <span className="text-sm font-mono text-secondary">ETH</span>
+                  <span className="text-sm font-mono text-secondary">{config.pairTokenType === 'WETH' ? 'ETH' : (pairTokenInfo?.symbol || 'TOKEN')}</span>
                 </div>
               </div>
             </div>
             
             <div className="form-hint space-y-xs">
-              <div>• Minimum: 0.001 ETH</div>
-              <div>• Recommended: 1-10 ETH for good liquidity</div>
+              <div>• Minimum: 0.001 {config.pairTokenType === 'WETH' ? 'ETH' : (pairTokenInfo?.symbol || 'TOKEN')}</div>
+              <div>• Recommended: 1-10 ETH for WETH, or set an appropriate value for your custom token (billions supported)</div>
             </div>
           </div>
         </div>

@@ -70,7 +70,7 @@ export interface TokenConfig {
   // DevBuy Extension (enhanced)
   devBuy?: {
     enabled: boolean;
-    ethAmount: number; // ETH amount to spend on initial buy
+    amount: number; // Amount of paired token to spend on initial buy (ETH for WETH, or custom token)
     poolKey?: {
       currency0: string;
       currency1: string;

@@ -9,6 +9,15 @@ interface ImageUploadProps {
   disabled?: boolean;
 }
 
+// Add a utility function to convert ipfs:// URLs to a gateway
+function ipfsToHttp(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith('ipfs://')) {
+    return url.replace('ipfs://', 'https://ipfs.io/ipfs/');
+  }
+  return url;
+}
+
 export function ImageUpload({ 
   onUploadSuccess, 
   onUploadError, 
@@ -105,7 +114,8 @@ export function ImageUpload({
     }
   };
 
-  const displayImageUrl = previewUrl || currentImageUrl;
+  // Use the utility for displayImageUrl
+  const displayImageUrl = previewUrl || ipfsToHttp(currentImageUrl);
 
   return (
     <div className="space-y-md">

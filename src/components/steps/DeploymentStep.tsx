@@ -28,7 +28,7 @@ interface SimulationResult {
     extensions: string[];
     rewardDistribution: string;
     costBreakdown: {
-      devBuyETH: number;
+      devBuyAmount: number;
       estimatedGasETH: number;
       totalETHRequired: number;
     };
@@ -122,9 +122,10 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
     }
 
     // Add dev buy extension if enabled
-    if (config.devBuy?.enabled && config.devBuy.ethAmount > 0) {
+    if (config.devBuy?.enabled && config.devBuy.amount > 0) {
       baseConfig.devBuy = {
-        ethAmount: config.devBuy.ethAmount,
+        ethAmount: config.devBuy.amount, // for SDK compatibility
+        amount: config.devBuy.amount,    // for future-proofing
         poolKey: {
           currency0: '0x0000000000000000000000000000000000000000', // Zero address for ETH
           currency1: '0x0000000000000000000000000000000000000000', // Zero address for ETH  
@@ -139,9 +140,15 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
     return baseConfig;
   };
 
+  const getPairedTokenSymbol = () => {
+    if (config.pairTokenType === 'WETH') return 'ETH';
+    // Try to get symbol from config or fallback
+    return config.pairTokenSymbol || 'TOKEN';
+  };
+
   const getConfigurationSummary = () => {
-    // Calculate total ETH requirement
-    const devBuyETH = config.devBuy?.enabled && config.devBuy.ethAmount > 0 ? config.devBuy.ethAmount : 0;
+    // Calculate total paired token requirement
+    const devBuyAmount = config.devBuy?.enabled && config.devBuy.amount > 0 ? config.devBuy.amount : 0;
     
     // Minimal gas estimation based on actual deployment costs (0.000034 ETH)
     let estimatedGasETH = 0.000034; // Exact gas matching your actual experience
@@ -158,7 +165,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
     // Add minimal buffer for network congestion
     estimatedGasETH *= 1.1; // 10% buffer (minimal based on your experience)
     
-    const totalETHRequired = devBuyETH + estimatedGasETH;
+    const totalETHRequired = devBuyAmount + estimatedGasETH;
     
     const summary = {
       mevProtection: config.mev.enabled 
@@ -171,16 +178,16 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
       extensions: [
         ...(config.vault?.enabled ? [`Vault (${config.vault.percentage}%)`] : []),
         ...(config.airdrop?.enabled ? [`Airdrop (${config.airdrop.amount} tokens)`] : []),
-        ...(config.devBuy?.enabled ? [`DevBuy (${config.devBuy.ethAmount} ETH)`] : []),
+        ...(config.devBuy?.enabled ? [`DevBuy (${devBuyAmount} ${getPairedTokenSymbol()})`] : []),
       ],
       rewardDistribution: config.rewards.recipients.map(r => 
         `${(r.bps / 100).toFixed(1)}%`
       ).join(', '),
       // Add cost breakdown
       costBreakdown: {
-        devBuyETH,
+        devBuyAmount,
         estimatedGasETH,
-        totalETHRequired
+        totalETHRequired: devBuyAmount + estimatedGasETH
       }
     };
     
@@ -221,7 +228,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
       console.log('Full Clanker v4 configuration:', JSON.stringify(fullConfig, null, 2));
       
       // Calculate required ETH
-      const devBuyETH = config.devBuy?.enabled && config.devBuy.ethAmount > 0 ? config.devBuy.ethAmount : 0;
+      const devBuyAmount = config.devBuy?.enabled && config.devBuy.amount > 0 ? config.devBuy.amount : 0;
       
       // Minimal gas estimation based on actual deployment costs (0.000034 ETH)
       let estimatedGasETH = 0.000034; // Exact gas matching your actual experience
@@ -238,7 +245,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
       // Add minimal buffer for network congestion
       estimatedGasETH *= 1.1; // 10% buffer (minimal based on your experience)
       
-      const totalETHRequired = devBuyETH + estimatedGasETH;
+      const totalETHRequired = devBuyAmount + estimatedGasETH;
       
       // Validate configuration
       if (!fullConfig.tokenAdmin.startsWith('0x') || fullConfig.tokenAdmin.length !== 42) {
@@ -545,7 +552,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
             <div className="text-sm">
               <span className="text-muted">Dev Buy:</span>
               <span className="ml-sm font-semibold text-primary">
-                {config.devBuy?.enabled ? `${config.devBuy.ethAmount} ETH` : 'Disabled'}
+                {config.devBuy?.enabled ? `${config.devBuy.amount} ${getPairedTokenSymbol()}` : 'Disabled'}
               </span>
             </div>
               </div>
@@ -696,7 +703,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
                       </div>
                       <div className="flex justify-between font-semibold">
                         <span>Dev Buy Amount:</span>
-                        <span className="font-mono">{simulationResult.configurationSummary.costBreakdown.devBuyETH.toFixed(4)} ETH</span>
+                        <span className="font-mono">{simulationResult.configurationSummary.costBreakdown.devBuyAmount.toFixed(4)} {getPairedTokenSymbol()}</span>
                       </div>
                     </div>
                     <div className="space-y-sm">
@@ -704,7 +711,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
                         <span>TOTAL REQUIRED:</span>
                         <span className="font-mono">{simulationResult.configurationSummary.costBreakdown.totalETHRequired.toFixed(4)} ETH</span>
                       </div>
-                      {simulationResult.configurationSummary.costBreakdown.devBuyETH > 0 && (
+                      {simulationResult.configurationSummary.costBreakdown.devBuyAmount > 0 && (
                         <div className="text-xs text-secondary">
                           💡 Disable Dev Buy to reduce cost to just gas fees
                         </div>
@@ -860,7 +867,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
                       <div className="text-sm">
                         {config.devBuy?.enabled ? (
                           <div>
-                            <div>{config.devBuy.ethAmount} ETH purchase</div>
+                            <div>{config.devBuy.amount} ${getPairedTokenSymbol()}</div>
                             <div className="text-xs text-secondary">
                               Recipient: {config.devBuy.recipient}
                             </div>

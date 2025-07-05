@@ -95,7 +95,7 @@ export function TokenDeployWizard({
       },
       devBuy: {
         enabled: false,
-        ethAmount: 0.0001,
+        amount: 0.0001,
         amountOutMin: 0,
         recipient: address || ''
       },
@@ -242,7 +242,7 @@ export function TokenDeployWizard({
       },
       devBuy: {
         enabled: false,
-        ethAmount: 0.0001,
+        amount: 0.0001,
         amountOutMin: 0,
         recipient: address || ''
       },
