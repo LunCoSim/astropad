@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePublicClient, useWalletClient } from 'wagmi';
 
 // Step Components
@@ -21,6 +21,8 @@ interface TokenDeployWizardProps {
   address: string | undefined;
 }
 
+const getDraftKey = (address?: string) => address ? `astropad_wizard_draft_${address.toLowerCase()}` : undefined;
+
 export function TokenDeployWizard({ 
   connected,
   address 
@@ -32,151 +34,261 @@ export function TokenDeployWizard({
   const [currentStep, setCurrentStep] = useState(0);
   
   // Configuration state using updated TokenConfig interface for Clanker v4
-  const [config, setConfig] = useState<TokenConfig>({
-    // Core Token Settings
-    name: 'My Project Token',
-    symbol: 'MPT',
-    image: '',
-    tokenAdmin: address || '',
-    
-    // Metadata
-    description: '',
-    socialUrls: [''],
-    auditUrls: [''],
-    
-    // Social Context (enhanced for v4)
-    interfaceName: 'astropad',
-    platform: '',
-    messageId: '',
-    socialId: '',
-    originatingChainId: 8453, // Base mainnet
-    
-    // Pool Configuration (enhanced for v4)
-    pool: {
-      pairedToken: BASE_NETWORK.WETH_ADDRESS,
-      tickIfToken0IsClanker: -230400, // Default starting tick
-      tickSpacing: 200, // Default tick spacing
-      positions: POOL_POSITIONS.Standard,
-
-    },
-    
-    // MEV Protection Configuration (NEW)
-    mev: {
-      enabled: true, // Enable by default for security
-      moduleType: 'block-delay',
-      blockDelay: 2, // 2 block delay by default
-      customModule: undefined,
-      customData: undefined
-    },
-    
-    // Token Locker (enhanced)
-    locker: {
-      locker: CLANKER_V4_ADDRESSES.LOCKER,
-      lockerData: '0x' // Default empty data
-    },
-    
-    // Extensions (enhanced with more options)
-    vault: {
-      enabled: false,
-      percentage: 5, // 5% default
-      lockupDuration: 7 * 24 * 60 * 60, // 7 days minimum
-      vestingDuration: 0, // No vesting by default
-      msgValue: 0 // No ETH value by default
-    },
-    
-    airdrop: {
-      enabled: false,
-      merkleRoot: '0x0000000000000000000000000000000000000000000000000000000000000000',
-      amount: 1000, // 1000 tokens default
-      lockupDuration: 24 * 60 * 60, // 1 day minimum
-      vestingDuration: 0, // No vesting by default
-      entries: [], // Will be populated by user
-      msgValue: 0 // No ETH value by default
-    },
-    
-    devBuy: {
-      enabled: false,
-      ethAmount: 0.0001, // 0.0001 ETH default (safe amount that avoids BigInt precision issues)
-      amountOutMin: 0, // No slippage protection by default
-      recipient: address || '' // Defaults to token admin
-    },
-    
-    // Fee Configuration (enhanced for v4)
-    fees: {
-      type: 'static',
-      userFeeBps: 100, // 1% total fee (60% to user, 20% to clanker, 20% to us)
-      static: {
-        clankerFeeBps: 100, // Will be calculated
-        pairedFeeBps: 100, // Will be calculated
-        customDistribution: false
+  const [config, setConfig] = useState<TokenConfig>(() => {
+    if (address) {
+      const draftKey = getDraftKey(address);
+      if (draftKey) {
+        const draft = localStorage.getItem(draftKey);
+        if (draft) {
+          try {
+            return JSON.parse(draft);
+          } catch {}
+        }
       }
-    },
-    
-    // Reward Recipients (enhanced)
-    rewards: {
-      recipients: [{
+    }
+    // Default config if no draft
+    return {
+      name: 'My Project Token',
+      symbol: 'MPT',
+      image: '',
+      tokenAdmin: address || '',
+      description: '',
+      socialUrls: [''],
+      auditUrls: [''],
+      interfaceName: 'astropad',
+      platform: '',
+      messageId: '',
+      socialId: '',
+      originatingChainId: 8453,
+      pool: {
+        pairedToken: BASE_NETWORK.WETH_ADDRESS,
+        tickIfToken0IsClanker: -230400,
+        tickSpacing: 200,
+        positions: POOL_POSITIONS.Standard,
+      },
+      mev: {
+        enabled: true,
+        moduleType: 'block-delay',
+        blockDelay: 2,
+        customModule: undefined,
+        customData: undefined
+      },
+      locker: {
+        locker: CLANKER_V4_ADDRESSES.LOCKER,
+        lockerData: '0x'
+      },
+      vault: {
+        enabled: false,
+        percentage: 5,
+        lockupDuration: 7 * 24 * 60 * 60,
+        vestingDuration: 0,
+        msgValue: 0
+      },
+      airdrop: {
+        enabled: false,
+        merkleRoot: '0x0000000000000000000000000000000000000000000000000000000000000000',
+        amount: 1000,
+        lockupDuration: 24 * 60 * 60,
+        vestingDuration: 0,
+        entries: [],
+        msgValue: 0
+      },
+      devBuy: {
+        enabled: false,
+        ethAmount: 0.0001,
+        amountOutMin: 0,
+        recipient: address || ''
+      },
+      fees: {
+        type: 'static',
+        userFeeBps: 100,
+        static: {
+          clankerFeeBps: 100,
+          pairedFeeBps: 100,
+          customDistribution: false
+        }
+      },
+      rewards: {
+        recipients: [{
+          recipient: address || '',
+          admin: address || '',
+          bps: 10000
+        }],
+        customDistribution: false,
+        useSimpleDistribution: true
+      },
+      vanity: {
+        enabled: false,
+        suffix: '0x4b07',
+        customSalt: undefined
+      },
+      advanced: {
+        customHookData: false,
+        hookData: undefined,
+        customExtensions: [],
+        gasOptimization: false
+      },
+      admin: address || '',
+      pairTokenType: 'WETH',
+      customPairTokenAddress: '',
+      startingMarketCap: '',
+      poolPositionType: 'Standard',
+      customPositions: [DEFAULT_CUSTOM_POSITION],
+      rewardRecipients: [{
         recipient: address || '',
         admin: address || '',
-        bps: 10000 // 100% to user
-      }],
-      customDistribution: false,
-      useSimpleDistribution: true // Default to simple 60/20/20 split
-    },
-    
-    // Vanity Address (enhanced)
-    vanity: {
-      enabled: false,
-      suffix: '0x4b07', // Default vanity suffix
-      customSalt: undefined
-    },
-    
-    // Advanced Configuration (NEW)
-    advanced: {
-      customHookData: false,
-      hookData: undefined,
-      customExtensions: [],
-      gasOptimization: false
-    },
-    
-    // Legacy fields for backwards compatibility
-    admin: address || '',
-    pairTokenType: 'WETH',
-    customPairTokenAddress: '',
-    startingMarketCap: '',
-    poolPositionType: 'Standard',
-    customPositions: [DEFAULT_CUSTOM_POSITION],
-    rewardRecipients: [{
-      recipient: address || '',
-      admin: address || '',
-      bps: 10000 // 100% to user
-    }]
+        bps: 10000
+      }]
+    };
   });
 
-  // Update config when address changes
+  // Track if a draft exists
+  const [hasDraft, setHasDraft] = useState(false);
+  // Track if deployment is complete (set to true after deployment)
+  const [isDeployed, setIsDeployed] = useState(false);
+  // Used to avoid saving on first load if loading draft
+  const isFirstLoad = useRef(true);
+  const [showDraftModal, setShowDraftModal] = useState(false);
+
+  // Load draft config on mount if available
   useEffect(() => {
-    if (address && address !== config.tokenAdmin) {
-      setConfig(prev => ({
-        ...prev,
-        tokenAdmin: address,
-        admin: address, // Legacy field
-        devBuy: prev.devBuy ? { ...prev.devBuy, recipient: address } : undefined,
-        rewards: {
-          recipients: [{
-            recipient: address,
-            admin: address,
-            bps: 10000 // 100% to user
-          }],
-          customDistribution: false,
-          useSimpleDistribution: true
-        },
-        rewardRecipients: [{
-          recipient: address,
-          admin: address,
-          bps: 10000 // 100% to user
-        }]
-      }));
+    if (!address) return;
+    const draftKey = getDraftKey(address);
+    if (!draftKey) return;
+    const draft = localStorage.getItem(draftKey);
+    if (draft) {
+      setHasDraft(true);
+      setShowDraftModal(true);
     }
-  }, [address, config.tokenAdmin]);
+  }, [address]);
+
+  // Auto-save config to localStorage on change, unless deployed
+  useEffect(() => {
+    if (!address) return;
+    const draftKey = getDraftKey(address);
+    if (!draftKey) return;
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      return;
+    }
+    if (!isDeployed) {
+      localStorage.setItem(draftKey, JSON.stringify(config));
+    }
+  }, [config, address, isDeployed]);
+
+  // Function to clear draft (to be called after deployment)
+  const clearDraft = () => {
+    if (!address) return;
+    const draftKey = getDraftKey(address);
+    if (draftKey) localStorage.removeItem(draftKey);
+  };
+
+  // Handler for continuing with draft
+  const handleContinueDraft = () => {
+    setShowDraftModal(false);
+  };
+
+  // Handler for starting new
+  const handleStartNew = () => {
+    if (!address) return;
+    const draftKey = getDraftKey(address);
+    if (draftKey) localStorage.removeItem(draftKey);
+    // Reset config to defaults
+    setConfig({
+      name: 'My Project Token',
+      symbol: 'MPT',
+      image: '',
+      tokenAdmin: address || '',
+      description: '',
+      socialUrls: [''],
+      auditUrls: [''],
+      interfaceName: 'astropad',
+      platform: '',
+      messageId: '',
+      socialId: '',
+      originatingChainId: 8453,
+      pool: {
+        pairedToken: BASE_NETWORK.WETH_ADDRESS,
+        tickIfToken0IsClanker: -230400,
+        tickSpacing: 200,
+        positions: POOL_POSITIONS.Standard,
+      },
+      mev: {
+        enabled: true,
+        moduleType: 'block-delay',
+        blockDelay: 2,
+        customModule: undefined,
+        customData: undefined
+      },
+      locker: {
+        locker: CLANKER_V4_ADDRESSES.LOCKER,
+        lockerData: '0x'
+      },
+      vault: {
+        enabled: false,
+        percentage: 5,
+        lockupDuration: 7 * 24 * 60 * 60,
+        vestingDuration: 0,
+        msgValue: 0
+      },
+      airdrop: {
+        enabled: false,
+        merkleRoot: '0x0000000000000000000000000000000000000000000000000000000000000000',
+        amount: 1000,
+        lockupDuration: 24 * 60 * 60,
+        vestingDuration: 0,
+        entries: [],
+        msgValue: 0
+      },
+      devBuy: {
+        enabled: false,
+        ethAmount: 0.0001,
+        amountOutMin: 0,
+        recipient: address || ''
+      },
+      fees: {
+        type: 'static',
+        userFeeBps: 100,
+        static: {
+          clankerFeeBps: 100,
+          pairedFeeBps: 100,
+          customDistribution: false
+        }
+      },
+      rewards: {
+        recipients: [{
+          recipient: address || '',
+          admin: address || '',
+          bps: 10000
+        }],
+        customDistribution: false,
+        useSimpleDistribution: true
+      },
+      vanity: {
+        enabled: false,
+        suffix: '0x4b07',
+        customSalt: undefined
+      },
+      advanced: {
+        customHookData: false,
+        hookData: undefined,
+        customExtensions: [],
+        gasOptimization: false
+      },
+      admin: address || '',
+      pairTokenType: 'WETH',
+      customPairTokenAddress: '',
+      startingMarketCap: '',
+      poolPositionType: 'Standard',
+      customPositions: [DEFAULT_CUSTOM_POSITION],
+      rewardRecipients: [{
+        recipient: address || '',
+        admin: address || '',
+        bps: 10000
+      }]
+    });
+    setShowDraftModal(false);
+  };
 
   const updateConfig = (updates: Partial<TokenConfig>) => {
     setConfig(prev => ({ ...prev, ...updates }));
@@ -258,53 +370,84 @@ export function TokenDeployWizard({
   }
 
   return (
-    <div className="space-y-xl">
-      {/* Progress Bar */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-md">
-          <h2 className="text-xl font-bold text-primary">Deploy Your Token</h2>
-          <span className="text-sm text-muted">
-            Step {currentStep + 1} of {WIZARD_STEPS.length}
-          </span>
-        </div>
-        
-        <div className="flex items-center space-x-md">
-          {WIZARD_STEPS.map((step, index) => (
-            <div key={step.id} className="flex items-center">
-              <div
-                className="flex items-center justify-center text-sm font-bold rounded-full"
-                style={{
-                  width: '2.5rem',
-                  height: '2.5rem',
-                  background: index === currentStep 
-                    ? 'var(--color-primary)' 
-                    : index < currentStep 
-                    ? 'var(--color-success)' 
-                    : 'var(--bg-surface)',
-                  color: index <= currentStep ? 'white' : 'var(--text-muted)'
-                }}
-              >
-                {index < currentStep ? '✓' : index + 1}
-              </div>
-              {index < WIZARD_STEPS.length - 1 && (
-                <div 
-                  style={{
-                    width: '3rem',
-                    height: '0.25rem',
-                    margin: '0 var(--spacing-sm)',
-                    background: index < currentStep ? 'var(--color-success)' : 'var(--bg-surface)',
-                    borderRadius: 'var(--radius-sm)'
-                  }}
-                />
-              )}
+    <>
+      {/* Draft Modal */}
+      {showDraftModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(0,0,0,0.35)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <div className="card animate-fade-in" style={{ maxWidth: 420, width: '90vw', textAlign: 'center', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+            <h2 className="text-xl font-bold text-primary mb-lg">Continue Previous Setup?</h2>
+            <p className="text-secondary mb-lg">We found a saved token deployment draft for your wallet.<br/>Would you like to continue where you left off or start a new setup?</p>
+            <div className="flex justify-center space-x-md mt-xl">
+              <button className="btn btn-primary btn-lg" onClick={handleContinueDraft}>
+                Continue
+              </button>
+              <button className="btn btn-secondary btn-lg" onClick={handleStartNew}>
+                Start New
+              </button>
             </div>
-          ))}
+          </div>
         </div>
-      </div>
+      )}
+      {/* Main Wizard UI */}
+      <div className="space-y-xl" style={{ filter: showDraftModal ? 'blur(2px)' : undefined, pointerEvents: showDraftModal ? 'none' : undefined }}>
+        {/* Progress Bar */}
+        <div className="card">
+          <div className="flex items-center justify-between mb-md">
+            <h2 className="text-xl font-bold text-primary">Deploy Your Token</h2>
+            <span className="text-sm text-muted">
+              Step {currentStep + 1} of {WIZARD_STEPS.length}
+            </span>
+          </div>
+          
+          <div className="flex items-center space-x-md">
+            {WIZARD_STEPS.map((step, index) => (
+              <div key={step.id} className="flex items-center">
+                <div
+                  className="flex items-center justify-center text-sm font-bold rounded-full"
+                  style={{
+                    width: '2.5rem',
+                    height: '2.5rem',
+                    background: index === currentStep 
+                      ? 'var(--color-primary)' 
+                      : index < currentStep 
+                      ? 'var(--color-success)' 
+                      : 'var(--bg-surface)',
+                    color: index <= currentStep ? 'white' : 'var(--text-muted)'
+                  }}
+                >
+                  {index < currentStep ? '✓' : index + 1}
+                </div>
+                {index < WIZARD_STEPS.length - 1 && (
+                  <div 
+                    style={{
+                      width: '3rem',
+                      height: '0.25rem',
+                      margin: '0 var(--spacing-sm)',
+                      background: index < currentStep ? 'var(--color-success)' : 'var(--bg-surface)',
+                      borderRadius: 'var(--radius-sm)'
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
 
-      {/* Current Step Content */}
-      {renderCurrentStep()}
-    </div>
+        {/* Current Step Content */}
+        {renderCurrentStep()}
+      </div>
+    </>
   );
 }
 
