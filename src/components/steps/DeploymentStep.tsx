@@ -308,6 +308,12 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
         
         console.log('Token deployment result:', deployResult);
         
+        // Handle error from SDK
+        if (deployResult && deployResult.error) {
+          setError(`Deployment failed: ${deployResult.error.message || deployResult.error}`);
+          setIsDeploying(false);
+          return;
+        }
         // Handle different return types from the deploy method
         let tokenAddress = 'Deployment completed';
         let txHash;
@@ -357,7 +363,8 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
         
       } catch (deployError: any) {
         console.error('SDK deployment failed:', deployError);
-        throw deployError;
+        setError(`Deployment failed: ${deployError.message || deployError}`);
+        setIsDeploying(false);
       }
       
     } catch (error: any) {
