@@ -1,6 +1,6 @@
 /**
  * Centralized type definitions for the Astropad application
- * This file contains all shared interfaces to prevent duplication
+ * This file contains all shared interfaces for Clanker v4 deployment
  */
 
 // ===== CORE TOKEN CONFIGURATION =====
@@ -17,14 +17,14 @@ export interface TokenConfig {
   socialUrls: string[];
   auditUrls: string[];
   
-  // Social Context (enhanced for v4)
+  // Social Context (v4)
   interfaceName: string;
   platform: string;
   messageId: string;
   socialId: string;
-  originatingChainId: number; // NEW: Chain ID for cross-chain tokens
+  originatingChainId: number; // Chain ID for cross-chain tokens
   
-  // Pool Configuration (enhanced for v4)
+  // Pool Configuration (v4)
   pool: {
     pairedToken: string; // Address of the token to pair with (usually WETH)
     tickIfToken0IsClanker: number; // Starting tick position
@@ -38,7 +38,7 @@ export interface TokenConfig {
     lockerData: string; // Encoded locker data
   };
   
-  // MEV Protection (NEW for v4)
+  // MEV Protection (v4)
   mev: {
     enabled: boolean;
     moduleType: 'block-delay' | 'custom'; // Type of MEV protection
@@ -47,7 +47,7 @@ export interface TokenConfig {
     customData?: string; // Encoded data for custom module
   };
   
-  // Vault Extension (enhanced)
+  // Vault Extension
   vault?: {
     enabled: boolean;
     percentage: number; // Percentage of tokens to vault (1-30%)
@@ -56,7 +56,7 @@ export interface TokenConfig {
     msgValue?: number; // Custom message value for vault extension
   };
   
-  // Airdrop Extension (enhanced)
+  // Airdrop Extension
   airdrop?: {
     enabled: boolean;
     merkleRoot: string; // Root of merkle tree
@@ -67,7 +67,7 @@ export interface TokenConfig {
     msgValue?: number; // Custom message value for airdrop extension
   };
   
-  // DevBuy Extension (enhanced)
+  // DevBuy Extension
   devBuy?: {
     enabled: boolean;
     amount: number; // Amount of paired token to spend on initial buy (ETH for WETH, or custom token)
@@ -82,10 +82,9 @@ export interface TokenConfig {
     recipient?: string; // Who receives the dev buy tokens (defaults to tokenAdmin)
   };
   
-  // Fee Configuration (enhanced for v4 with multiple collectors)
+  // Fee Configuration (v4 with multiple collectors)
   fees: {
     type: 'static' | 'dynamic';
-    // User-facing fee percentage (can be distributed among up to 7 collectors)
     userFeeBps: number; // Total fee percentage in basis points
     static?: {
       clankerFeeBps: number; // Fee on clanker token
@@ -103,21 +102,21 @@ export interface TokenConfig {
     };
   };
   
-  // Reward Recipients (enhanced to support up to 7 collectors)
+  // Reward Recipients (up to 7 collectors)
   rewards: {
     recipients: RewardRecipient[]; // Up to 7 fee collectors
     customDistribution: boolean; // Whether user has customized the distribution
     useSimpleDistribution: boolean; // Whether to use the 60/20/20 split vs custom
   };
   
-  // Vanity Address (enhanced)
+  // Vanity Address
   vanity: {
     enabled: boolean;
     suffix: string; // Desired vanity suffix (e.g., '0x4b07')
     customSalt?: string; // Custom salt for vanity generation
   };
   
-  // Advanced Configuration (NEW)
+  // Advanced Configuration
   advanced: {
     customHookData: boolean; // Whether to use custom hook data
     hookData?: string; // Custom hook data if enabled
@@ -125,16 +124,7 @@ export interface TokenConfig {
     gasOptimization: boolean; // Whether to optimize for gas
   };
   
-  // Legacy fields for backwards compatibility
-  admin: string;
-  pairTokenType: string;
-  customPairTokenAddress: string;
-  startingMarketCap: string;
-  poolPositionType: string;
-  customPositions: PoolPosition[];
-  rewardRecipients: RewardRecipient[];
-  
-  // Presale Extension (NEW for v4)
+  // Presale Extension (v4)
   presale?: {
     enabled: boolean; // Whether presale is enabled
     minEthGoal: number; // Minimum ETH goal for presale success
@@ -151,6 +141,15 @@ export interface TokenConfig {
     claimableTokens?: number; // Tokens user can claim
     presaleId?: number; // Presale ID (if tracked)
   };
+
+  // Legacy fields for backwards compatibility (TODO: Remove after migration)
+  admin: string;
+  pairTokenType: string;
+  customPairTokenAddress: string;
+  startingMarketCap: string;
+  poolPositionType: string;
+  customPositions: PoolPosition[];
+  rewardRecipients: RewardRecipient[];
 }
 
 // ===== SUPPORTING TYPES =====

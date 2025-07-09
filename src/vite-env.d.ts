@@ -9,4 +9,3 @@ interface ImportMeta {
 }
 
 declare module 'pinata';
-declare module 'file-api';

@@ -1,12 +1,20 @@
-import { createPublicClient, http, parseEther, type Account } from "viem";
-import fs from "fs";
-import path from "path";
+/*
+ * CLI script for generating Gnosis Safe deployment transactions
+ * NOTE: This file needs to be updated for Clanker v4 API compatibility
+ * TODO: Fix type imports and API usage to match v4 SDK structure
+ */
+
+console.log("❌ This CLI script is temporarily disabled pending v4 API migration");
+console.log("Please use the web interface at src/components/TokenDeployWizard.tsx instead");
+process.exit(1);
+
+/*
+// Original code commented out - needs v4 migration
+import { createPublicClient, http, type Account } from "viem";
 import { base } from "viem/chains";
-import {
-  WETH_ADDRESS,
-  POOL_POSITIONS,
-} from "clanker-sdk";
 import { Clanker } from "clanker-sdk/v4";
+import { WETH_ADDRESS, POOL_POSITIONS } from "../lib/constants.js";
+import type { ClankerTokenV4 } from "clanker-sdk/src/config/clankerTokenV4.js";
 
 // Your Gnosis Safe Multisig address
 const SAFE_MULTISIG_ADDRESS =
@@ -18,25 +26,41 @@ async function generateClankerTokenDeploymentTransaction() {
     transport: http(),
   });
 
-  // 1. Define your token configuration using the TokenConfigV4Builder
-  const builder = new TokenConfigV4Builder()
-    .withName("My Project Coin")
-    .withSymbol("MPC")
-    .withChainId(base.id)
-    .withTokenAdmin(SAFE_MULTISIG_ADDRESS)
-    .withStaticFeeConfig({
-      clankerFeeBps: 100, // 1% fee for Clanker token (100 basis points)
-      pairedFeeBps: 100, // 1% fee for paired token (100 basis points)
-    })
-    .withPoolConfig({
+  // 1. Define your token configuration using the v4 structure
+  const tokenConfig: ClankerTokenV4 = {
+    type: 'v4',
+    name: "My Project Coin",
+    symbol: "MPC",
+    chainId: base.id,
+    tokenAdmin: SAFE_MULTISIG_ADDRESS,
+    image: '',
+    metadata: {
+      description: 'A token deployed via Gnosis Safe using Astropad CLI',
+      socialMediaUrls: [],
+      auditUrls: []
+    },
+    context: {
+      interface: 'Astropad CLI',
+      platform: 'Gnosis Safe',
+      messageId: `SAFE-${Date.now()}`,
+      id: `MPC-${Date.now()}`
+    },
+    pool: {
       pairedToken: WETH_ADDRESS,
+      tickIfToken0IsClanker: -230400,
+      tickSpacing: 200,
       positions: POOL_POSITIONS.Standard,
-    })
-    .withDevBuy({
-      ethAmount: 0.0001, // Initial buy with 0.0001 ETH
-    })
-    .withRewardsRecipients({
-      // Direct all rewards to the Safe Multisig (no developer allocation)
+    },
+    locker: {
+      locker: '0x29d17C1A8D851d7d4cA97FAe97AcAdb398D9cCE0', // CLANKER_LOCKER_V4
+      lockerData: '0x'
+    },
+    fees: {
+      type: 'static',
+      clankerFee: 100, // 1% fee for Clanker token (100 basis points)
+      pairedFee: 100, // 1% fee for paired token (100 basis points)
+    },
+    rewards: {
       recipients: [
         {
           admin: SAFE_MULTISIG_ADDRESS,
@@ -44,36 +68,43 @@ async function generateClankerTokenDeploymentTransaction() {
           bps: 10000, // 100% of rewards go to the Safe
         },
       ],
-    });
+    },
+    devBuy: {
+      ethAmount: 0.0001, // Initial buy with 0.0001 ETH
+      poolKey: {
+        currency0: '0x0000000000000000000000000000000000000000',
+        currency1: '0x0000000000000000000000000000000000000000',
+        fee: 0,
+        tickSpacing: 0,
+        hooks: '0x0000000000000000000000000000000000000000',
+      },
+      amountOutMin: 0,
+    },
+    vanity: false,
+  };
 
-  // 2. Build the token configuration
-  const tokenConfig = builder.build();
-
-  // 3. Simulate the deployment to get the transaction data
+  // 2. Simulate the deployment to get the transaction data
   try {
-    // For simulation, you need an 'account' but it doesn't have to be the Safe's account.
-    // Any valid address will do as we are not sending the transaction here.
+    // For simulation, create a dummy account since we're not actually sending
     const dummyAccount: Account = {
-      address: "0x0000000000000000000000000000000000000001" as `0x${string}`,
+      address: SAFE_MULTISIG_ADDRESS,
       type: "json-rpc",
-      signMessage: async () => "0x",
-      signTransaction: async () => "0x",
-      signTypedData: async () => "0x",
-    }; // Example dummy address
+      signMessage: async () => "0x" as `0x${string}`,
+      signTransaction: async () => "0x" as `0x${string}`,
+      signTypedData: async () => "0x" as `0x${string}`,
+    };
 
     const clanker = new Clanker({ publicClient });
 
-    const simulationResult = await clanker.simulateDeployToken(
-      tokenConfig,
-      dummyAccount,
-    );
+    console.log("Simulating token deployment...");
+    const simulationResult = await clanker.deploySimulate(tokenConfig, dummyAccount);
 
     if ("error" in simulationResult) {
       console.error("Simulation failed:", simulationResult.error);
       return null;
     }
 
-    const { transaction, simulatedAddress } = simulationResult;
+    const { transaction, expectedAddress } = simulationResult;
 
     console.log(
       "\n--- Clanker Token Deployment Transaction Data for Gnosis Safe ---",
@@ -81,12 +112,12 @@ async function generateClankerTokenDeploymentTransaction() {
     console.log("To Address (Clanker Deployer):", transaction.to);
     console.log(
       "Value (in wei, for initial buy):",
-      transaction.value.toString(),
+      transaction.value?.toString() || "0",
     );
     console.log("Data (hex, for contract interaction):", transaction.data);
     console.log(
       "Simulated Token Address (where your token will be deployed):",
-      simulatedAddress,
+      expectedAddress || "Not available",
     );
     console.log(
       "\nCopy these values and use them in your Gnosis Safe web interface.",
@@ -104,24 +135,42 @@ async function generateClankerTokenDeploymentTransaction() {
       transactions: [
         {
           to: transaction.to,
-          value: transaction.value.toString(),
+          value: transaction.value?.toString() || "0",
           data: transaction.data,
         },
       ],
     };
 
     const outputFileName = `gnosis_safe_tx_${tokenConfig.symbol}.json`;
-    const outputPath = path.join(__dirname, outputFileName);
+    console.log(`\nWriting Gnosis Safe transaction to ${outputFileName}...`);
+    
+    try {
+      const fs = await import("fs");
+      fs.writeFileSync(outputFileName, JSON.stringify(gnosisSafeTx, null, 2));
+      console.log(`✅ Transaction data saved to ${outputFileName}`);
+    } catch (err) {
+      console.error("Failed to write file:", err);
+    }
 
-    fs.writeFileSync(outputPath, JSON.stringify(gnosisSafeTx, null, 2));
-    console.log(`Gnosis Safe transaction JSON saved to: ${outputPath}`);
-
-    return transaction;
+    return gnosisSafeTx;
   } catch (error) {
-    console.error("Error during Clanker simulation:", error);
+    console.error("Error generating transaction:", error);
     return null;
   }
 }
 
-// Call the function to generate the transaction data
-generateClankerTokenDeploymentTransaction();
+// Run the function
+generateClankerTokenDeploymentTransaction()
+  .then((result) => {
+    if (result) {
+      console.log("✅ Transaction generation completed successfully");
+    } else {
+      console.log("❌ Transaction generation failed");
+      process.exit(1);
+    }
+  })
+  .catch((error) => {
+    console.error("❌ Unexpected error:", error);
+    process.exit(1);
+  });
+*/

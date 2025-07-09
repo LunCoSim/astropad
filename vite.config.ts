@@ -18,7 +18,27 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
+        secure: false,
       },
     },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separate vendor chunks for better caching
+          vendor: ['react', 'react-dom'],
+          blockchain: ['wagmi', 'viem', '@reown/appkit'],
+          sdk: ['clanker-sdk'],
+        },
+      },
+    },
+    // Optimize for production
+    minify: 'terser',
+    sourcemap: false,
+    target: 'esnext',
+  },
+  optimizeDeps: {
+    include: ['clanker-sdk', 'wagmi', 'viem'],
   },
 })

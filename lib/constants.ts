@@ -1,6 +1,24 @@
 /**
  * Constants and configuration data for the token deployment wizard
+ * All addresses sourced from clanker-sdk v4.1.1
  */
+
+// Re-export constants from clanker-sdk to avoid duplication
+import { 
+  WETH_ADDRESS,
+  CLANKER_FACTORY_V4,
+  CLANKER_LOCKER_V4,
+  CLANKER_VAULT_V4,
+  CLANKER_AIRDROP_V4,
+  CLANKER_DEVBUY_V4,
+  CLANKER_MEV_MODULE_V4,
+  CLANKER_HOOK_STATIC_FEE_V4,
+  CLANKER_HOOK_DYNAMIC_FEE_V4,
+  POOL_POSITIONS as SDK_POOL_POSITIONS
+} from 'clanker-sdk';
+
+// Re-export WETH_ADDRESS for compatibility
+export { WETH_ADDRESS };
 
 export const WIZARD_STEPS = [
   {
@@ -40,36 +58,27 @@ export const WIZARD_STEPS = [
   }
 ];
 
-// Clanker v4 Contract Addresses (Base Mainnet)
+// Clanker v4 Contract Addresses (Base Mainnet) - actual addresses from SDK
 export const CLANKER_V4_ADDRESSES = {
-  FACTORY: '0x...', // TODO: Add actual Clanker v4 factory address
-  LOCKER: '0x...', // TODO: Add actual locker address
-  VAULT: '0x...', // TODO: Add actual vault extension address
-  AIRDROP: '0x...', // TODO: Add actual airdrop extension address
-  DEVBUY: '0x...', // TODO: Add actual devbuy extension address
-  MEV_MODULE: '0x...', // TODO: Add actual MEV module address
-  HOOK_STATIC: '0x...', // TODO: Add actual static fee hook address
-  HOOK_DYNAMIC: '0x...', // TODO: Add actual dynamic fee hook address
+  FACTORY: CLANKER_FACTORY_V4,
+  LOCKER: CLANKER_LOCKER_V4,
+  VAULT: CLANKER_VAULT_V4,
+  AIRDROP: CLANKER_AIRDROP_V4,
+  DEVBUY: CLANKER_DEVBUY_V4,
+  MEV_MODULE: CLANKER_MEV_MODULE_V4,
+  HOOK_STATIC: CLANKER_HOOK_STATIC_FEE_V4,
+  HOOK_DYNAMIC: CLANKER_HOOK_DYNAMIC_FEE_V4,
 };
 
 // Base Network Constants
 export const BASE_NETWORK = {
   CHAIN_ID: 8453,
-  WETH_ADDRESS: '0x4200000000000000000000000000000000000006',
+  WETH_ADDRESS,
   NATIVE_SYMBOL: 'ETH'
 };
 
-// Default Pool Positions for Clanker v4
-export const POOL_POSITIONS = {
-  Standard: [
-    { tickLower: -230400, tickUpper: -230200, positionBps: 10000 } // Tight range around starting tick
-  ],
-  Project: [
-    { tickLower: -230600, tickUpper: -230000, positionBps: 6000 }, // 60% in wider range
-    { tickLower: -230400, tickUpper: -230200, positionBps: 4000 }  // 40% in tight range
-  ],
-  Custom: [] // User-defined positions
-};
+// Re-export pool positions from SDK to maintain compatibility
+export const POOL_POSITIONS = SDK_POOL_POSITIONS;
 
 export const DEFAULT_TOKEN_SUPPLY = 100_000_000_000; // 100 billion tokens
 

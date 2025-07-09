@@ -10,13 +10,10 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
-[[redirects]]
-  from = "/api/upload-image"
-  to = "/.netlify/functions/upload-image"
-  status = 200
-
 [build.environment]
   NODE_VERSION = "18"
 
-# Example environment variables - these should be set in Netlify UI
-# ALCHEMY_API_KEY = "your_alchemy_api_key_here" 
+# Required environment variables (set in Netlify UI):
+# ALCHEMY_API_KEY - For token discovery via Alchemy API
+# PINATA_JWT - For IPFS image uploads
+# PINATA_GATEWAY - Pinata gateway URL 
