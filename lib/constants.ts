@@ -1,9 +1,9 @@
 /**
- * Constants and configuration data for the token deployment wizard
- * All addresses sourced from clanker-sdk v4.1.1
+ * Constants and configuration data for the Astropad interface
+ * Focused on v4-only functionality using clanker-sdk
  */
 
-// Re-export constants from clanker-sdk to avoid duplication
+// Import SDK constants
 import { 
   WETH_ADDRESS,
   CLANKER_FACTORY_V4,
@@ -14,11 +14,13 @@ import {
   CLANKER_MEV_MODULE_V4,
   CLANKER_HOOK_STATIC_FEE_V4,
   CLANKER_HOOK_DYNAMIC_FEE_V4,
-  POOL_POSITIONS as SDK_POOL_POSITIONS
+  POOL_POSITIONS as SDK_POOL_POSITIONS,
+  FEE_CONFIGS as SDK_FEE_CONFIGS,
+  DEFAULT_SUPPLY
 } from 'clanker-sdk';
 
-// Re-export WETH_ADDRESS for compatibility
-export { WETH_ADDRESS };
+// Re-export key constants for convenience
+export { WETH_ADDRESS, DEFAULT_SUPPLY };
 
 export const WIZARD_STEPS = [
   {
@@ -79,6 +81,9 @@ export const BASE_NETWORK = {
 
 // Re-export pool positions from SDK to maintain compatibility
 export const POOL_POSITIONS = SDK_POOL_POSITIONS;
+
+// Re-export fee configs from SDK
+export const FEE_CONFIGS = SDK_FEE_CONFIGS;
 
 export const DEFAULT_TOKEN_SUPPLY = 100_000_000_000; // 100 billion tokens
 

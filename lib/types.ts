@@ -142,14 +142,7 @@ export interface TokenConfig {
     presaleId?: number; // Presale ID (if tracked)
   };
 
-  // Legacy fields for backwards compatibility (TODO: Remove after migration)
-  admin: string;
-  pairTokenType: string;
-  customPairTokenAddress: string;
-  startingMarketCap: string;
-  poolPositionType: string;
-  customPositions: PoolPosition[];
-  rewardRecipients: RewardRecipient[];
+  // NOTE: Legacy fields removed - now v4-only
 }
 
 // ===== SUPPORTING TYPES =====

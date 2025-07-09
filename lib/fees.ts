@@ -78,6 +78,7 @@ export const LP_FEE_PERCENTAGE = 0.8; // 80% goes to LP
  */
 export function calculateFeeDistribution(
   userAddress: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _userFeeBps: number
 ): RewardRecipient[] {
   // Recipients array represents distribution of LP fees only

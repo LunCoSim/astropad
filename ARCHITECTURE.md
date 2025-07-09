@@ -1,4 +1,4 @@
-# Zenit Project Architecture
+# Astropad Project Architecture
 
 This document outlines the architecture of the Astropad project, providing a guide for developers and contributors.
 
@@ -6,20 +6,23 @@ This document outlines the architecture of the Astropad project, providing a gui
 
 The project is built on a set of core principles to ensure it is maintainable, scalable, and easy to develop.
 
-- **Separation of Concerns:** The project is divided into distinct layers: a shared core logic library, a backend API, a command-line interface (CLI), and a frontend UI. Each layer has a single, well-defined responsibility.
-- **Code Reusability:** The core business logic is written once in a shared library (`/lib`) and reused across the API, CLI, and frontend.
-- **Provider Agnostic Logic:** Functions in the core library are designed to be independent of where they run (Node.js or browser). They accept blockchain providers (`PublicClient`, `WalletClient`) as arguments rather than creating their own.
+- **Clanker v4 Only:** The project is focused exclusively on Clanker v4 functionality, leveraging the official clanker-sdk for all blockchain interactions.
+- **SDK-First Approach:** Core blockchain logic is handled by the clanker-sdk, with minimal custom utilities only for UI-specific functionality.
+- **Separation of Concerns:** The project is divided into distinct layers: a thin utility library (`/lib`), a minimal backend API, and a React frontend UI.
+- **Provider Agnostic Logic:** Functions in the library are designed to work with both Node.js and browser environments using viem providers.
 
 ## 2. Directory Structure
 
 The project is organized into the following top-level directories:
 
-- **/lib**: Contains the shared, reusable core logic of the application. This code is universal and can be run in both a Node.js environment and the browser.
-- **/api**: An Express.js server that exposes a RESTful API. It consumes the functions from `/lib`. In production, it also serves the static frontend application.
-- **/cli**: Contains scripts for the command-line interface. This is used for administrative tasks, scripting, and testing. It also consumes functions from `/lib`.
-- **/src**: The frontend user interface, built with React and Vite. It interacts with the blockchain via both our backend API and the user's browser wallet (e.g., MetaMask).
-- **/dist**: The output directory for the production build of the frontend UI.
-- **/dist-api**: The output directory for the compiled JavaScript version of the API server.
+- **/lib**: Contains minimal UI-specific utilities and re-exports from clanker-sdk. Focused on v4-only functionality.
+- **/api**: Minimal Express.js endpoints for image upload and fee checking. Most blockchain logic happens client-side via clanker-sdk.
+- **/backend**: Development server that combines API endpoints for local development.
+- **/src**: The React frontend UI built with Vite. Primary interface for Clanker v4 token deployment and management.
+- **/netlify**: Netlify-specific serverless functions for production deployment.
+- **/cli**: Optional command-line tools (currently disabled pending v4 migration).
+- **/dist**: Production build output for the frontend.
+- **/dist-api**: Compiled backend/API code for production.
 
 ## 3. Development Workflow
 
@@ -37,9 +40,18 @@ The project is organized into the following top-level directories:
     - This runs the compiled API server from `/dist-api/backend/index.js`.
     - In this mode, the server will both handle API requests and serve the built static files from the `/dist` directory.
 
-## 5. The Hybrid Model (Frontend)
+## 5. The v4-First Architecture
 
-The frontend is designed to use the most appropriate method for blockchain interactions:
+The frontend is designed to leverage clanker-sdk v4 for all blockchain operations:
 
-- **User-Signed Actions** (e.g., deploying a token): The frontend uses `wagmi` to get a `WalletClient` directly from the user's browser wallet. It then calls the relevant function from `/lib`, passing this client to sign and send the transaction.
-- **Read-Only Data** (e.g., checking fees): The frontend makes a `fetch` request to our backend API. This allows for potential caching, use of a reliable RPC, and keeps the frontend clean.
+- **Token Deployment**: Direct integration with clanker-sdk v4 using `wagmi` WalletClient for user-signed transactions.
+- **Fee Management**: Utilizes clanker-sdk v4 fee checking and collection methods.
+- **Read-Only Data**: Some operations use backend API endpoints for caching and reliability, but most data comes directly from the SDK.
+- **Extensions**: Full support for v4 extensions (Vault, Airdrop, DevBuy, etc.) through the SDK interface.
+
+## 6. Key Dependencies
+
+- **clanker-sdk**: Official SDK for Clanker v4 interactions
+- **wagmi**: Wallet connection and transaction management 
+- **viem**: Low-level Ethereum client library
+- **@reown/appkit**: Wallet connection UI components

@@ -29,16 +29,19 @@ export default defineConfig({
           // Separate vendor chunks for better caching
           vendor: ['react', 'react-dom'],
           blockchain: ['wagmi', 'viem', '@reown/appkit'],
-          sdk: ['clanker-sdk'],
+          'clanker-v4': ['clanker-sdk/v4', 'clanker-sdk'],
         },
       },
     },
     // Optimize for production
     minify: 'terser',
-    sourcemap: false,
+    sourcemap: process.env.NODE_ENV === 'development',
     target: 'esnext',
+    // Increase chunk size limit for better optimization
+    chunkSizeWarningLimit: 1000,
   },
   optimizeDeps: {
-    include: ['clanker-sdk', 'wagmi', 'viem'],
+    include: ['clanker-sdk', 'clanker-sdk/v4', 'wagmi', 'viem'],
+    exclude: ['clanker-sdk/v3'], // Exclude v3 from optimization
   },
 })

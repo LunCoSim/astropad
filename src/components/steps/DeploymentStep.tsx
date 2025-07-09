@@ -4,9 +4,8 @@ import { InfoTooltip } from '../ui/InfoTooltip';
 import { usePublicClient, useWalletClient, useAccount } from 'wagmi';
 import { storeDeployedToken } from '../../../lib/deployed-tokens';
 import { Clanker } from 'clanker-sdk/v4';
-import { getTokenPairByAddress, getDesiredPriceAndPairAddress, WETH_ADDRESS } from '../../../lib/clanker-utils';
+import { getTokenPairDisplayName, WETH_ADDRESS } from '../../../lib/clanker-utils';
 import { POOL_POSITIONS } from '../../../lib/constants';
-import { ERC20_ABI } from '../../../lib/abis';
 
 interface DeploymentStepProps {
   config: TokenConfig;
