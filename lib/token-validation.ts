@@ -1,5 +1,5 @@
 import type { PublicClient } from "viem";
-import { ERC20_ABI } from './abis.js';
+import { erc20Abi } from 'viem';
 import type { TokenInfo } from './types';
 
 /**
@@ -16,7 +16,7 @@ export async function getTokenDecimals(
   try {
     const decimals = await publicClient.readContract({
       address: tokenAddress,
-      abi: ERC20_ABI,
+      abi: erc20Abi,
       functionName: "decimals",
     });
     return decimals;
@@ -39,7 +39,7 @@ export async function getTokenSymbol(
   try {
     const symbol = await publicClient.readContract({
       address: tokenAddress,
-      abi: ERC20_ABI,
+      abi: erc20Abi,
       functionName: "symbol",
     });
     return symbol;

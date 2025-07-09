@@ -1,5 +1,5 @@
 import type { PublicClient } from 'viem';
-import { ERC20_ABI } from './abis.js';
+import { erc20Abi } from 'viem';
 import type { DeployedToken } from './types.js';
 
 const STORAGE_KEY = 'astropad_deployed_tokens';
@@ -87,22 +87,22 @@ export async function fetchTokenMetadata(
     const [name, symbol, decimals, totalSupply] = await Promise.all([
       publicClient.readContract({
         address: tokenAddress as `0x${string}`,
-        abi: ERC20_ABI,
+        abi: erc20Abi,
         functionName: 'name',
       }),
       publicClient.readContract({
         address: tokenAddress as `0x${string}`,
-        abi: ERC20_ABI,
+        abi: erc20Abi,
         functionName: 'symbol',
       }),
       publicClient.readContract({
         address: tokenAddress as `0x${string}`,
-        abi: ERC20_ABI,
+        abi: erc20Abi,
         functionName: 'decimals',
       }),
       publicClient.readContract({
         address: tokenAddress as `0x${string}`,
-        abi: ERC20_ABI,
+        abi: erc20Abi,
         functionName: 'totalSupply',
       }),
     ]);
