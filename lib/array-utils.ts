@@ -154,18 +154,4 @@ export function updateRewardRecipient(
   value: string | number
 ): RewardRecipient[] {
   return updateArrayItem(recipients, index, { [field]: value });
-}
-
-// New function to validate image file
-export function validateImageFile(file: File): Promise<{ isValid: boolean; file: File }> {
-  return new Promise((resolve) => {
-    // Implementation of validation logic
-    // For example, you can check file size, type, etc.
-    // If validation passes, resolve the promise with isValid: true and the file
-    // If validation fails, reject the promise
-    resolve({
-      isValid: true,
-      file
-    });
-  });
 } 
