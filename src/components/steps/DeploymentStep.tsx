@@ -6,6 +6,7 @@ import { storeDeployedToken } from '../../../lib/deployed-tokens';
 import { Clanker } from 'clanker-sdk/v4';
 import { getTokenPairDisplayName, WETH_ADDRESS } from '../../../lib/clanker-utils';
 import { POOL_POSITIONS } from '../../../lib/constants';
+import { getTokenPairByAddress, getDesiredPriceAndPairAddress } from '../../../lib/clanker-sdk-workarounds';
 
 interface DeploymentStepProps {
   config: TokenConfig;
