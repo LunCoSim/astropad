@@ -93,7 +93,8 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
         recipients: config.rewards.recipients.map(recipient => ({
           admin: recipient.admin as `0x${string}`,
           recipient: recipient.recipient as `0x${string}`,
-          bps: recipient.bps
+          bps: recipient.bps,
+          token: 'Paired', // Add this field to each recipient
         }))
       },
       // Use vanity address setting
@@ -341,81 +342,58 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
     setError('');
     
     try {
+      console.log('[DEPLOY] Starting deployment process');
+      // Build full v4 configuration with ALL user settings
+      const fullConfig = buildFullClankerV4Config();
+      console.log('[DEPLOY] Full config built:', fullConfig);
+
       // Initialize Clanker SDK
       const clanker = new Clanker({
         wallet: walletClient,
         publicClient,
       });
+      console.log('[DEPLOY] Clanker SDK initialized');
 
-      // Use the SDK's deploy method
-      
-      try {
-        // Use the SDK's deploy method
-        const deployResult = await clanker.deploy(simulationResult.tokenConfig);
-        
-        // Handle error from SDK
-        if (deployResult && deployResult.error) {
-          setError(`Deployment failed: ${deployResult.error.message || deployResult.error}`);
-          setIsDeploying(false);
-          return;
-        }
-        // Handle different return types from the deploy method
-        let tokenAddress = 'Deployment completed';
-        let txHash;
-        
-        if (typeof deployResult === 'string') {
-          tokenAddress = deployResult;
-        } else if (deployResult && typeof deployResult === 'object') {
-          // Handle SDK response structure
-          if ('txHash' in deployResult) {
-            txHash = deployResult.txHash as string;
-            console.log('Transaction hash:', txHash);
-            
-            if ('waitForTransaction' in deployResult && typeof deployResult.waitForTransaction === 'function') {
-              console.log('Waiting for transaction confirmation...');
-              const receipt = await deployResult.waitForTransaction();
-              console.log('Transaction receipt:', receipt);
-              
-              // Try to extract token address from receipt
-              if (receipt && 'logs' in receipt && receipt.logs) {
-                // Look for TokenCreated event or use contract address
-                tokenAddress = receipt.contractAddress || 'Deployed successfully';
-              }
-            }
-          } else if ('tokenAddress' in deployResult) {
-            tokenAddress = deployResult.tokenAddress as string;
-          } else if ('address' in deployResult) {
-            tokenAddress = deployResult.address as string;
-          }
-        }
-        
-        setDeployedTokenAddress(tokenAddress);
-        
-        // Save the deployed token
-        const deployedToken = {
-          address: tokenAddress,
-          name: config.name,
-          symbol: config.symbol,
-          deployerAddress: address,
-          deploymentTxHash: txHash,
-          deploymentTimestamp: Date.now(),
-          isVerified: true,
-          source: 'manual' as const,
-        };
-        storeDeployedToken(deployedToken);
-        
-        console.log('✅ Token deployed successfully using SDK!');
-        
-      } catch (deployError: any) {
-        console.error('SDK deployment failed:', deployError);
-        setError(`Deployment failed: ${deployError.message || deployError}`);
-        setIsDeploying(false);
+      // Estimate gas
+      console.log('[DEPLOY] Estimating gas...');
+      const gasEstimate = await publicClient.estimateGas({
+        // ... your gas estimation params here ...
+      });
+      console.log('[DEPLOY] Estimated gas required:', gasEstimate);
+
+      // Deploy token
+      console.log('[DEPLOY] Calling clanker.deploy...');
+      const deployResult = await clanker.deploy(fullConfig);
+      console.log('[DEPLOY] Deploy result:', deployResult);
+
+      // Wait for transaction (if applicable)
+      if (deployResult.waitForTransaction) {
+        console.log('[DEPLOY] Waiting for transaction confirmation...');
+        const txReceipt = await deployResult.waitForTransaction();
+        console.log('[DEPLOY] Transaction confirmed:', txReceipt);
       }
+
+      setIsDeploying(false);
+      setDeployedTokenAddress(deployResult.address || '');
       
-    } catch (error: any) {
-      console.error('Deployment failed:', error);
-      setError(`Deployment failed: ${error.message}`);
-    } finally {
+      // Save the deployed token
+      const deployedToken = {
+        address: deployResult.address || '',
+        name: config.name,
+        symbol: config.symbol,
+        deployerAddress: address,
+        deploymentTxHash: txReceipt?.transactionHash || '',
+        deploymentTimestamp: Date.now(),
+        isVerified: true,
+        source: 'manual' as const,
+      };
+      storeDeployedToken(deployedToken);
+      
+      console.log('✅ Token deployed successfully using SDK!');
+      
+    } catch (err: any) {
+      console.error('[DEPLOY] Deployment error:', err);
+      setError(err.message || String(err));
       setIsDeploying(false);
     }
   };
