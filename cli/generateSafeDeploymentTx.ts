@@ -28,7 +28,6 @@ async function generateClankerTokenDeploymentTransaction() {
 
   // 1. Define your token configuration using the v4 structure
   const tokenConfig: ClankerTokenV4 = {
-    type: 'v4',
     name: "My Project Coin",
     symbol: "MPC",
     chainId: base.id,

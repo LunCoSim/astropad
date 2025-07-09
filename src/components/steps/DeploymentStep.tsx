@@ -48,15 +48,8 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
   const [pairedTokenSymbol, setPairedTokenSymbol] = useState<string>('');
 
   const buildFullClankerV4Config = () => {
-    // Determine the correct paired token and price logic using SDK utilities
-    const pairTokenAddress = (config.pool.pairedToken || WETH_ADDRESS) as `0x${string}`;
-    const pairType = getTokenPairByAddress(pairTokenAddress);
-    const marketCap = Number(config.startingMarketCap) || 10;
-    const { pairAddress } = getDesiredPriceAndPairAddress(pairType, marketCap);
-
     // Build comprehensive v4 configuration using ALL user settings
     const baseConfig: any = {
-      type: 'v4' as const,
       name: config.name,
       symbol: config.symbol,
       image: config.image || '',
@@ -75,7 +68,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
       },
       // Use advanced pool configuration
       pool: {
-        pairedToken: pairAddress,
+        pairedToken: (config.pool.pairedToken || WETH_ADDRESS) as `0x${string}`,
         tickIfToken0IsClanker: config.pool.tickIfToken0IsClanker,
         tickSpacing: config.pool.tickSpacing,
         positions: config.pool.positions || POOL_POSITIONS.Standard
@@ -131,13 +124,13 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
     // Add dev buy extension if enabled
     if (config.devBuy?.enabled && config.devBuy.amount > 0) {
       // If paired token is not WETH, set up poolKey and amountOutMin
-      if (pairType !== 'WETH') {
+      if (getTokenPairByAddress(baseConfig.pool.pairedToken).type !== 'WETH') {
         baseConfig.devBuy = {
           ethAmount: config.devBuy.amount, // for SDK compatibility
           amount: config.devBuy.amount,    // for future-proofing
           poolKey: {
             currency0: '0x0000000000000000000000000000000000000000', // ETH (default)
-            currency1: pairAddress,
+            currency1: baseConfig.pool.pairedToken,
             fee: 500, // Default UniswapV3 fee tier, adjust as needed
             tickSpacing: config.pool.tickSpacing || 10,
             hooks: '0x0000000000000000000000000000000000000000', // No hooks by default
@@ -277,18 +270,12 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
         publicClient,
       });
 
-      console.log('Network chain ID:', await publicClient.getChainId());
-      console.log('User address:', address);
-      
       // Check account balance
       const balance = await publicClient.getBalance({ address: address as `0x${string}` });
       const balanceEth = Number(balance) / 1e18;
-      console.log('Account balance:', balanceEth.toFixed(4), 'ETH');
-
+      
       // Build full v4 configuration with ALL user settings
       const fullConfig = buildFullClankerV4Config();
-      
-      console.log('Full Clanker v4 configuration:', JSON.stringify(fullConfig, null, 2));
       
       // Calculate required ETH
       const devBuyAmount = config.devBuy?.enabled && config.devBuy.amount > 0 ? config.devBuy.amount : 0;
@@ -323,9 +310,6 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
       let simulatedAddress = 'Will be determined on deployment';
       let gasEstimate = 'Variable based on configuration';
       let estimatedCost = 'Estimated gas cost varies';
-      
-      console.log('Configuration validated successfully');
-      console.log(`Balance: ${balanceEth.toFixed(4)} ETH available, ${totalETHRequired.toFixed(4)} ETH estimated (will attempt deployment regardless)`);
       
       // Fetch paired token balance
       await fetchPairedTokenBalance(fullConfig.pool.pairedToken);
@@ -363,16 +347,11 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
         publicClient,
       });
 
-      console.log('Deploying token with full v4 config:', simulationResult.tokenConfig);
-
       // Use the SDK's deploy method
-      console.log('Deploying with Clanker SDK...');
       
       try {
         // Use the SDK's deploy method
         const deployResult = await clanker.deploy(simulationResult.tokenConfig);
-        
-        console.log('Token deployment result:', deployResult);
         
         // Handle error from SDK
         if (deployResult && deployResult.error) {
