@@ -7,6 +7,7 @@ import { Clanker } from 'clanker-sdk/v4';
 import { getTokenPairDisplayName, WETH_ADDRESS } from '../../../lib/clanker-utils';
 import { POOL_POSITIONS } from '../../../lib/constants';
 import { getTokenPairByAddress, getDesiredPriceAndPairAddress } from '../../../lib/clanker-sdk-workarounds';
+import { ensureLunCoCollector } from '../ui/FeeCollectorsManager';
 
 interface DeploymentStepProps {
   config: TokenConfig;
@@ -49,6 +50,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
 
   const buildFullClankerV4Config = () => {
     // Build comprehensive v4 configuration using ALL user settings
+    const recipientsWithLunCo = ensureLunCoCollector(config.rewards.recipients, config.fees.userFeeBps);
     const baseConfig: any = {
       name: config.name,
       symbol: config.symbol,
@@ -90,7 +92,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
       },
       // Use custom reward distribution
       rewards: {
-        recipients: config.rewards.recipients.map(recipient => ({
+        recipients: recipientsWithLunCo.map(recipient => ({
           admin: recipient.admin as `0x${string}`,
           recipient: recipient.recipient as `0x${string}`,
           bps: recipient.bps,
@@ -157,11 +159,12 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
     return baseConfig;
   };
 
-  const getPairedTokenSymbol = () => {
-    if (config.pairTokenType === 'WETH') return 'ETH';
-    // Try to get symbol from config or fallback
-    return config.pairTokenSymbol || 'TOKEN';
-  };
+  // Remove getPairedTokenSymbol and references to config.pairTokenType and config.pairTokenSymbol
+  // const getPairedTokenSymbol = () => {
+  //   if (config.pairTokenType === 'WETH') return 'ETH';
+  //   // Try to get symbol from config or fallback
+  //   return config.pairTokenSymbol || 'TOKEN';
+  // };
 
   const getConfigurationSummary = () => {
     // Calculate total paired token requirement
@@ -195,7 +198,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
       extensions: [
         ...(config.vault?.enabled ? [`Vault (${config.vault.percentage}%)`] : []),
         ...(config.airdrop?.enabled ? [`Airdrop (${config.airdrop.amount} tokens)`] : []),
-        ...(config.devBuy?.enabled ? [`DevBuy (${devBuyAmount} ${getPairedTokenSymbol()})`] : []),
+        ...(config.devBuy?.enabled ? [`DevBuy (${devBuyAmount} ${config.pool.pairedToken === WETH_ADDRESS ? 'ETH' : 'Custom'})`] : []),
       ],
       rewardDistribution: config.rewards.recipients.map(r => 
         `${(r.bps / 100).toFixed(1)}%`
@@ -582,7 +585,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
             <div className="text-sm">
               <span className="text-muted">Dev Buy:</span>
               <span className="ml-sm font-semibold text-primary">
-                {config.devBuy?.enabled ? `${config.devBuy.amount} ${getPairedTokenSymbol()}` : 'Disabled'}
+                {config.devBuy?.enabled ? `${config.devBuy.amount} ${config.pool.pairedToken === WETH_ADDRESS ? 'ETH' : 'Custom'}` : 'Disabled'}
               </span>
             </div>
               </div>
@@ -660,14 +663,14 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
                   <div className="flex justify-between items-center">
                     <div>
                       <div className="font-semibold text-secondary">Your Paired Token Balance:</div>
-                      <div className="text-xs text-secondary">Current {pairedTokenSymbol || getPairedTokenSymbol()} available for deployment</div>
+                      <div className="text-xs text-secondary">Current {pairedTokenSymbol || (config.pool.pairedToken === WETH_ADDRESS ? 'ETH' : 'Custom')} available for deployment</div>
                     </div>
                     <div className="text-right">
                       <div className="font-mono font-bold text-lg">
-                        {pairedTokenBalance !== null ? `${pairedTokenBalance} ${pairedTokenSymbol || getPairedTokenSymbol()}` : 'Checking...'}
+                        {pairedTokenBalance !== null ? `${pairedTokenBalance} ${pairedTokenSymbol || (config.pool.pairedToken === WETH_ADDRESS ? 'ETH' : 'Custom')}` : 'Checking...'}
                       </div>
                       {config.devBuy?.enabled && config.devBuy.amount > 0 && pairedTokenBalance !== null && pairedTokenBalance < config.devBuy.amount && (
-                        <div className="text-xs text-danger font-bold">Insufficient {pairedTokenSymbol || getPairedTokenSymbol()} for Dev Buy</div>
+                        <div className="text-xs text-danger font-bold">Insufficient {pairedTokenSymbol || (config.pool.pairedToken === WETH_ADDRESS ? 'ETH' : 'Custom')} for Dev Buy</div>
                       )}
                       <div className="text-xs text-secondary">
                         Deployment will proceed regardless of balance
@@ -742,7 +745,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
                       </div>
                       <div className="flex justify-between font-semibold">
                         <span>Dev Buy Amount:</span>
-                        <span className="font-mono">{simulationResult.configurationSummary.costBreakdown.devBuyAmount.toFixed(4)} {getPairedTokenSymbol()}</span>
+                        <span className="font-mono">{simulationResult.configurationSummary.costBreakdown.devBuyAmount.toFixed(4)} {config.pool.pairedToken === WETH_ADDRESS ? 'ETH' : 'Custom'}</span>
                       </div>
                     </div>
                     <div className="space-y-sm">
@@ -906,7 +909,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
                       <div className="text-sm">
                         {config.devBuy?.enabled ? (
                           <div>
-                            <div>{config.devBuy.amount} ${getPairedTokenSymbol()}</div>
+                            <div>{config.devBuy.amount} ${config.pool.pairedToken === WETH_ADDRESS ? 'ETH' : 'Custom'}</div>
                             <div className="text-xs text-secondary">
                               Recipient: {config.devBuy.recipient}
                             </div>

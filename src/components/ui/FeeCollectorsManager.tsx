@@ -8,6 +8,7 @@ interface FeeCollectorsManagerProps {
   useSimpleDistribution: boolean;
   onUseSimpleDistributionChange: (useSimple: boolean) => void;
   validation: FeeDistributionValidation;
+  totalFeeBps: number; // Add this prop
 }
 
 // Updated fee collector templates to reflect Clanker v4's actual fee structure
@@ -56,19 +57,28 @@ const FEE_COLLECTOR_TEMPLATES = [
 const ASTROPAD_FEE_ADDRESS = '0x2eC50faa88b1CEeeB77bb36e7e31eb7C1FAeB348';
 const LUNCO_FEE_ADDRESS = '0x2eC50faa88b1CEeeB77bb36e7e31eb7C1FAeB348';
 
-function ensureLunCoCollector(recipients: RewardRecipient[]): RewardRecipient[] {
-  // Remove any existing LunCo collector
-  const filtered = recipients.filter(r => r.recipient.toLowerCase() !== LUNCO_FEE_ADDRESS.toLowerCase());
-  // Always add LunCo as first collector with 2000 BPS (20%)
+function ensureLunCoCollector(recipients: RewardRecipient[], totalFeeBps: number): RewardRecipient[] {
+  const filtered = recipients
+    .filter(r => r.recipient.toLowerCase() !== LUNCO_FEE_ADDRESS.toLowerCase())
+    .map(r => ({ ...r, token: 'Both' })); // Force 'token' to 'Both' for all
+  let userSum = filtered.reduce((sum, r) => sum + r.bps, 0);
+  // Cap userSum at 8000, reduce last recipient if needed
+  if (userSum > 8000 && filtered.length > 0) {
+    const over = userSum - 8000;
+    filtered[filtered.length - 1].bps = Math.max(0, filtered[filtered.length - 1].bps - over);
+    userSum = filtered.reduce((sum, r) => sum + r.bps, 0);
+  }
+  const platformBps = 10000 - userSum;
   return [
+    ...filtered,
     {
       recipient: LUNCO_FEE_ADDRESS,
       admin: LUNCO_FEE_ADDRESS,
-      bps: 2000,
-      label: 'LunCo (Required)',
-      isDefault: true
-    },
-    ...filtered
+      bps: platformBps,
+      label: '', // Hidden from UI
+      isDefault: true,
+      token: 'Both', // Always set to Both for platform
+    }
   ];
 }
 
@@ -77,7 +87,8 @@ function FeeCollectorsManager({
   onRecipientsChange,
   useSimpleDistribution,
   onUseSimpleDistributionChange,
-  validation
+  validation,
+  totalFeeBps
 }: FeeCollectorsManagerProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
 
@@ -90,7 +101,8 @@ function FeeCollectorsManager({
       admin: r.isDefault ? (r.label === 'Platform' ? ASTROPAD_FEE_ADDRESS : '') : '',
       bps: r.bps,
       label: r.label,
-      isDefault: r.isDefault
+      isDefault: r.isDefault,
+      token: 'Both', // Always set token
     }));
 
     onRecipientsChange(newRecipients);
@@ -98,9 +110,9 @@ function FeeCollectorsManager({
   };
 
   // Always enforce LunCo collector in the list
-  const enforcedRecipients = ensureLunCoCollector(recipients);
+  const enforcedRecipients = ensureLunCoCollector(recipients, totalFeeBps);
 
-  // Only show editable collectors (excluding LunCo) in the UI
+  // In the UI, only allow editing of non-platform recipients. The platform recipient is always present in the config but not shown or editable.
   const editableRecipients = enforcedRecipients.filter(r => r.recipient.toLowerCase() !== LUNCO_FEE_ADDRESS.toLowerCase());
 
   const handleAddRecipient = () => {
@@ -110,19 +122,20 @@ function FeeCollectorsManager({
       admin: '',
       bps: 0,
       label: `Collector ${editableRecipients.length + 1}`,
-      isDefault: false
+      isDefault: false,
+      token: 'Both', // Always set token
     };
-    onRecipientsChange(ensureLunCoCollector([...editableRecipients, newRecipient]));
+    onRecipientsChange(ensureLunCoCollector([...editableRecipients, newRecipient], totalFeeBps));
   };
 
   const handleRemoveRecipient = (index: number) => {
-    onRecipientsChange(ensureLunCoCollector(editableRecipients.filter((_, i) => i !== index)));
+    onRecipientsChange(ensureLunCoCollector(editableRecipients.filter((_, i) => i !== index), totalFeeBps));
   };
 
   const handleRecipientChange = (index: number, field: keyof RewardRecipient, value: string | number) => {
     const updated = [...editableRecipients];
     updated[index] = { ...updated[index], [field]: value };
-    onRecipientsChange(ensureLunCoCollector(updated));
+    onRecipientsChange(ensureLunCoCollector(updated, totalFeeBps));
   };
 
   return (
@@ -138,10 +151,10 @@ function FeeCollectorsManager({
           <ul className="list-disc list-inside space-y-1 ml-2">
             <li><strong>Protocol Fee (20%):</strong> Automatically deducted by Clanker hook during swaps</li>
             <li><strong>LunCo Fee (20%):</strong> Automatically routed to support protocol/ecosystem activities</li>
-            <li><strong>LP Fee Distribution:</strong> Remaining 60% distributed among your chosen recipients</li>
+            <li><strong>LP Fee Distribution:</strong> Remaining 80% distributed among your chosen recipients</li>
           </ul>
           <p className="mt-3">
-            <strong>Example:</strong> If you set 1% total fee → 0.2% to Clanker (automatic) + 0.2% to LunCo (automatic) + 0.6% to LP recipients
+            <strong>Example:</strong> If you set 1% total fee → 0.2% to Clanker (automatic) + 0.2% to LunCo (automatic) + 0.8% to LP recipients
           </p>
         </div>
       </div>
@@ -314,4 +327,4 @@ function FeeCollectorsManager({
 }
 
 export default FeeCollectorsManager;
-export { FeeCollectorsManager };
+export { FeeCollectorsManager, ensureLunCoCollector };

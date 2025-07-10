@@ -4,6 +4,7 @@ import { VALIDATION_LIMITS } from '../../../lib/constants.js';
 import { calculateFeeDistribution, getFeeDisplayInfo } from '../../../lib/fees.js';
 import { InfoTooltip } from '../ui/InfoTooltip.js';
 import FeeCollectorsManager from '../ui/FeeCollectorsManager.js';
+import { ensureLunCoCollector } from '../ui/FeeCollectorsManager';
 
 interface AdvancedConfigStepProps {
   config: TokenConfig;
@@ -76,10 +77,12 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
   };
 
   const handleFeeCollectorsChange = (recipients: RewardRecipient[]) => {
+    // Always enforce hidden LunCo collector and force token: 'Both'
+    const recipientsWithToken = recipients.map(r => ({ ...r, token: 'Both' }));
     updateConfig({
       rewards: {
         ...config.rewards,
-        recipients,
+        recipients: ensureLunCoCollector(recipientsWithToken, config.fees.userFeeBps),
         customDistribution: !config.rewards.useSimpleDistribution
       }
     });
@@ -150,6 +153,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
   };
 
   const validateFeeDistribution = (): FeeDistributionValidation => {
+    // Include hidden LunCo collector in validation
     const totalBps = config.rewards.recipients.reduce((sum, r) => sum + r.bps, 0);
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -158,34 +162,39 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
       errors.push(`LP fee distribution must equal 100% (currently ${(totalBps / 100).toFixed(1)}%)`);
     }
 
-    if (config.rewards.recipients.length > 7) {
-      errors.push('Maximum 7 fee collectors allowed');
+    // Exclude LunCo from editable count
+    const visibleRecipients = config.rewards.recipients.filter(r => r.recipient.toLowerCase() !== '0x2ec50faa88b1ceeb77bb36e7e31eb7c1faeb348');
+    if (visibleRecipients.length > 6) {
+      errors.push('Maximum 6 fee collectors allowed (excluding platform)');
     }
 
-    if (config.rewards.recipients.length === 0) {
+    if (visibleRecipients.length === 0) {
       errors.push('At least one fee collector required');
     }
 
     // Check for duplicate addresses
-    const addresses = config.rewards.recipients.map(r => r.recipient.toLowerCase()).filter(addr => addr);
+    const addresses = visibleRecipients.map(r => r.recipient.toLowerCase()).filter(addr => addr);
     const duplicates = addresses.filter((addr, index) => addresses.indexOf(addr) !== index);
     if (duplicates.length > 0) {
       errors.push('Duplicate recipient addresses found');
     }
 
     // Check for zero allocations
-    const zeroAllocations = config.rewards.recipients.filter(r => r.bps === 0);
+    const zeroAllocations = visibleRecipients.filter(r => r.bps === 0);
     if (zeroAllocations.length > 0) {
       warnings.push(`${zeroAllocations.length} recipients have 0% allocation`);
     }
+
+    // User can allocate up to 8000 BPS (20% is always reserved for LunCo)
+    const userTotalBps = visibleRecipients.reduce((sum, r) => sum + r.bps, 0);
 
     return {
       isValid: errors.length === 0,
       errors,
       warnings,
-      totalBps,
-      maxCollectors: 7,
-      remainingBps: 10000 - totalBps
+      totalBps: userTotalBps,
+      maxCollectors: 6,
+      remainingBps: 8000 - userTotalBps
     };
   };
 
@@ -279,11 +288,12 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
 
           {/* Fee Collectors Manager */}
           <FeeCollectorsManager
-            recipients={config.rewards.recipients}
+            recipients={config.rewards.recipients.map(r => ({ ...r, token: 'Both' }))}
             useSimpleDistribution={config.rewards.useSimpleDistribution}
             onRecipientsChange={handleFeeCollectorsChange}
             onUseSimpleDistributionChange={handleDistributionModeChange}
             validation={validateFeeDistribution()}
+            totalFeeBps={config.fees.userFeeBps}
           />
         </div>
       </div>

@@ -162,6 +162,7 @@ export interface RewardRecipient {
   recipient: string; // Address that receives the fees
   admin: string; // Address that can modify this recipient
   bps: number; // Basis points (out of 10000) this recipient gets
+  token: string; // 'Both', 'Paired', or 'Clanker'
   label?: string; // Optional label for UI display (e.g., "Team", "Marketing")
   isDefault?: boolean; // Whether this is a default recipient (user, clanker, astropad)
 }

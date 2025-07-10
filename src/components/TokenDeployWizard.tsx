@@ -40,7 +40,15 @@ export function TokenDeployWizard({
       const draft = localStorage.getItem(draftKey);
       if (draft) {
         try {
-          return JSON.parse(draft);
+          const parsed = JSON.parse(draft);
+          // Patch all recipients to have token: 'Both'
+          if (parsed.rewards && Array.isArray(parsed.rewards.recipients)) {
+            parsed.rewards.recipients = parsed.rewards.recipients.map((r: any) => ({
+              ...r,
+              token: r.token || 'Both'
+            }));
+          }
+          return parsed;
         } catch {}
       }
     }
@@ -110,7 +118,8 @@ export function TokenDeployWizard({
         recipients: [{
           recipient: address || '',
           admin: address || '',
-          bps: 10000
+          bps: 10000,
+          token: 'Both'
         }],
         customDistribution: false,
         useSimpleDistribution: true
@@ -242,7 +251,8 @@ export function TokenDeployWizard({
         recipients: [{
           recipient: address || '',
           admin: address || '',
-          bps: 10000
+          bps: 10000,
+          token: 'Both'
         }],
         customDistribution: false,
         useSimpleDistribution: true
