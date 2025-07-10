@@ -1,7 +1,7 @@
 import { formatUnits, type PublicClient } from "viem";
 import { Clanker } from "clanker-sdk/v4";
 import { getTokenDecimals, getTokenSymbol } from "./token-validation.js";
-import { WETH_ADDRESS } from "./clanker-utils.js";
+import { WETH_ADDRESS } from 'clanker-sdk';
 import type { RewardRecipient } from './types';
 
 export async function getAvailableFees(

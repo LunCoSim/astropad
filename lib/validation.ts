@@ -2,7 +2,6 @@
  * Validation utilities for token configuration steps
  */
 
-import { VALIDATION_LIMITS } from './constants.js';
 import type { TokenConfig, ValidationResult } from './types.js';
 
 /**
@@ -32,7 +31,7 @@ export function validateExtensionsStep(): boolean {
 export function validateAdvancedStep(config: Pick<TokenConfig, 'fees'>): boolean {
   // Fee validation - check if userFeeBps is within valid range
   const feeBps = config.fees.userFeeBps;
-  return feeBps >= 0 && feeBps <= VALIDATION_LIMITS.MAX_FEE_BPS;
+  return feeBps >= 0 && feeBps <= 10000; // Changed from VALIDATION_LIMITS.MAX_FEE_BPS to 10000
 }
 
 /**
@@ -79,11 +78,11 @@ export function getStepValidationErrors(stepIndex: number, config: TokenConfig):
       if (feeBps < 0) {
         errors.push('Fee percentage cannot be negative');
       }
-      if (feeBps > VALIDATION_LIMITS.MAX_FEE_BPS) {
-        errors.push(`Fee percentage cannot exceed ${VALIDATION_LIMITS.MAX_FEE_BPS / 100}%`);
+      if (feeBps > 10000) { // Changed from VALIDATION_LIMITS.MAX_FEE_BPS to 10000
+        errors.push(`Fee percentage cannot exceed ${10000 / 100}%`);
       }
-      if (feeBps > 0 && feeBps < VALIDATION_LIMITS.MIN_FEE_BPS) {
-        errors.push(`Minimum fee is ${VALIDATION_LIMITS.MIN_FEE_BPS / 100}% if enabled`);
+      if (feeBps > 0 && feeBps < 100) { // Changed from VALIDATION_LIMITS.MIN_FEE_BPS to 100
+        errors.push(`Minimum fee is ${100 / 100}% if enabled`);
       }
       break;
   }
@@ -98,8 +97,8 @@ export function validateTokenName(name: string): ValidationResult {
   if (!name.trim()) {
     return { isValid: false, errors: ['Token name is required'], warnings: [] };
   }
-  if (name.length > VALIDATION_LIMITS.NAME_MAX_LENGTH) {
-    return { isValid: false, errors: [`Token name must be ${VALIDATION_LIMITS.NAME_MAX_LENGTH} characters or less`], warnings: [] };
+  if (name.length > 32) { // Changed from VALIDATION_LIMITS.NAME_MAX_LENGTH to 32
+    return { isValid: false, errors: [`Token name must be ${32} characters or less`], warnings: [] };
   }
   return { isValid: true, errors: [], warnings: [] };
 }
@@ -111,8 +110,8 @@ export function validateTokenSymbol(symbol: string): ValidationResult {
   if (!symbol.trim()) {
     return { isValid: false, errors: ['Token symbol is required'], warnings: [] };
   }
-  if (symbol.length > VALIDATION_LIMITS.SYMBOL_MAX_LENGTH) {
-    return { isValid: false, errors: [`Token symbol must be ${VALIDATION_LIMITS.SYMBOL_MAX_LENGTH} characters or less`], warnings: [] };
+  if (symbol.length > 10) { // Changed from VALIDATION_LIMITS.SYMBOL_MAX_LENGTH to 10
+    return { isValid: false, errors: [`Token symbol must be ${10} characters or less`], warnings: [] };
   }
   if (!/^[A-Z0-9]+$/.test(symbol)) {
     return { isValid: false, errors: ['Token symbol must contain only uppercase letters and numbers'], warnings: [] };

@@ -9,7 +9,8 @@ import { AdvancedConfigStep } from './steps/AdvancedConfigStep';
 import DeploymentStep from './steps/DeploymentStep';
 
 // Utilities
-import { WIZARD_STEPS, BASE_NETWORK, POOL_POSITIONS, CLANKER_V4_ADDRESSES, DEFAULT_CUSTOM_POSITION } from '../../lib/constants';
+import { WIZARD_STEPS, BASE_NETWORK, CLANKER_V4_ADDRESSES, DEFAULT_CUSTOM_POSITION } from '../../lib/constants';
+import { POOL_POSITIONS } from 'clanker-sdk';
 import { validateStep } from '../../lib/validation';
 
 

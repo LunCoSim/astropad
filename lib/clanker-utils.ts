@@ -15,17 +15,6 @@ import {
   A0X_ADDRESS
 } from 'clanker-sdk';
 
-export { 
-  WETH_ADDRESS, 
-  DEGEN_ADDRESS, 
-  NATIVE_ADDRESS, 
-  CLANKER_ADDRESS, 
-  ANON_ADDRESS,
-  HIGHER_ADDRESS,
-  CB_BTC_ADDRESS,
-  A0X_ADDRESS
-};
-
 // Supported token pairs for v4 pools
 export type TokenPair = 'WETH' | 'DEGEN' | 'NATIVE' | 'CLANKER' | 'ANON' | 'HIGHER' | 'BTC' | 'A0x';
 

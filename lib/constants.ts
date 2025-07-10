@@ -14,13 +14,13 @@ import {
   CLANKER_MEV_MODULE_V4,
   CLANKER_HOOK_STATIC_FEE_V4,
   CLANKER_HOOK_DYNAMIC_FEE_V4,
-  POOL_POSITIONS as SDK_POOL_POSITIONS,
-  FEE_CONFIGS as SDK_FEE_CONFIGS,
+  POOL_POSITIONS,
+  FEE_CONFIGS,
   DEFAULT_SUPPLY
 } from 'clanker-sdk';
 
 // Re-export key constants for convenience
-export { WETH_ADDRESS, DEFAULT_SUPPLY };
+// Remove all export { ... } re-exports for SDK constants
 
 export const WIZARD_STEPS = [
   {
@@ -80,10 +80,10 @@ export const BASE_NETWORK = {
 };
 
 // Re-export pool positions from SDK to maintain compatibility
-export const POOL_POSITIONS = SDK_POOL_POSITIONS;
+// Use imported names directly in this file
 
 // Re-export fee configs from SDK
-export const FEE_CONFIGS = SDK_FEE_CONFIGS;
+// Use imported names directly in this file
 
 export const DEFAULT_TOKEN_SUPPLY = 100_000_000_000; // 100 billion tokens
 
