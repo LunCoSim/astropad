@@ -60,6 +60,11 @@ export function TokenBasicsStep({ config, updateConfig, onNext }: TokenBasicsSte
     });
   };
 
+  // Patch updateConfig to always set interfaceName to 'astropad'
+  const patchedUpdateConfig = (updates: Partial<TokenConfig>) => {
+    updateConfig({ ...updates, interfaceName: 'astropad' });
+  };
+
   return (
     <div className="space-y-2xl animate-fade-in">
       {/* Enhanced Header */}
@@ -101,7 +106,7 @@ export function TokenBasicsStep({ config, updateConfig, onNext }: TokenBasicsSte
               <input
                 type="text"
                 value={config.name}
-                onChange={(e) => updateConfig({ name: e.target.value })}
+                onChange={(e) => patchedUpdateConfig({ name: e.target.value })}
                 placeholder="e.g., AstroPad Token"
                 className="input font-medium"
                 maxLength={50}
@@ -123,7 +128,7 @@ export function TokenBasicsStep({ config, updateConfig, onNext }: TokenBasicsSte
               <input
                 type="text"
                 value={config.symbol}
-                onChange={(e) => updateConfig({ symbol: e.target.value.toUpperCase() })}
+                onChange={(e) => patchedUpdateConfig({ symbol: e.target.value.toUpperCase() })}
                 placeholder="e.g., ASTRO"
                 className="input font-mono uppercase"
                 style={{ letterSpacing: '0.1em' }}
@@ -147,10 +152,7 @@ export function TokenBasicsStep({ config, updateConfig, onNext }: TokenBasicsSte
           <input
             type="text"
             value={config.tokenAdmin}
-            onChange={(e) => updateConfig({ 
-              tokenAdmin: e.target.value,
-              admin: e.target.value // Update legacy field too
-            })}
+            onChange={(e) => patchedUpdateConfig({ tokenAdmin: e.target.value })}
             placeholder="0x... (defaults to your connected wallet)"
             className="input font-mono text-sm"
           />
@@ -183,7 +185,7 @@ export function TokenBasicsStep({ config, updateConfig, onNext }: TokenBasicsSte
               <input
                 type="text"
                 value={config.image}
-                onChange={(e) => updateConfig({ image: e.target.value })}
+                onChange={(e) => patchedUpdateConfig({ image: e.target.value })}
                 placeholder="ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf..."
                 className="input font-mono text-sm"
               />
@@ -215,7 +217,7 @@ export function TokenBasicsStep({ config, updateConfig, onNext }: TokenBasicsSte
             <div className="relative">
               <textarea
                 value={config.description}
-                onChange={(e) => updateConfig({ description: e.target.value })}
+                onChange={(e) => patchedUpdateConfig({ description: e.target.value })}
                 placeholder="Describe your token project, its unique features, and what makes it special..."
                 className="input textarea"
                 rows={5}

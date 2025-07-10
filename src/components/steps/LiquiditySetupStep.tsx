@@ -6,6 +6,12 @@ import { BASE_NETWORK, POOL_POSITIONS } from '../../../lib/constants';
 import { validatePairToken } from '../../../lib/token-validation';
 import { addCustomPosition, removeCustomPosition, updateCustomPosition } from '../../../lib/array-utils';
 
+const POOL_POSITION_OPTIONS = [
+  { label: 'Standard', value: 'Standard', description: 'Single wide position for maximum liquidity.' },
+  { label: 'Project', value: 'Project', description: 'Multiple positions for project-style liquidity.' },
+  { label: 'Custom', value: 'Custom', description: 'Manually configure advanced positions.' },
+];
+
 interface LiquiditySetupStepProps {
   config: TokenConfig;
   updateConfig: (updates: Partial<TokenConfig>) => void;
@@ -18,6 +24,15 @@ export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }:
   const [pairTokenInfo, setPairTokenInfo] = useState<{symbol: string, decimals: number} | null>(null);
   const [pairTokenValidating, setPairTokenValidating] = useState(false);
   const [pairTokenValid, setPairTokenValid] = useState(false);
+
+  // Add state for selected pool position type
+  const [poolPositionType, setPoolPositionType] = useState<'Standard' | 'Project' | 'Custom'>(
+    config.pool.positions === POOL_POSITIONS.Project
+      ? 'Project'
+      : config.customPositions && config.customPositions.length > 0
+      ? 'Custom'
+      : 'Standard'
+  );
 
   const isValid = true; // Pool configuration is always valid with default values
 
@@ -237,6 +252,115 @@ export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }:
           </div>
         </div>
       </div>
+
+      {/* Pool Position Strategy */}
+      <div className="card card-hover animate-slide-up mt-xl">
+        <div className="flex items-center space-x-md mb-xl">
+          <div style={{ width: '3rem', height: '3rem', background: 'linear-gradient(135deg, var(--color-primary), var(--color-success))', borderRadius: 'var(--radius-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg style={{ width: '1.5rem', height: '1.5rem' }} className="text-primary" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 12H9v-2h2v2zm0-4H9V7h2v3z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-2xl font-bold text-primary">Pool Position Strategy</h3>
+            <p className="text-muted text-sm">Choose a preset or configure custom positions for your liquidity pool.</p>
+          </div>
+        </div>
+        <div className="space-y-md">
+          {POOL_POSITION_OPTIONS.map(opt => (
+            <label key={opt.value} className="flex items-center space-x-md cursor-pointer">
+              <input
+                type="radio"
+                name="poolPositionType"
+                value={opt.value}
+                checked={poolPositionType === opt.value}
+                onChange={() => {
+                  setPoolPositionType(opt.value as 'Standard' | 'Project' | 'Custom');
+                  if (opt.value === 'Standard') {
+                    updateConfig({ pool: { ...config.pool, positions: POOL_POSITIONS.Standard } });
+                  } else if (opt.value === 'Project') {
+                    updateConfig({ pool: { ...config.pool, positions: POOL_POSITIONS.Project } });
+                  }
+                  // For custom, don't update positions here
+                }}
+                className="mr-md"
+              />
+              <span className="font-semibold text-primary">{opt.label}</span>
+              <span className="text-muted text-xs">{opt.description}</span>
+            </label>
+          ))}
+          {poolPositionType === 'Project' && (
+            <div className="mt-md card animate-fade-in" style={{ background: 'var(--bg-surface)', padding: 'var(--spacing-md)' }}>
+              <div className="font-semibold text-primary mb-xs">How Project Liquidity is Spread:</div>
+              <ul className="text-sm text-muted space-y-xs list-disc pl-lg">
+                <li>10% in a tight range near the starting price (~$27K–$130K market cap) for initial trading.</li>
+                <li>50% spread broadly (~$130K–$50M) for general trading and price discovery.</li>
+                <li><b>+15% extra</b> concentrated in a mid-range (~$450K–$50M), providing additional depth where more trading is expected (overlaps with the 50% band).</li>
+                <li>20% covers a wide range (~$50M–$1.5B) for large price swings and long-term liquidity.</li>
+                <li><b>+5% extra</b> in the upper end (~$200M–$1.5B) to ensure liquidity even at extreme prices (overlaps with the 20% band).</li>
+              </ul>
+              <div className="text-xs text-secondary mt-xs">This strategy uses overlapping bands to concentrate more liquidity where it's most useful, balancing initial trading, price discovery, and long-term support for your token.</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Custom Positions (Advanced) */}
+      {poolPositionType === 'Custom' && (
+        <div className="card card-hover animate-slide-up mt-xl">
+          <div className="flex items-center space-x-md mb-xl">
+            <div style={{ width: '3rem', height: '3rem', background: 'linear-gradient(135deg, var(--color-primary), var(--color-success))', borderRadius: 'var(--radius-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg style={{ width: '1.5rem', height: '1.5rem' }} className="text-primary" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 12H9v-2h2v2zm0-4H9V7h2v3z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-2xl font-bold text-primary">Custom Pool Positions <span className='text-sm text-muted'>(Advanced)</span></h3>
+              <p className="text-muted text-sm">Add, edit, or remove custom liquidity positions for advanced market making strategies.</p>
+            </div>
+          </div>
+          <div className="space-y-md">
+            {config.customPositions && config.customPositions.length > 0 && config.customPositions.map((pos, idx) => (
+              <div key={idx} className="grid grid-3 gap-md items-center">
+                <input
+                  type="number"
+                  value={pos.tickLower}
+                  onChange={e => handleUpdateCustomPosition(idx, 'tickLower', Number(e.target.value))}
+                  placeholder="Tick Lower"
+                  className="input font-mono text-xs"
+                />
+                <input
+                  type="number"
+                  value={pos.tickUpper}
+                  onChange={e => handleUpdateCustomPosition(idx, 'tickUpper', Number(e.target.value))}
+                  placeholder="Tick Upper"
+                  className="input font-mono text-xs"
+                />
+                <input
+                  type="number"
+                  value={pos.positionBps}
+                  onChange={e => handleUpdateCustomPosition(idx, 'positionBps', Number(e.target.value))}
+                  placeholder="Position Bps"
+                  className="input font-mono text-xs"
+                  min={1}
+                  max={10000}
+                />
+                <button type="button" onClick={() => handleRemoveCustomPosition(idx)} className="btn btn-secondary" style={{ padding: 'var(--spacing-sm)' }}>
+                  <svg style={{ width: '1rem', height: '1rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+            <button type="button" onClick={handleAddCustomPosition} className="btn btn-secondary text-sm mt-md">
+              <svg style={{ width: '1rem', height: '1rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add Custom Position
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Navigation Buttons */}
       <div className="flex justify-between items-center mt-2xl">

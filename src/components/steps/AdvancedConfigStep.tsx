@@ -195,6 +195,11 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
   const defaultStatic = { clankerFeeBps: 100, pairedFeeBps: 100, customDistribution: false };
   const defaultDynamic = { baseFee: 100, maxFee: 300, referenceTickFilterPeriod: 3600, resetPeriod: 86400, resetTickFilter: 500, feeControlNumerator: 100, decayFilterBps: 9500 };
 
+  // Patch updateConfig to always set interfaceName to 'astropad'
+  const patchedUpdateConfig = (updates: Partial<TokenConfig>) => {
+    updateConfig({ ...updates, interfaceName: 'astropad' });
+  };
+
   return (
     <div className="space-y-2xl animate-fade-in">
       {/* Header */}
@@ -344,7 +349,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
                 <input
                   type="text"
                   value={config.mev.customModule || ''}
-                  onChange={e => updateConfig({ mev: { ...config.mev, customModule: e.target.value } })}
+                  onChange={e => patchedUpdateConfig({ mev: { ...config.mev, customModule: e.target.value } })}
                   placeholder="0x... (optional)"
                   className="input font-mono text-xs"
                 />
@@ -360,7 +365,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
                 <input
                   type="text"
                   value={config.mev.customData || ''}
-                  onChange={e => updateConfig({ mev: { ...config.mev, customData: e.target.value } })}
+                  onChange={e => patchedUpdateConfig({ mev: { ...config.mev, customData: e.target.value } })}
                   placeholder="0x... (optional)"
                   className="input font-mono text-xs"
                 />
@@ -423,7 +428,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
             <input
               type="checkbox"
               checked={config.advanced.customHookData}
-              onChange={e => updateConfig({ advanced: { ...config.advanced, customHookData: e.target.checked } })}
+              onChange={e => patchedUpdateConfig({ advanced: { ...config.advanced, customHookData: e.target.checked } })}
               className="rounded"
             />
             <span className="form-label">Enable Advanced Pool/Hook Configuration</span>
@@ -440,7 +445,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
               <input
                 type="text"
                 value={config.advanced.hookData || ''}
-                onChange={e => updateConfig({ advanced: { ...config.advanced, hookData: e.target.value } })}
+                onChange={e => patchedUpdateConfig({ advanced: { ...config.advanced, hookData: e.target.value } })}
                 placeholder="0x... (optional)"
                 className="input font-mono text-xs"
               />
@@ -458,7 +463,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
                   <input
                     type="number"
                     value={config.fees.static?.clankerFeeBps || 100}
-                    onChange={e => updateConfig({ fees: { ...config.fees, static: { ...defaultStatic, ...config.fees.static, clankerFeeBps: Number(e.target.value) } } })}
+                    onChange={e => patchedUpdateConfig({ fees: { ...config.fees, static: { ...defaultStatic, ...config.fees.static, clankerFeeBps: Number(e.target.value) } } })}
                     min={0}
                     max={2000}
                     className="input"
@@ -472,7 +477,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
                   <input
                     type="number"
                     value={config.fees.static?.pairedFeeBps || 100}
-                    onChange={e => updateConfig({ fees: { ...config.fees, static: { ...defaultStatic, ...config.fees.static, pairedFeeBps: Number(e.target.value) } } })}
+                    onChange={e => patchedUpdateConfig({ fees: { ...config.fees, static: { ...defaultStatic, ...config.fees.static, pairedFeeBps: Number(e.target.value) } } })}
                     min={0}
                     max={2000}
                     className="input"
@@ -491,7 +496,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
                     <input
                       type="number"
                       value={config.fees.dynamic?.baseFee || 100}
-                      onChange={e => updateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, baseFee: Number(e.target.value) } } })}
+                      onChange={e => patchedUpdateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, baseFee: Number(e.target.value) } } })}
                       min={25}
                       max={2000}
                       className="input"
@@ -505,7 +510,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
                     <input
                       type="number"
                       value={config.fees.dynamic?.maxFee || 300}
-                      onChange={e => updateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, maxFee: Number(e.target.value) } } })}
+                      onChange={e => patchedUpdateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, maxFee: Number(e.target.value) } } })}
                       min={0}
                       max={3000}
                       className="input"
@@ -521,7 +526,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
                     <input
                       type="number"
                       value={config.fees.dynamic?.referenceTickFilterPeriod || 3600}
-                      onChange={e => updateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, referenceTickFilterPeriod: Number(e.target.value) } } })}
+                      onChange={e => patchedUpdateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, referenceTickFilterPeriod: Number(e.target.value) } } })}
                       min={1}
                       className="input"
                     />
@@ -534,7 +539,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
                     <input
                       type="number"
                       value={config.fees.dynamic?.resetPeriod || 86400}
-                      onChange={e => updateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, resetPeriod: Number(e.target.value) } } })}
+                      onChange={e => patchedUpdateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, resetPeriod: Number(e.target.value) } } })}
                       min={1}
                       className="input"
                     />
@@ -549,7 +554,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
                     <input
                       type="number"
                       value={config.fees.dynamic?.resetTickFilter || 500}
-                      onChange={e => updateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, resetTickFilter: Number(e.target.value) } } })}
+                      onChange={e => patchedUpdateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, resetTickFilter: Number(e.target.value) } } })}
                       min={0}
                       className="input"
                     />
@@ -562,7 +567,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
                     <input
                       type="number"
                       value={config.fees.dynamic?.feeControlNumerator || 100}
-                      onChange={e => updateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, feeControlNumerator: Number(e.target.value) } } })}
+                      onChange={e => patchedUpdateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, feeControlNumerator: Number(e.target.value) } } })}
                       min={1}
                       className="input"
                     />
@@ -576,7 +581,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
                   <input
                     type="number"
                     value={config.fees.dynamic?.decayFilterBps || 9500}
-                    onChange={e => updateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, decayFilterBps: Number(e.target.value) } } })}
+                    onChange={e => patchedUpdateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, decayFilterBps: Number(e.target.value) } } })}
                     min={0}
                     max={10000}
                     className="input"
@@ -634,38 +639,25 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
       <div className="card card-hover">
         <div className="flex items-center space-x-md mb-lg">
           <h3 className="text-xl font-bold text-primary">Advanced TokenConfig Fields</h3>
-          <InfoTooltip content="Set advanced deployment fields like salt (for deterministic/vanity deploys) and arbitrary context (for provenance, metadata, or integrations)." />
+          <InfoTooltip content="Set advanced deployment fields like custom salt for vanity address and context fields for provenance or integrations." />
         </div>
         <div className="space-y-lg">
           <div className="form-group">
             <label className="form-label">
-              Salt (bytes32, optional)
+              Vanity Custom Salt (bytes32, optional)
               <InfoTooltip content="Advanced: Set a custom salt for deterministic or vanity address deployment. Leave blank for random. Use 0x... format (32 bytes)." />
             </label>
             <input
               type="text"
-              value={config.salt || ''}
-              onChange={e => updateConfig({ salt: e.target.value })}
+              value={config.vanity.customSalt || ''}
+              onChange={e => patchedUpdateConfig({ vanity: { ...config.vanity, customSalt: e.target.value } })}
               placeholder="0x... (optional, 32 bytes)"
               className="input font-mono text-xs"
               maxLength={66}
             />
             <div className="form-hint">Leave blank unless you want a specific deterministic or vanity address. Must be 0x-prefixed, 64 hex chars (32 bytes).</div>
           </div>
-          <div className="form-group">
-            <label className="form-label">
-              Context (JSON, optional)
-              <InfoTooltip content={'Advanced: Arbitrary context for provenance, metadata, or integrations. Example: {"interface":"SDK","platform":"twitter"}'} />
-            </label>
-            <textarea
-              value={config.context || ''}
-              onChange={e => updateConfig({ context: e.target.value })}
-              placeholder='{"interface":"SDK","platform":"twitter"} (optional)'
-              className="input font-mono text-xs"
-              rows={3}
-            />
-            <div className="form-hint">Leave blank for default. Must be valid JSON if set. Used for provenance and integrations.</div>
-          </div>
+          {/* Context fields hidden for astropad */}
         </div>
       </div>
 
@@ -684,7 +676,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
             <input
               type="text"
               value={config.locker.locker}
-              onChange={e => updateConfig({ locker: { ...config.locker, locker: e.target.value } })}
+              onChange={e => patchedUpdateConfig({ locker: { ...config.locker, locker: e.target.value } })}
               className="input font-mono text-xs"
               placeholder="0x..."
             />
@@ -700,36 +692,12 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
             <input
               type="text"
               value={config.locker.lockerData}
-              onChange={e => updateConfig({ locker: { ...config.locker, lockerData: e.target.value } })}
+              onChange={e => patchedUpdateConfig({ locker: { ...config.locker, lockerData: e.target.value } })}
               className="input font-mono text-xs"
               placeholder="0x... (optional)"
             />
             <div className="text-xs text-muted mt-sm">
               Leave blank unless your locker requires custom data.
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-primary mb-sm">
-              Reward Admins (comma-separated addresses)
-              <InfoTooltip content="Addresses that can manage reward recipients. Separate multiple addresses with commas." />
-            </label>
-            <input
-              type="text"
-              value={config.rewards.recipients.map(r => r.admin).join(', ')}
-              onChange={e => {
-                const admins = e.target.value.split(',').map(a => a.trim());
-                updateConfig({
-                  rewards: {
-                    ...config.rewards,
-                    recipients: config.rewards.recipients.map((r, i) => ({ ...r, admin: admins[i] || r.admin }))
-                  }
-                });
-              }}
-              className="input font-mono text-xs"
-              placeholder="0x..., 0x..., ..."
-            />
-            <div className="text-xs text-muted mt-sm">
-              Each reward recipient should have an admin address.
             </div>
           </div>
           <div>
@@ -742,7 +710,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
               value={config.rewards.recipients.map(r => r.recipient).join(', ')}
               onChange={e => {
                 const recipients = e.target.value.split(',').map(a => a.trim());
-                updateConfig({
+                patchedUpdateConfig({
                   rewards: {
                     ...config.rewards,
                     recipients: config.rewards.recipients.map((r, i) => ({ ...r, recipient: recipients[i] || r.recipient }))
@@ -755,6 +723,79 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
             <div className="text-xs text-muted mt-sm">
               Each reward recipient address will receive a share of rewards.
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Extensions (Advanced) */}
+      <div className="card card-hover">
+        <div className="flex items-center space-x-md mb-lg">
+          <h3 className="text-xl font-bold text-primary">Extensions (Advanced)</h3>
+          <InfoTooltip content="Add arbitrary extensions to your token deployment. For advanced users and integrations only." />
+        </div>
+        <div className="space-y-md">
+          {(config.advanced.customExtensions || []).map((ext, idx) => (
+            <div key={idx} className="grid grid-4 gap-md items-center">
+              <input type="text" value={ext.address || ''} onChange={e => {
+                const updated = [...config.advanced.customExtensions];
+                updated[idx] = { ...updated[idx], address: e.target.value };
+                patchedUpdateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
+              }} placeholder="Extension Address" className="input font-mono text-xs" />
+              <input type="number" value={ext.msgValue || ''} onChange={e => {
+                const updated = [...config.advanced.customExtensions];
+                updated[idx] = { ...updated[idx], msgValue: Number(e.target.value) };
+                patchedUpdateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
+              }} placeholder="msg.value" className="input font-mono text-xs" />
+              <input type="number" value={ext.extensionBps || ''} onChange={e => {
+                const updated = [...config.advanced.customExtensions];
+                updated[idx] = { ...updated[idx], extensionBps: Number(e.target.value) };
+                patchedUpdateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
+              }} placeholder="Extension Bps" className="input font-mono text-xs" />
+              <input type="text" value={ext.extensionData || ''} onChange={e => {
+                const updated = [...config.advanced.customExtensions];
+                updated[idx] = { ...updated[idx], extensionData: e.target.value };
+                patchedUpdateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
+              }} placeholder="Extension Data (bytes)" className="input font-mono text-xs" />
+              <button type="button" onClick={() => {
+                const updated = [...config.advanced.customExtensions];
+                updated.splice(idx, 1);
+                patchedUpdateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
+              }} className="btn btn-secondary" style={{ padding: 'var(--spacing-sm)' }}>✕</button>
+            </div>
+          ))}
+          <button type="button" onClick={() => {
+            const updated = [...(config.advanced.customExtensions || []), { address: '', msgValue: 0, extensionBps: 0, extensionData: '' }];
+            patchedUpdateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
+          }} className="btn btn-secondary text-sm mt-md">
+            + Add Extension
+          </button>
+        </div>
+      </div>
+      {/* Gas/Fee Estimation Controls (Advanced) */}
+      <div className="card card-hover">
+        <div className="flex items-center space-x-md mb-lg">
+          <h3 className="text-xl font-bold text-primary">Gas/Fee Estimation Controls (Advanced)</h3>
+          <InfoTooltip content="Override gas estimation or enable gas optimization. For advanced users only." />
+        </div>
+        <div className="space-y-md">
+          <label className="flex items-center space-x-md cursor-pointer">
+            <input
+              type="checkbox"
+              checked={config.advanced.gasOptimization}
+              onChange={e => patchedUpdateConfig({ advanced: { ...config.advanced, gasOptimization: e.target.checked } })}
+              className="rounded"
+            />
+            <span className="form-label">Enable Gas Optimization</span>
+          </label>
+          <div className="form-group">
+            <label className="form-label">Custom Gas Limit <InfoTooltip content='Advanced: Set a custom gas limit for deployment. Leave blank for automatic estimation.' /></label>
+            <input
+              type="number"
+              value={config.advanced.customGasLimit || ''}
+              onChange={e => patchedUpdateConfig({ advanced: { ...config.advanced, customGasLimit: Number(e.target.value) } })}
+              placeholder="e.g., 5000000 (optional)"
+              className="input font-mono text-xs"
+            />
           </div>
         </div>
       </div>

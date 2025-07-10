@@ -125,18 +125,7 @@ export function TokenDeployWizard({
         hookData: undefined,
         customExtensions: [],
         gasOptimization: false
-      },
-      admin: address || '',
-      pairTokenType: 'WETH',
-      customPairTokenAddress: '',
-      startingMarketCap: '',
-      poolPositionType: 'Standard',
-      customPositions: [DEFAULT_CUSTOM_POSITION],
-      rewardRecipients: [{
-        recipient: address || '',
-        admin: address || '',
-        bps: 10000
-      }]
+      }
     };
   });
 
@@ -268,24 +257,13 @@ export function TokenDeployWizard({
         hookData: undefined,
         customExtensions: [],
         gasOptimization: false
-      },
-      admin: address || '',
-      pairTokenType: 'WETH',
-      customPairTokenAddress: '',
-      startingMarketCap: '',
-      poolPositionType: 'Standard',
-      customPositions: [DEFAULT_CUSTOM_POSITION],
-      rewardRecipients: [{
-        recipient: address || '',
-        admin: address || '',
-        bps: 10000
-      }]
+      }
     });
     setShowDraftModal(false);
   };
 
   const updateConfig = (updates: Partial<TokenConfig>) => {
-    setConfig(prev => ({ ...prev, ...updates }));
+    setConfig(prev => ({ ...prev, ...updates, interfaceName: 'astropad' }));
   };
 
   const isStepValid = (stepIndex: number): boolean => {

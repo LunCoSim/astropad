@@ -73,15 +73,7 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
   }, [config.devBuy?.enabled, devBuyEstimate?.tokensReceived]);
 
   // Ensure all extension configs are always defined for safe access
-  const presale = config.presale || {
-    enabled: false,
-    minEthGoal: 1,
-    maxEthGoal: 10,
-    presaleDuration: 7 * 24 * 60 * 60,
-    recipient: config.tokenAdmin || '',
-    lockupDuration: 0,
-    vestingDuration: 0,
-  };
+  // Removed presale config as presale is unsupported in v4
   const vault = config.vault || {
     enabled: false,
     percentage: 5,
@@ -117,131 +109,7 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
         </p>
       </div>
 
-      {/* Presale Extension Configuration */}
-      <div className="card card-hover">
-        <div className="flex items-center space-x-md mb-lg">
-          <h3 className="text-xl font-bold text-primary">Presale Extension</h3>
-          <InfoTooltip content="Enable a presale for your token. Users can buy in with ETH before launch. Tokens are distributed after the presale ends and goals are met. Supports lockup and vesting." />
-        </div>
-        <div className="space-y-lg">
-          <label className="flex items-center space-x-md cursor-pointer">
-            <input
-              type="checkbox"
-              checked={presale.enabled}
-              onChange={e => updateConfig({ presale: { ...presale, enabled: e.target.checked } })}
-              className="rounded"
-            />
-            <span className="form-label">Enable Presale</span>
-          </label>
-          {presale.enabled && (
-            <div className="space-y-lg">
-              <div className="grid grid-2 gap-lg">
-                <div className="form-group">
-                  <label className="form-label">
-                    Min ETH Goal
-                    <InfoTooltip content="Minimum ETH required for the presale to succeed. If not reached, presale fails and funds are refundable." />
-                  </label>
-                  <input
-                    type="number"
-                    value={presale.minEthGoal}
-                    onChange={e => updateConfig({ presale: { ...presale, minEthGoal: Number(e.target.value) } })}
-                    min="0"
-                    step="0.01"
-                    className="input"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">
-                    Max ETH Cap
-                    <InfoTooltip content="Maximum ETH that can be raised. Presale ends early if this is reached." />
-                  </label>
-                  <input
-                    type="number"
-                    value={presale.maxEthGoal}
-                    onChange={e => updateConfig({ presale: { ...presale, maxEthGoal: Number(e.target.value) } })}
-                    min={presale.minEthGoal}
-                    step="0.01"
-                    className="input"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-2 gap-lg">
-                <div className="form-group">
-                  <label className="form-label">
-                    Presale Duration (days)
-                    <InfoTooltip content="How long the presale will last. Users can buy in during this period." />
-                  </label>
-                  <input
-                    type="number"
-                    value={presale.presaleDuration / (24 * 60 * 60)}
-                    onChange={e => updateConfig({ presale: { ...presale, presaleDuration: Number(e.target.value) * 24 * 60 * 60 } })}
-                    min="1"
-                    max="42"
-                    className="input"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">
-                    Presale Recipient
-                    <InfoTooltip content="Address that will receive the raised ETH if the presale succeeds." />
-                  </label>
-                  <input
-                    type="text"
-                    value={presale.recipient}
-                    onChange={e => updateConfig({ presale: { ...presale, recipient: e.target.value } })}
-                    placeholder="0x... recipient address"
-                    className="input font-mono text-sm"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-2 gap-lg">
-                <div className="form-group">
-                  <label className="form-label">
-                    Lockup Duration (days)
-                    <InfoTooltip content="How long presale tokens are locked before claimable." />
-                  </label>
-                  <input
-                    type="number"
-                    value={presale.lockupDuration / (24 * 60 * 60)}
-                    onChange={e => updateConfig({ presale: { ...presale, lockupDuration: Number(e.target.value) * 24 * 60 * 60 } })}
-                    min="0"
-                    className="input"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">
-                    Vesting Duration (days)
-                    <InfoTooltip content="After lockup, tokens vest linearly over this period." />
-                  </label>
-                  <input
-                    type="number"
-                    value={presale.vestingDuration / (24 * 60 * 60)}
-                    onChange={e => updateConfig({ presale: { ...presale, vestingDuration: Number(e.target.value) * 24 * 60 * 60 } })}
-                    min="0"
-                    className="input"
-                  />
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">
-                  ETH Value to Send (msg.value)
-                  <InfoTooltip content="Advanced: Amount of ETH to send with the presale extension call. Usually 0. Only change if instructed by advanced documentation." />
-                </label>
-                <input
-                  type="number"
-                  value={presale.msgValue ?? 0}
-                  onChange={e => updateConfig({ presale: { ...presale, msgValue: Number(e.target.value) } })}
-                  min="0"
-                  step="0.0001"
-                  className="input font-mono"
-                  placeholder="0"
-                />
-                <div className="form-hint">Leave as 0 unless you know you need to send ETH with the presale extension.</div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Removed Presale Extension Configuration as presale is unsupported in v4 */}
 
       {/* Vault Configuration */}
       <div className="card card-hover">
@@ -361,6 +229,16 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                 </div>
               </div>
               <div className="form-group">
+                <label className="form-label">Airdrop Merkle Root <InfoTooltip content='Advanced: Override the auto-generated merkle root for the airdrop. Use with caution.' /></label>
+                <input
+                  type="text"
+                  value={airdrop.merkleRoot}
+                  onChange={e => updateConfig({ airdrop: { ...defaultAirdrop, ...airdrop, merkleRoot: e.target.value } })}
+                  placeholder="0x... (optional, advanced)"
+                  className="input font-mono text-xs"
+                />
+              </div>
+              <div className="form-group">
                 <label className="form-label">Airdrop Recipients</label>
                 <div className="space-y-md">
                   {airdrop.entries.map((entry, index) => (
@@ -452,16 +330,15 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                     type="number"
                     value={(config.devBuy?.amount ?? defaultDevBuy.amount)}
                     onChange={(e) => updateConfig({ devBuy: { ...defaultDevBuy, ...(config.devBuy ?? {}), amount: Number(e.target.value) } })}
-                    min="0"
-                    step="0.0001"
+                    min="0.00001"
+                    step="0.00001"
                     className="input font-mono"
-                    placeholder={config.pairTokenType === 'WETH' ? '0.0001' : '1000'}
+                    placeholder={config.pairTokenType === 'WETH' ? '0.00001' : '1000'}
                   />
                   <div className="form-hint">
-                    Minimum: 0.0001 {config.pairTokenType === 'WETH' ? 'ETH' : (pairTokenInfo?.symbol || 'TOKEN')} (avoids precision issues)
+                    Minimum: 0.00001 {config.pairTokenType === 'WETH' ? 'ETH' : (pairTokenInfo?.symbol || 'TOKEN')} (avoids precision issues)
                   </div>
                 </div>
-
                 <div className="form-group">
                   <label className="form-label">Recipient Address</label>
                   <input
@@ -472,6 +349,29 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                     className="input font-mono text-sm"
                   />
                 </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Amount Out Min <InfoTooltip content='Advanced: Minimum amount of tokens to receive from the dev buy swap. Use for slippage protection.' /></label>
+                <input
+                  type="number"
+                  value={devBuy.amountOutMin}
+                  onChange={e => updateConfig({ devBuy: { ...devBuy, amountOutMin: Number(e.target.value) } })}
+                  min="0"
+                  step="0.0001"
+                  className="input font-mono text-xs"
+                  placeholder="0 (optional, advanced)"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Pool Key (Advanced)</label>
+                <div className="grid grid-2 gap-md">
+                  <input type="text" value={devBuy.poolKey?.currency0 || ''} onChange={e => updateConfig({ devBuy: { ...devBuy, poolKey: { ...devBuy.poolKey, currency0: e.target.value } } })} placeholder="Currency 0 (address)" className="input font-mono text-xs" />
+                  <input type="text" value={devBuy.poolKey?.currency1 || ''} onChange={e => updateConfig({ devBuy: { ...devBuy, poolKey: { ...devBuy.poolKey, currency1: e.target.value } } })} placeholder="Currency 1 (address)" className="input font-mono text-xs" />
+                  <input type="number" value={devBuy.poolKey?.fee || ''} onChange={e => updateConfig({ devBuy: { ...devBuy, poolKey: { ...devBuy.poolKey, fee: Number(e.target.value) } } })} placeholder="Fee" className="input font-mono text-xs" />
+                  <input type="number" value={devBuy.poolKey?.tickSpacing || ''} onChange={e => updateConfig({ devBuy: { ...devBuy, poolKey: { ...devBuy.poolKey, tickSpacing: Number(e.target.value) } } })} placeholder="Tick Spacing" className="input font-mono text-xs" />
+                  <input type="text" value={devBuy.poolKey?.hooks || ''} onChange={e => updateConfig({ devBuy: { ...devBuy, poolKey: { ...devBuy.poolKey, hooks: e.target.value } } })} placeholder="Hooks (address)" className="input font-mono text-xs" />
+                </div>
+                <div className="form-hint">Leave blank for default pool key. Only use if you need to override pool parameters.</div>
               </div>
 
               {devBuyEstimate && (
