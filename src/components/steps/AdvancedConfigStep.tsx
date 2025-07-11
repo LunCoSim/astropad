@@ -1,6 +1,6 @@
 import React from 'react';
 import type { TokenConfig, RewardRecipient, FeeDistributionValidation } from '../../../lib/types.js';
-import { VALIDATION_LIMITS } from '../../../lib/constants.js';
+import { VALIDATION_LIMITS } from '../../../lib/clanker-utils';
 import { calculateFeeDistribution, getFeeDisplayInfo } from '../../../lib/fees.js';
 import { InfoTooltip } from '../ui/InfoTooltip.js';
 import FeeCollectorsManager from '../ui/FeeCollectorsManager.js';

@@ -2,9 +2,13 @@ import { useState, useEffect } from 'react';
 import { usePublicClient } from 'wagmi';
 import type { TokenConfig } from '../../../lib/types';
 import { InfoTooltip } from '../ui/InfoTooltip';
-import { BASE_NETWORK, POOL_POSITIONS } from '../../../lib/constants';
-import { validatePairToken } from '../../../lib/token-validation';
-import { addCustomPosition, removeCustomPosition, updateCustomPosition } from '../../../lib/array-utils';
+
+// Updated imports
+import { BASE_NETWORK } from '../../../lib/clanker-utils';
+import { POOL_POSITIONS } from 'clanker-sdk';
+
+import { validatePairToken } from '../../../lib/validation';
+import { addCustomPosition, removeCustomPosition, updateCustomPosition } from '../../../lib/clanker-utils';
 
 const POOL_POSITION_OPTIONS = [
   { label: 'Standard', value: 'Standard', description: 'Single wide position for maximum liquidity.' },

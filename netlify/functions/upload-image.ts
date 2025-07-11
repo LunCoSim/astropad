@@ -44,6 +44,7 @@ export const handler = async (event: any, context: any) => {
   logs.push('[handler] Function invoked');
   logs.push(`[handler] Method: ${event.httpMethod}`);
   logs.push(`[handler] Headers: ${JSON.stringify(event.headers)}`);
+  logs.push(`[handler] Request from: ${event.headers['x-forwarded-for'] || 'unknown'}`);
 
   if (event.httpMethod === 'OPTIONS') {
     logs.push('[handler] Handling OPTIONS');
@@ -89,6 +90,7 @@ export const handler = async (event: any, context: any) => {
     }
   } catch (err) {
     logs.push(`[handler] Exception parsing form: ${String(err)}`);
+    logs.push(`Error details: ${err.stack}`);
     return {
       statusCode: 400,
       headers: { 'Access-Control-Allow-Origin': '*' },
@@ -108,6 +110,7 @@ export const handler = async (event: any, context: any) => {
     logs.push(`[handler] Pinata upload result: ${JSON.stringify(result)}`);
   } catch (err) {
     logs.push(`[handler] Pinata upload exception: ${String(err)}`);
+    logs.push(`Error details: ${err.stack}`);
     return {
       statusCode: 500,
       headers: { 'Access-Control-Allow-Origin': '*' },

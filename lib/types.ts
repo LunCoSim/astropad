@@ -24,6 +24,9 @@ export interface TokenConfig {
   socialId: string;
   originatingChainId: number; // Chain ID for cross-chain tokens
   
+  // Liquidity Setup
+  startingMarketCap?: number;
+
   // Pool Configuration (v4)
   pool: {
     pairedToken: string; // Address of the token to pair with (usually WETH)
@@ -72,14 +75,15 @@ export interface TokenConfig {
     enabled: boolean;
     amount: number; // Amount of paired token to spend on initial buy (ETH for WETH, or custom token)
     poolKey?: {
-      currency0: string;
-      currency1: string;
-      fee: number;
-      tickSpacing: number;
-      hooks: string;
+      currency0?: string;
+      currency1?: string;
+      fee?: number;
+      tickSpacing?: number;
+      hooks?: string;
     };
     amountOutMin: number; // Min amount for ETH->PAIR swap if not WETH paired
     recipient?: string; // Who receives the dev buy tokens (defaults to tokenAdmin)
+    estimatedTokens?: number;
   };
   
   // Fee Configuration (v4 with multiple collectors)
@@ -120,7 +124,7 @@ export interface TokenConfig {
   advanced: {
     customHookData: boolean; // Whether to use custom hook data
     hookData?: string; // Custom hook data if enabled
-    customExtensions: string[]; // Array of custom extension addresses
+    customExtensions: { address: string; msgValue: number; extensionBps: number; extensionData: string; }[]; // Array of custom extension addresses
     gasOptimization: boolean; // Whether to optimize for gas
   };
   
@@ -141,6 +145,13 @@ export interface TokenConfig {
     claimableTokens?: number; // Tokens user can claim
     presaleId?: number; // Presale ID (if tracked)
   };
+
+  // UI-specific fields for pair selection
+  pairTokenType?: 'WETH' | 'custom';
+  customPairTokenAddress?: string;
+
+  // Custom positions for UI (separate from pool.positions)
+  customPositions?: PoolPosition[];
 
   // NOTE: Legacy fields removed - now v4-only
 }

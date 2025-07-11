@@ -13,9 +13,9 @@ export function calculateDevBuyTokens(
   marketCapEth: number,
   totalTokenSupply: number = 100_000_000_000 // 100 billion default supply
 ): DevBuyResult {
-  if (devBuyEthAmount <= 0 || marketCapEth <= 0) {
-    return { tokensReceived: 0, priceImpact: 0, newPrice: 0, effectivePrice: 0 };
-  }
+  if (devBuyEthAmount <= 0) throw new Error('Dev buy amount must be positive');
+  if (marketCapEth <= 0) throw new Error('Market cap must be positive');
+  if (totalTokenSupply <= 0) throw new Error('Total supply must be positive');
 
   // In Clanker v4, the dev buy is a normal swap that happens AFTER liquidity is created
   // Initial liquidity pool setup (assuming no vault/airdrop extensions for simplicity)
@@ -53,9 +53,8 @@ export function calculateDevBuyTokens(
  * Calculate estimated token amounts for dev buy (simplified version)
  */
 export function calculateDevBuyEstimate(amount: number, marketCap: number) {
-  if (amount <= 0 || marketCap <= 0) {
-    return null;
-  }
+  if (amount <= 0) throw new Error('Dev buy amount must be positive');
+  if (marketCap <= 0) throw new Error('Market cap must be positive');
   // Assume total supply is 100,000,000,000 tokens
   const totalSupply = 100_000_000_000;
   // Initial pool is marketCap worth of paired token and totalSupply tokens

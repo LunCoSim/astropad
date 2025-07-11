@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { TokenConfig } from '../../../lib/types';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { ImageUpload } from '../ui/ImageUpload';
-import { addSocialUrl, removeSocialUrl, updateSocialUrl, addAuditUrl, removeAuditUrl, updateAuditUrl } from '../../../lib/array-utils';
+import { addSocialUrl, removeSocialUrl, updateSocialUrl, addAuditUrl, removeAuditUrl, updateAuditUrl } from '../../../lib/clanker-utils';
 
 interface TokenBasicsStepProps {
   config: TokenConfig;

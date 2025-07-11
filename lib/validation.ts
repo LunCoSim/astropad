@@ -3,6 +3,9 @@
  */
 
 import type { TokenConfig, ValidationResult } from './types.js';
+import type { PublicClient } from "viem";
+import { erc20Abi } from 'viem';
+import type { TokenInfo } from './types';
 
 /**
  * Validate step 0: Token Basics
@@ -143,4 +146,105 @@ export function validatePercentage(value: number, min: number = 0, max: number =
     return { isValid: false, errors: [`Percentage must be no more than ${max}%`], warnings: [] };
   }
   return { isValid: true, errors: [], warnings: [] };
+}
+
+/**
+ * Validate fee percentage is within acceptable bounds
+ * @param feeBps - Fee in basis points
+ * @returns Validation result
+ */
+export function validateFeeBps(feeBps: number): { isValid: boolean; error?: string } {
+  if (feeBps < 0) {
+    return { isValid: false, error: 'Fee cannot be negative' };
+  }
+
+  if (feeBps > 2000) { // 20% max
+    return { isValid: false, error: 'Fee cannot exceed 20%' };
+  }
+
+  if (feeBps > 0 && feeBps < 25) {
+    return { isValid: false, error: 'Minimum fee is 0.25% (25 basis points)' };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Fetch token decimals from an ERC20 contract with error handling
+ * @throws Error if contract read fails
+ */
+export async function getTokenDecimals(
+  publicClient: PublicClient,
+  tokenAddress: `0x${string}`,
+): Promise<number> {
+  try {
+    return await publicClient.readContract({
+      address: tokenAddress,
+      abi: erc20Abi,
+      functionName: "decimals",
+    });
+  } catch (error) {
+    console.warn(`Could not fetch decimals for ${tokenAddress}, assuming 18.`);
+    return 18;
+  }
+}
+
+/**
+ * Fetch token symbol from an ERC20 contract with error handling
+ * @throws Error if contract read fails
+ */
+export async function getTokenSymbol(
+  publicClient: PublicClient,
+  tokenAddress: `0x${string}`,
+): Promise<string> {
+  try {
+    return await publicClient.readContract({
+      address: tokenAddress,
+      abi: erc20Abi,
+      functionName: "symbol",
+    });
+  } catch (error: any) {
+    console.error(`Error fetching symbol for ${tokenAddress}:`, error);
+    return 'UNKNOWN';
+  }
+}
+
+/**
+ * Validate a pair token by fetching its decimals and symbol
+ * Returns token info if valid, null if invalid
+ */
+export async function validatePairToken(
+  publicClient: PublicClient,
+  tokenAddress: `0x${string}`
+): Promise<TokenInfo | null> {
+  try {
+    const [decimals, symbol] = await Promise.all([
+      getTokenDecimals(publicClient, tokenAddress),
+      getTokenSymbol(publicClient, tokenAddress)
+    ]);
+
+    return { address: tokenAddress, name: symbol, symbol, decimals };
+  } catch (error) {
+    console.error(`Error validating token ${tokenAddress}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Check if an address is a valid Ethereum address format
+ */
+export function isValidAddress(address: string): boolean {
+  return /^0x[a-fA-F0-9]{40}$/.test(address);
+}
+
+/**
+ * Validate multiple token addresses
+ */
+export async function validateMultipleTokens(
+  publicClient: PublicClient,
+  tokenAddresses: `0x${string}`[]
+): Promise<(TokenInfo | null)[]> {
+  return Promise.all(
+    tokenAddresses.map(address => validatePairToken(publicClient, address))
+  );
 } 

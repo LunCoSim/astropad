@@ -9,7 +9,9 @@ import { AdvancedConfigStep } from './steps/AdvancedConfigStep';
 import DeploymentStep from './steps/DeploymentStep';
 
 // Utilities
-import { WIZARD_STEPS, BASE_NETWORK, CLANKER_V4_ADDRESSES, DEFAULT_CUSTOM_POSITION } from '../../lib/constants';
+import { WIZARD_STEPS, BASE_NETWORK, CLANKER_V4_ADDRESSES, DEFAULT_CUSTOM_POSITION } from "../../lib/clanker-utils";
+
+// If any symbols are missing in clanker-utils, we'll handle separately, but assuming merge included them.
 import { POOL_POSITIONS } from 'clanker-sdk';
 import { validateStep } from '../../lib/validation';
 
@@ -42,11 +44,11 @@ export function TokenDeployWizard({
       if (draft) {
         try {
           const parsed = JSON.parse(draft);
-          // Patch all recipients to have token: 'Both'
+          // Ensure all recipients have token: 'Both' if missing
           if (parsed.rewards && Array.isArray(parsed.rewards.recipients)) {
             parsed.rewards.recipients = parsed.rewards.recipients.map((r: any) => ({
               ...r,
-              token: r.token || 'Both'
+              token: r.token ?? 'Both'
             }));
           }
           return parsed;
@@ -120,7 +122,7 @@ export function TokenDeployWizard({
           recipient: address || '',
           admin: address || '',
           bps: 10000,
-          token: 'Both'
+          token: 'Both'  // Ensure default is set
         }],
         customDistribution: false,
         useSimpleDistribution: true

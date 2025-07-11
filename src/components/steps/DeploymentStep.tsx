@@ -4,10 +4,9 @@ import { InfoTooltip } from '../ui/InfoTooltip';
 import { usePublicClient, useWalletClient, useAccount } from 'wagmi';
 import { storeDeployedToken } from '../../../lib/deployed-tokens';
 import { Clanker } from 'clanker-sdk/v4';
-import { getTokenPairDisplayName, WETH_ADDRESS } from '../../../lib/clanker-utils';
-import { POOL_POSITIONS } from '../../../lib/constants';
-import { getTokenPairByAddress, getDesiredPriceAndPairAddress } from '../../../lib/clanker-sdk-workarounds';
-import { ensureLunCoCollector } from '../ui/FeeCollectorsManager';
+import { getTokenPairDisplayName } from '../../../lib/clanker-utils';
+import { WETH_ADDRESS } from 'clanker-sdk';
+import { POOL_POSITIONS } from 'clanker-sdk';
 
 interface DeploymentStepProps {
   config: TokenConfig;
@@ -127,7 +126,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
     // Add dev buy extension if enabled
     if (config.devBuy?.enabled && config.devBuy.amount > 0) {
       // If paired token is not WETH, set up poolKey and amountOutMin
-      if (getTokenPairByAddress(baseConfig.pool.pairedToken).type !== 'WETH') {
+      if (baseConfig.pool.pairedToken.toLowerCase() !== WETH_ADDRESS.toLowerCase()) {
         baseConfig.devBuy = {
           ethAmount: config.devBuy.amount, // for SDK compatibility
           amount: config.devBuy.amount,    // for future-proofing
@@ -311,9 +310,9 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
       }
 
       // For now, just validate the config since simulation API varies
-      let simulatedAddress = 'Will be determined on deployment';
-      let gasEstimate = 'Variable based on configuration';
-      let estimatedCost = 'Estimated gas cost varies';
+      const simulatedAddress = 'Will be determined on deployment';
+      const gasEstimate = 'Variable based on configuration';
+      const estimatedCost = 'Estimated gas cost varies';
       
       // Fetch paired token balance
       await fetchPairedTokenBalance(fullConfig.pool.pairedToken);

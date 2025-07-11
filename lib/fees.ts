@@ -1,8 +1,8 @@
 import { formatUnits, type PublicClient } from "viem";
 import { Clanker } from "clanker-sdk/v4";
-import { getTokenDecimals, getTokenSymbol } from "./token-validation.js";
 import { WETH_ADDRESS } from 'clanker-sdk';
 import type { RewardRecipient } from './types';
+import { validateFeeBps } from './validation';
 
 export async function getAvailableFees(
   publicClient: PublicClient,
@@ -75,12 +75,19 @@ export const LP_FEE_PERCENTAGE = 0.8; // 80% goes to LP
  * @param userAddress - The user's address
  * @param userFeeBps - The total fee percentage the user wants to set (in basis points)
  * @returns Array of reward recipients with proper distribution (sums to 10,000 bps)
+ * @throws Error if invalid inputs
  */
 export function calculateFeeDistribution(
   userAddress: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _userFeeBps: number
+  userFeeBps: number
 ): RewardRecipient[] {
+  if (!userAddress || !userAddress.startsWith('0x')) {
+    throw new Error('Invalid user address');
+  }
+  if (userFeeBps < 0 || userFeeBps > 10000) {
+    throw new Error('Invalid fee basis points (must be 0-10000)');
+  }
+  
   // Recipients array represents distribution of LP fees only
   // Default split: 75% to user, 25% to platform (of LP fees)
   const userBps = 7500; // 75% of LP fees
@@ -92,14 +99,16 @@ export function calculateFeeDistribution(
       admin: userAddress,
       bps: userBps,
       label: 'You',
-      isDefault: true
+      isDefault: true,
+      token: ''
     },
     {
       recipient: ASTROPAD_FEE_ADDRESS,
       admin: ASTROPAD_FEE_ADDRESS,
       bps: astropadBps,
       label: 'Platform',
-      isDefault: true
+      isDefault: true,
+      token: ''
     }
   ].filter(recipient => recipient.bps > 0); // Only include recipients with non-zero fees
 }
@@ -114,6 +123,8 @@ export function calculateTokenFees(
   _userFeeBps: number,
   feeType: 'static' | 'dynamic'
 ) {
+  validateFeeBps(_userFeeBps);
+
   if (feeType === 'static') {
     return {
       clankerFeeBps: _userFeeBps,
@@ -157,25 +168,4 @@ export function getFeeDisplayInfo(userFeeBps: number) {
     userBps: 7500, // 75% of LP fees
     astropadBps: 2500 // 25% of LP fees
   };
-}
-
-/**
- * Validate fee percentage is within acceptable bounds
- * @param feeBps - Fee in basis points
- * @returns Validation result
- */
-export function validateFeeBps(feeBps: number): { isValid: boolean; error?: string } {
-  if (feeBps < 0) {
-    return { isValid: false, error: 'Fee cannot be negative' };
-  }
-  
-  if (feeBps > 2000) { // 20% max
-    return { isValid: false, error: 'Fee cannot exceed 20%' };
-  }
-  
-  if (feeBps > 0 && feeBps < 25) {
-    return { isValid: false, error: 'Minimum fee is 0.25% (25 basis points)' };
-  }
-  
-  return { isValid: true };
 }

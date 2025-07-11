@@ -1,10 +1,10 @@
 import type { TokenConfig } from '../../../lib/types';
 import { InfoTooltip } from '../ui/InfoTooltip';
-import { addAirdropEntry, removeAirdropEntry, updateAirdropEntry } from '../../../lib/array-utils';
+import { addAirdropEntry, removeAirdropEntry, updateAirdropEntry } from '../../../lib/clanker-utils';
 import { calculateDevBuyEstimate } from '../../../lib/calculations';
 import { useState, useEffect } from 'react';
 import { usePublicClient } from 'wagmi';
-import { validatePairToken } from '../../../lib/token-validation';
+import { validatePairToken } from '../../../lib/validation';
 
 interface ExtensionsStepProps {
   config: TokenConfig;
