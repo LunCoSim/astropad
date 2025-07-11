@@ -42,6 +42,32 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
     validateToken();
   }, [config.pairTokenType, config.customPairTokenAddress, publicClient]);
 
+  // Moved const definitions here to avoid TDZ
+  // Ensure all extension configs are always defined for safe access
+  // Removed presale config as presale is unsupported in v4
+  const vault = config.vault || {
+    enabled: false,
+    percentage: 5,
+    lockupDuration: 7 * 24 * 60 * 60,
+    vestingDuration: 0,
+  };
+  const defaultAirdrop = {
+    enabled: false,
+    merkleRoot: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    amount: 1000,
+    lockupDuration: 24 * 60 * 60,
+    vestingDuration: 0,
+    entries: [{ address: '', amount: 1 }],
+  };
+  const airdrop = { ...defaultAirdrop, ...(config.airdrop ?? {}) };
+  const defaultDevBuy = {
+    enabled: false,
+    amount: 0.1,
+    amountOutMin: 0,
+    recipient: config.tokenAdmin || '',
+  };
+  const devBuy = { ...defaultDevBuy, ...(config.devBuy ?? {}) };
+
   const handleAddAirdropEntry = () => {
     updateConfig({
       airdrop: { ...defaultAirdrop, ...airdrop, entries: addAirdropEntry(airdrop.entries) }
@@ -71,31 +97,6 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
       updateConfig({ devBuy: { ...devBuy, estimatedTokens: devBuyEstimate.tokensReceived } });
     }
   }, [config.devBuy?.enabled, devBuyEstimate?.tokensReceived]);
-
-  // Ensure all extension configs are always defined for safe access
-  // Removed presale config as presale is unsupported in v4
-  const vault = config.vault || {
-    enabled: false,
-    percentage: 5,
-    lockupDuration: 7 * 24 * 60 * 60,
-    vestingDuration: 0,
-  };
-  const defaultAirdrop = {
-    enabled: false,
-    merkleRoot: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    amount: 1000,
-    lockupDuration: 24 * 60 * 60,
-    vestingDuration: 0,
-    entries: [{ address: '', amount: 1 }],
-  };
-  const airdrop = { ...defaultAirdrop, ...(config.airdrop ?? {}) };
-  const defaultDevBuy = {
-    enabled: false,
-    amount: 0.1,
-    amountOutMin: 0,
-    recipient: config.tokenAdmin || '',
-  };
-  const devBuy = { ...defaultDevBuy, ...(config.devBuy ?? {}) };
 
   return (
     <div className="space-y-2xl animate-fade-in">
@@ -385,6 +386,107 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Custom Extensions */}
+      <div className="card card-hover">
+        <div className="flex items-center space-x-md mb-lg">
+          <h3 className="text-xl font-bold text-primary">Custom Extensions</h3>
+          <InfoTooltip content="Add arbitrary custom extensions to your token deployment" />
+        </div>
+
+        <div className="space-y-lg">
+          <label className="flex items-center space-x-md cursor-pointer">
+            <input
+              type="checkbox"
+              checked={config.advanced.customExtensions.length > 0}
+              onChange={(e) => {
+                if (!e.target.checked) {
+                  updateConfig({ advanced: { ...config.advanced, customExtensions: [] } });
+                } else {
+                  // Add first extension when enabling
+                  updateConfig({ advanced: { ...config.advanced, customExtensions: [{ address: '', msgValue: 0, extensionBps: 0, extensionData: '' }] } });
+                }
+              }}
+              className="rounded"
+            />
+            <span className="form-label">Enable Custom Extensions</span>
+          </label>
+
+          {config.advanced.customExtensions.length > 0 && (
+            <div className="space-y-md">
+              {config.advanced.customExtensions.map((ext, index) => (
+                <div key={index} className="grid grid-4 gap-md">
+                  <input
+                    type="text"
+                    value={ext.address}
+                    onChange={(e) => {
+                      const updated = [...config.advanced.customExtensions];
+                      updated[index].address = e.target.value;
+                      updateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
+                    }}
+                    placeholder="Extension Address"
+                    className="input font-mono text-xs"
+                  />
+                  <input
+                    type="number"
+                    value={ext.msgValue}
+                    onChange={(e) => {
+                      const updated = [...config.advanced.customExtensions];
+                      updated[index].msgValue = Number(e.target.value);
+                      updateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
+                    }}
+                    placeholder="msg.value"
+                    className="input"
+                    min="0"
+                  />
+                  <input
+                    type="number"
+                    value={ext.extensionBps}
+                    onChange={(e) => {
+                      const updated = [...config.advanced.customExtensions];
+                      updated[index].extensionBps = Number(e.target.value);
+                      updateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
+                    }}
+                    placeholder="BPS"
+                    className="input"
+                    min="0"
+                    max="10000"
+                  />
+                  <input
+                    type="text"
+                    value={ext.extensionData}
+                    onChange={(e) => {
+                      const updated = [...config.advanced.customExtensions];
+                      updated[index].extensionData = e.target.value;
+                      updateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
+                    }}
+                    placeholder="Extension Data (bytes)"
+                    className="input font-mono text-xs"
+                  />
+                  <button
+                    onClick={() => {
+                      const updated = config.advanced.customExtensions.filter((_, i) => i !== index);
+                      updateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
+                    }}
+                    className="btn btn-secondary"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  const updated = [...config.advanced.customExtensions, { address: '', msgValue: 0, extensionBps: 0, extensionData: '' }];
+                  updateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
+                }}
+                className="btn btn-secondary"
+              >
+                Add Extension
+              </button>
             </div>
           )}
         </div>
