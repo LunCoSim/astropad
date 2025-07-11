@@ -8,6 +8,15 @@ import { getTokenPairDisplayName } from '../../../lib/clanker-utils';
 import { WETH_ADDRESS } from 'clanker-sdk';
 import { POOL_POSITIONS } from 'clanker-sdk';
 
+// Add missing import
+import { ensureLunCoCollector } from "../ui/FeeCollectorsManager";
+
+// New import for ERC20 ABI
+import { erc20Abi } from 'viem';
+
+// Remove manual ERC20_ABI definition
+// export const ERC20_ABI = [...]
+
 interface DeploymentStepProps {
   config: TokenConfig;
   onPrevious: () => void;
@@ -32,6 +41,24 @@ interface SimulationResult {
       totalETHRequired: number;
     };
   };
+}
+
+// Add interface for RewardRecipient
+export interface RewardRecipient {
+  admin: string;
+  recipient: string;
+  bps: number;
+  token: string;
+  label?: string;
+  isDefault?: boolean;
+}
+
+// Add interface for ClankerDeployResult
+export interface ClankerDeployResult {
+  address?: `0x${string}`;
+  waitForTransaction?: () => Promise<any>;
+  txHash?: `0x${string}`;
+  error?: Error;
 }
 
 export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentStepProps) {
@@ -91,7 +118,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
       },
       // Use custom reward distribution
       rewards: {
-        recipients: recipientsWithLunCo.map(recipient => ({
+        recipients: recipientsWithLunCo.map((recipient: RewardRecipient) => ({
           admin: recipient.admin as `0x${string}`,
           recipient: recipient.recipient as `0x${string}`,
           bps: recipient.bps,
@@ -199,7 +226,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
         ...(config.airdrop?.enabled ? [`Airdrop (${config.airdrop.amount} tokens)`] : []),
         ...(config.devBuy?.enabled ? [`DevBuy (${devBuyAmount} ${config.pool.pairedToken === WETH_ADDRESS ? 'ETH' : 'Custom'})`] : []),
       ],
-      rewardDistribution: config.rewards.recipients.map(r => 
+      rewardDistribution: config.rewards.recipients.map((r: RewardRecipient) => 
         `${(r.bps / 100).toFixed(1)}%`
       ).join(', '),
       // Add cost breakdown
@@ -219,7 +246,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
 
   // Fetch paired token balance and symbol on simulate
   const fetchPairedTokenBalance = async (tokenAddress: `0x${string}`) => {
-    if (!publicClient || !address) return;
+    if (!publicClient?.chain || !address) return;
     try {
       // ETH/WETH: use getBalance, else use ERC20
       if (tokenAddress.toLowerCase() === WETH_ADDRESS.toLowerCase()) {
@@ -231,18 +258,18 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
         const [balance, decimals, symbol] = await Promise.all([
           publicClient.readContract({
             address: tokenAddress,
-            abi: ERC20_ABI,
+            abi: erc20Abi,
             functionName: 'balanceOf',
             args: [address as `0x${string}`],
           }),
           publicClient.readContract({
             address: tokenAddress,
-            abi: ERC20_ABI,
+            abi: erc20Abi,
             functionName: 'decimals',
           }),
           publicClient.readContract({
             address: tokenAddress,
-            abi: ERC20_ABI,
+            abi: erc20Abi,
             functionName: 'symbol',
           }),
         ]);
@@ -365,13 +392,14 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
 
       // Deploy token
       console.log('[DEPLOY] Calling clanker.deploy...');
-      const deployResult = await clanker.deploy(fullConfig);
+      const deployResult: ClankerDeployResult = await clanker.deploy(fullConfig);
       console.log('[DEPLOY] Deploy result:', deployResult);
 
       // Wait for transaction (if applicable)
+      let txReceipt;
       if (deployResult.waitForTransaction) {
         console.log('[DEPLOY] Waiting for transaction confirmation...');
-        const txReceipt = await deployResult.waitForTransaction();
+        txReceipt = await deployResult.waitForTransaction();
         console.log('[DEPLOY] Transaction confirmed:', txReceipt);
       }
 
