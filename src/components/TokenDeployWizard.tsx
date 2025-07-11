@@ -75,6 +75,7 @@ export function TokenDeployWizard({
         tickSpacing: 200,
         positions: POOL_POSITIONS.Standard,
       },
+      pairTokenType: 'WETH',
       mev: {
         enabled: true,
         moduleType: 'block-delay',
@@ -208,6 +209,7 @@ export function TokenDeployWizard({
         tickSpacing: 200,
         positions: POOL_POSITIONS.Standard,
       },
+      pairTokenType: 'WETH',
       mev: {
         enabled: true,
         moduleType: 'block-delay',
