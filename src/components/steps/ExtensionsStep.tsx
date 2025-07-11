@@ -168,22 +168,6 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                   className="input"
                 />
               </div>
-              <div className="form-group">
-                <label className="form-label">
-                  ETH Value to Send (msg.value)
-                  <InfoTooltip content="Advanced: Amount of ETH to send with the vault extension call. Usually 0. Only change if instructed by advanced documentation." />
-                </label>
-                <input
-                  type="number"
-                  value={vault.msgValue ?? 0}
-                  onChange={e => updateConfig({ vault: { ...vault, msgValue: Number(e.target.value) } })}
-                  min="0"
-                  step="0.0001"
-                  className="input font-mono"
-                  placeholder="0"
-                />
-                <div className="form-hint">Leave as 0 unless you know you need to send ETH with the vault extension.</div>
-              </div>
             </div>
           )}
         </div>
@@ -281,22 +265,6 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                   </button>
                 </div>
               </div>
-              <div className="form-group">
-                <label className="form-label">
-                  ETH Value to Send (msg.value)
-                  <InfoTooltip content="Advanced: Amount of ETH to send with the airdrop extension call. Usually 0. Only change if instructed by advanced documentation." />
-                </label>
-                <input
-                  type="number"
-                  value={airdrop.msgValue ?? 0}
-                  onChange={e => updateConfig({ airdrop: { ...defaultAirdrop, ...airdrop, msgValue: Number(e.target.value) } })}
-                  min="0"
-                  step="0.0001"
-                  className="input font-mono"
-                  placeholder="0"
-                />
-                <div className="form-hint">Leave as 0 unless you know you need to send ETH with the airdrop extension.</div>
-              </div>
             </div>
           )}
         </div>
@@ -351,29 +319,6 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                   />
                 </div>
               </div>
-              <div className="form-group">
-                <label className="form-label">Amount Out Min <InfoTooltip content='Advanced: Minimum amount of tokens to receive from the dev buy swap. Use for slippage protection.' /></label>
-                <input
-                  type="number"
-                  value={devBuy.amountOutMin}
-                  onChange={e => updateConfig({ devBuy: { ...devBuy, amountOutMin: Number(e.target.value) } })}
-                  min="0"
-                  step="0.0001"
-                  className="input font-mono text-xs"
-                  placeholder="0 (optional, advanced)"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Pool Key (Advanced)</label>
-                <div className="grid grid-2 gap-md">
-                  <input type="text" value={devBuy.poolKey?.currency0 || ''} onChange={e => updateConfig({ devBuy: { ...devBuy, poolKey: { ...devBuy.poolKey, currency0: e.target.value } } })} placeholder="Currency 0 (address)" className="input font-mono text-xs" />
-                  <input type="text" value={devBuy.poolKey?.currency1 || ''} onChange={e => updateConfig({ devBuy: { ...devBuy, poolKey: { ...devBuy.poolKey, currency1: e.target.value } } })} placeholder="Currency 1 (address)" className="input font-mono text-xs" />
-                  <input type="number" value={devBuy.poolKey?.fee || ''} onChange={e => updateConfig({ devBuy: { ...devBuy, poolKey: { ...devBuy.poolKey, fee: Number(e.target.value) } } })} placeholder="Fee" className="input font-mono text-xs" />
-                  <input type="number" value={devBuy.poolKey?.tickSpacing || ''} onChange={e => updateConfig({ devBuy: { ...devBuy, poolKey: { ...devBuy.poolKey, tickSpacing: Number(e.target.value) } } })} placeholder="Tick Spacing" className="input font-mono text-xs" />
-                  <input type="text" value={devBuy.poolKey?.hooks || ''} onChange={e => updateConfig({ devBuy: { ...devBuy, poolKey: { ...devBuy.poolKey, hooks: e.target.value } } })} placeholder="Hooks (address)" className="input font-mono text-xs" />
-                </div>
-                <div className="form-hint">Leave blank for default pool key. Only use if you need to override pool parameters.</div>
-              </div>
 
               {devBuyEstimate && (
                 <div className="card" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
@@ -386,107 +331,6 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                   </div>
                 </div>
               )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Custom Extensions */}
-      <div className="card card-hover">
-        <div className="flex items-center space-x-md mb-lg">
-          <h3 className="text-xl font-bold text-primary">Custom Extensions</h3>
-          <InfoTooltip content="Add arbitrary custom extensions to your token deployment" />
-        </div>
-
-        <div className="space-y-lg">
-          <label className="flex items-center space-x-md cursor-pointer">
-            <input
-              type="checkbox"
-              checked={config.advanced.customExtensions.length > 0}
-              onChange={(e) => {
-                if (!e.target.checked) {
-                  updateConfig({ advanced: { ...config.advanced, customExtensions: [] } });
-                } else {
-                  // Add first extension when enabling
-                  updateConfig({ advanced: { ...config.advanced, customExtensions: [{ address: '', msgValue: 0, extensionBps: 0, extensionData: '' }] } });
-                }
-              }}
-              className="rounded"
-            />
-            <span className="form-label">Enable Custom Extensions</span>
-          </label>
-
-          {config.advanced.customExtensions.length > 0 && (
-            <div className="space-y-md">
-              {config.advanced.customExtensions.map((ext, index) => (
-                <div key={index} className="grid grid-4 gap-md">
-                  <input
-                    type="text"
-                    value={ext.address}
-                    onChange={(e) => {
-                      const updated = [...config.advanced.customExtensions];
-                      updated[index].address = e.target.value;
-                      updateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
-                    }}
-                    placeholder="Extension Address"
-                    className="input font-mono text-xs"
-                  />
-                  <input
-                    type="number"
-                    value={ext.msgValue}
-                    onChange={(e) => {
-                      const updated = [...config.advanced.customExtensions];
-                      updated[index].msgValue = Number(e.target.value);
-                      updateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
-                    }}
-                    placeholder="msg.value"
-                    className="input"
-                    min="0"
-                  />
-                  <input
-                    type="number"
-                    value={ext.extensionBps}
-                    onChange={(e) => {
-                      const updated = [...config.advanced.customExtensions];
-                      updated[index].extensionBps = Number(e.target.value);
-                      updateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
-                    }}
-                    placeholder="BPS"
-                    className="input"
-                    min="0"
-                    max="10000"
-                  />
-                  <input
-                    type="text"
-                    value={ext.extensionData}
-                    onChange={(e) => {
-                      const updated = [...config.advanced.customExtensions];
-                      updated[index].extensionData = e.target.value;
-                      updateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
-                    }}
-                    placeholder="Extension Data (bytes)"
-                    className="input font-mono text-xs"
-                  />
-                  <button
-                    onClick={() => {
-                      const updated = config.advanced.customExtensions.filter((_, i) => i !== index);
-                      updateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
-                    }}
-                    className="btn btn-secondary"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={() => {
-                  const updated = [...config.advanced.customExtensions, { address: '', msgValue: 0, extensionBps: 0, extensionData: '' }];
-                  updateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
-                }}
-                className="btn btn-secondary"
-              >
-                Add Extension
-              </button>
             </div>
           )}
         </div>

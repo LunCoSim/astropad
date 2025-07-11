@@ -44,10 +44,7 @@ export interface TokenConfig {
   // MEV Protection (v4)
   mev: {
     enabled: boolean;
-    moduleType: 'block-delay' | 'custom'; // Type of MEV protection
-    blockDelay?: number; // Number of blocks to delay (1-5, default 2)
-    customModule?: string; // Address of custom MEV module
-    customData?: string; // Encoded data for custom module
+    blockDelay: number;
   };
   
   // Vault Extension
@@ -117,15 +114,12 @@ export interface TokenConfig {
   vanity: {
     enabled: boolean;
     suffix: string; // Desired vanity suffix (e.g., '0x4b07')
+    type: 'suffix' | 'prefix';
     customSalt?: string; // Custom salt for vanity generation
   };
   
   // Advanced Configuration
   advanced: {
-    customHookData: boolean; // Whether to use custom hook data
-    hookData?: string; // Custom hook data if enabled
-    customExtensions: { address: string; msgValue: number; extensionBps: number; extensionData: string; }[]; // Array of custom extension addresses
-    gasOptimization: boolean; // Whether to optimize for gas
   };
   
   // Presale Extension (v4)
@@ -176,6 +170,7 @@ export interface RewardRecipient {
   token: string; // 'Both', 'Paired', or 'Clanker'
   label?: string; // Optional label for UI display (e.g., "Team", "Marketing")
   isDefault?: boolean; // Whether this is a default recipient (user, clanker, astropad)
+  isFixed?: boolean;
 }
 
 // ===== FEE COLLECTOR MANAGEMENT =====

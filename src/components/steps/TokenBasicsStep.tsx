@@ -8,9 +8,10 @@ interface TokenBasicsStepProps {
   config: TokenConfig;
   updateConfig: (updates: Partial<TokenConfig>) => void;
   onNext: () => void;
+  address?: string;
 }
 
-export function TokenBasicsStep({ config, updateConfig, onNext }: TokenBasicsStepProps) {
+export function TokenBasicsStep({ config, updateConfig, onNext, address }: TokenBasicsStepProps) {
   const [uploadError, setUploadError] = useState<string>('');
   const isValid = !!(config.name && config.symbol && config.tokenAdmin);
 
@@ -149,13 +150,26 @@ export function TokenBasicsStep({ config, updateConfig, onNext }: TokenBasicsSte
             <span className="required">*</span>
             <InfoTooltip content="The wallet address that will control this token contract and receive admin privileges." />
           </label>
-          <input
-            type="text"
-            value={config.tokenAdmin}
-            onChange={(e) => patchedUpdateConfig({ tokenAdmin: e.target.value })}
-            placeholder="0x... (defaults to your connected wallet)"
-            className="input font-mono text-sm"
-          />
+          <div className="flex items-center space-x-md">
+            <input
+              type="text"
+              value={config.tokenAdmin}
+              onChange={(e) => patchedUpdateConfig({ tokenAdmin: e.target.value })}
+              placeholder="0x... (defaults to your connected wallet)"
+              className="input font-mono text-sm flex-1"
+            />
+            <button
+              onClick={() => {
+                if (address) {
+                  patchedUpdateConfig({ tokenAdmin: address });
+                }
+              }}
+              disabled={!address}
+              className="btn btn-secondary text-sm"
+            >
+              Use Connected
+            </button>
+          </div>
         </div>
 
         <div className="form-group mt-xl">

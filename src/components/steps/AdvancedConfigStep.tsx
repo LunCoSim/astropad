@@ -4,7 +4,7 @@ import { VALIDATION_LIMITS } from '../../../lib/clanker-utils';
 import { calculateFeeDistribution, getFeeDisplayInfo } from '../../../lib/fees.js';
 import { InfoTooltip } from '../ui/InfoTooltip.js';
 import FeeCollectorsManager from '../ui/FeeCollectorsManager.js';
-import { ensureLunCoCollector } from '../ui/FeeCollectorsManager';
+import { ensureAstropadCollector } from '../ui/FeeCollectorsManager';
 
 interface AdvancedConfigStepProps {
   config: TokenConfig;
@@ -82,7 +82,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
     updateConfig({
       rewards: {
         ...config.rewards,
-        recipients: ensureLunCoCollector(recipientsWithToken, config.fees.userFeeBps),
+        recipients: ensureAstropadCollector(recipientsWithToken),
         customDistribution: !config.rewards.useSimpleDistribution
       }
     });
@@ -163,7 +163,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
     }
 
     // Exclude LunCo from editable count
-    const visibleRecipients = config.rewards.recipients.filter(r => r.recipient.toLowerCase() !== '0x2ec50faa88b1ceeb77bb36e7e31eb7c1faeb348');
+    const visibleRecipients = config.rewards.recipients.filter(r => r.recipient.toLowerCase() !== '0x2ec50faa88b1ceeeb77bb36e7e31eb7c1faeb348');
     if (visibleRecipients.length > 6) {
       errors.push('Maximum 6 fee collectors allowed (excluding platform)');
     }
@@ -282,18 +282,17 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
               </div>
             </div>
                          <div className="text-xs text-muted mt-sm">
-               Total fee: {feeInfo.totalFee} | Protocol: {feeInfo.protocolFee} (automatic) | LP Distribution: {feeInfo.lpDistributable} (You: {feeInfo.userReceives}, Platform: {feeInfo.astropadReceives})
+               Total fee: {feeInfo.totalFee} | Protocol (Clanker + Astropad): {feeInfo.combinedProtocol} | User: {feeInfo.userReceives}
              </div>
           </div>
 
           {/* Fee Collectors Manager */}
           <FeeCollectorsManager
             recipients={config.rewards.recipients.map(r => ({ ...r, token: 'Both' }))}
-            useSimpleDistribution={config.rewards.useSimpleDistribution}
             onRecipientsChange={handleFeeCollectorsChange}
-            onUseSimpleDistributionChange={handleDistributionModeChange}
             validation={validateFeeDistribution()}
             totalFeeBps={config.fees.userFeeBps}
+            defaultAddress={config.tokenAdmin}
           />
         </div>
       </div>
@@ -351,256 +350,9 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
                   Number of blocks to delay transactions (higher = more protection, slower trading)
                 </div>
               </div>
-              <div className="mt-lg">
-                <label className="block text-sm font-semibold text-primary mb-sm">
-                  Custom MEV Module Address
-                  <InfoTooltip content="(Advanced) Use a custom MEV module contract address. Leave blank for default block delay module." />
-                </label>
-                <input
-                  type="text"
-                  value={config.mev.customModule || ''}
-                  onChange={e => patchedUpdateConfig({ mev: { ...config.mev, customModule: e.target.value } })}
-                  placeholder="0x... (optional)"
-                  className="input font-mono text-xs"
-                />
-                <div className="text-xs text-muted mt-sm">
-                  Leave blank to use the default block delay module.
-                </div>
-              </div>
-              <div className="mt-lg">
-                <label className="block text-sm font-semibold text-primary mb-sm">
-                  Custom MEV Module Data (bytes)
-                  <InfoTooltip content="(Advanced) Pass custom data to the MEV module. Use only if your module requires it." />
-                </label>
-                <input
-                  type="text"
-                  value={config.mev.customData || ''}
-                  onChange={e => patchedUpdateConfig({ mev: { ...config.mev, customData: e.target.value } })}
-                  placeholder="0x... (optional)"
-                  className="input font-mono text-xs"
-                />
-                <div className="text-xs text-muted mt-sm">
-                  Leave blank unless your custom module requires data.
-                </div>
-              </div>
             </>
           )}
         </div>
-      </div>
-
-      {/* Pool Configuration */}
-      <div className="card card-hover">
-        <div className="flex items-center space-x-md mb-lg">
-          <h3 className="text-xl font-bold text-primary">Pool Configuration</h3>
-          <InfoTooltip content="Advanced Uniswap V4 pool settings for optimal trading. You can customize all pool and fee parameters here." />
-        </div>
-
-        <div className="grid grid-2 gap-lg">
-          <div>
-            <label className="block text-sm font-semibold text-primary mb-sm">
-              Tick Spacing
-            </label>
-            <select
-              value={config.pool.tickSpacing}
-              onChange={(e) => handleTickSpacingChange(parseInt(e.target.value))}
-              className="input"
-            >
-              <option value={10}>10 (0.01% precision)</option>
-              <option value={60}>60 (0.06% precision)</option>
-              <option value={200}>200 (0.20% precision)</option>
-              <option value={2000}>2000 (2.00% precision)</option>
-            </select>
-            <div className="text-xs text-muted mt-sm">
-              Smaller values = higher precision, higher gas costs
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-primary mb-sm">
-              Starting Tick
-            </label>
-            <input
-              type="number"
-              value={config.pool.tickIfToken0IsClanker}
-              onChange={(e) => handleStartingTickChange(parseInt(e.target.value || '-230400'))}
-              className="input"
-              step={config.pool.tickSpacing}
-            />
-            <div className="text-xs text-muted mt-sm">
-              Initial price position (must be multiple of tick spacing)
-            </div>
-          </div>
-        </div>
-
-        {/* Advanced Pool/Hook Config */}
-        <div className="mt-lg">
-          <label className="flex items-center space-x-md cursor-pointer">
-            <input
-              type="checkbox"
-              checked={config.advanced.customHookData}
-              onChange={e => patchedUpdateConfig({ advanced: { ...config.advanced, customHookData: e.target.checked } })}
-              className="rounded"
-            />
-            <span className="form-label">Enable Advanced Pool/Hook Configuration</span>
-            <InfoTooltip content="Expose all static/dynamic fee parameters and custom poolData for advanced users." />
-          </label>
-        </div>
-        {config.advanced.customHookData && (
-          <div className="space-y-lg mt-lg">
-            <div>
-              <label className="block text-sm font-semibold text-primary mb-sm">
-                Custom Pool Data (bytes)
-                <InfoTooltip content="(Advanced) Pass custom poolData bytes to the pool/hook. Use only if you know what you're doing." />
-              </label>
-              <input
-                type="text"
-                value={config.advanced.hookData || ''}
-                onChange={e => patchedUpdateConfig({ advanced: { ...config.advanced, hookData: e.target.value } })}
-                placeholder="0x... (optional)"
-                className="input font-mono text-xs"
-              />
-              <div className="text-xs text-muted mt-sm">
-                Leave blank unless you need to pass custom data to the pool/hook.
-              </div>
-            </div>
-            {config.fees.type === 'static' && (
-              <div className="grid grid-2 gap-lg">
-                <div>
-                  <label className="block text-sm font-semibold text-primary mb-sm">
-                    Clanker Fee (bps)
-                    <InfoTooltip content="Fee on the Clanker token. Units are in basis points (1% = 100 bps)." />
-                  </label>
-                  <input
-                    type="number"
-                    value={config.fees.static?.clankerFeeBps || 100}
-                    onChange={e => patchedUpdateConfig({ fees: { ...config.fees, static: { ...defaultStatic, ...config.fees.static, clankerFeeBps: Number(e.target.value) } } })}
-                    min={0}
-                    max={2000}
-                    className="input"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-primary mb-sm">
-                    Paired Fee (bps)
-                    <InfoTooltip content="Fee on the paired token. Units are in basis points (1% = 100 bps)." />
-                  </label>
-                  <input
-                    type="number"
-                    value={config.fees.static?.pairedFeeBps || 100}
-                    onChange={e => patchedUpdateConfig({ fees: { ...config.fees, static: { ...defaultStatic, ...config.fees.static, pairedFeeBps: Number(e.target.value) } } })}
-                    min={0}
-                    max={2000}
-                    className="input"
-                  />
-                </div>
-              </div>
-            )}
-            {config.fees.type === 'dynamic' && (
-              <div className="space-y-lg">
-                <div className="grid grid-2 gap-lg">
-                  <div>
-                    <label className="block text-sm font-semibold text-primary mb-sm">
-                      Base Fee (bps)
-                      <InfoTooltip content="Minimum fee in basis points (1% = 100 bps)." />
-                    </label>
-                    <input
-                      type="number"
-                      value={config.fees.dynamic?.baseFee || 100}
-                      onChange={e => patchedUpdateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, baseFee: Number(e.target.value) } } })}
-                      min={25}
-                      max={2000}
-                      className="input"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-primary mb-sm">
-                      Max Fee (bps)
-                      <InfoTooltip content="Maximum fee in basis points (1% = 100 bps)." />
-                    </label>
-                    <input
-                      type="number"
-                      value={config.fees.dynamic?.maxFee || 300}
-                      onChange={e => patchedUpdateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, maxFee: Number(e.target.value) } } })}
-                      min={0}
-                      max={3000}
-                      className="input"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-2 gap-lg">
-                  <div>
-                    <label className="block text-sm font-semibold text-primary mb-sm">
-                      Reference Tick Filter Period (seconds)
-                      <InfoTooltip content="Period for reference tick filter. Controls volatility window." />
-                    </label>
-                    <input
-                      type="number"
-                      value={config.fees.dynamic?.referenceTickFilterPeriod || 3600}
-                      onChange={e => patchedUpdateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, referenceTickFilterPeriod: Number(e.target.value) } } })}
-                      min={1}
-                      className="input"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-primary mb-sm">
-                      Reset Period (seconds)
-                      <InfoTooltip content="How often the fee resets to base. Controls fee decay." />
-                    </label>
-                    <input
-                      type="number"
-                      value={config.fees.dynamic?.resetPeriod || 86400}
-                      onChange={e => patchedUpdateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, resetPeriod: Number(e.target.value) } } })}
-                      min={1}
-                      className="input"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-2 gap-lg">
-                  <div>
-                    <label className="block text-sm font-semibold text-primary mb-sm">
-                      Reset Tick Filter (bps)
-                      <InfoTooltip content="Basis points for reset tick filter. Controls fee reset sensitivity." />
-                    </label>
-                    <input
-                      type="number"
-                      value={config.fees.dynamic?.resetTickFilter || 500}
-                      onChange={e => patchedUpdateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, resetTickFilter: Number(e.target.value) } } })}
-                      min={0}
-                      className="input"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-primary mb-sm">
-                      Fee Control Numerator
-                      <InfoTooltip content="Controls how quickly fees increase with volatility." />
-                    </label>
-                    <input
-                      type="number"
-                      value={config.fees.dynamic?.feeControlNumerator || 100}
-                      onChange={e => patchedUpdateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, feeControlNumerator: Number(e.target.value) } } })}
-                      min={1}
-                      className="input"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-primary mb-sm">
-                    Decay Filter Bps
-                    <InfoTooltip content="Decay rate for previous volatility (e.g., 9500 = 95%)." />
-                  </label>
-                  <input
-                    type="number"
-                    value={config.fees.dynamic?.decayFilterBps || 9500}
-                    onChange={e => patchedUpdateConfig({ fees: { ...config.fees, dynamic: { ...defaultDynamic, ...config.fees.dynamic, decayFilterBps: Number(e.target.value) } } })}
-                    min={0}
-                    max={10000}
-                    className="input"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Vanity Address */}
@@ -627,6 +379,13 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
           {config.vanity.enabled && (
             <div>
               <label className="block text-sm font-semibold text-primary mb-sm">
+                Vanity Type
+              </label>
+              <div>
+                <label><input type="radio" checked={config.vanity.type === 'suffix'} onChange={() => updateConfig({ vanity: { ...config.vanity, type: 'suffix' } })} /> Suffix</label>
+                <label><input type="radio" checked={config.vanity.type === 'prefix'} onChange={() => updateConfig({ vanity: { ...config.vanity, type: 'prefix' } })} /> Prefix</label>
+              </div>
+              <label className="block text-sm font-semibold text-primary mb-sm">
                 Desired Suffix
               </label>
               <input
@@ -642,171 +401,6 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
               </div>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Advanced TokenConfig Fields */}
-      <div className="card card-hover">
-        <div className="flex items-center space-x-md mb-lg">
-          <h3 className="text-xl font-bold text-primary">Advanced TokenConfig Fields</h3>
-          <InfoTooltip content="Set advanced deployment fields like custom salt for vanity address and context fields for provenance or integrations." />
-        </div>
-        <div className="space-y-lg">
-          <div className="form-group">
-            <label className="form-label">
-              Vanity Custom Salt (bytes32, optional)
-              <InfoTooltip content="Advanced: Set a custom salt for deterministic or vanity address deployment. Leave blank for random. Use 0x... format (32 bytes)." />
-            </label>
-            <input
-              type="text"
-              value={config.vanity.customSalt || ''}
-              onChange={e => patchedUpdateConfig({ vanity: { ...config.vanity, customSalt: e.target.value } })}
-              placeholder="0x... (optional, 32 bytes)"
-              className="input font-mono text-xs"
-              maxLength={66}
-            />
-            <div className="form-hint">Leave blank unless you want a specific deterministic or vanity address. Must be 0x-prefixed, 64 hex chars (32 bytes).</div>
-          </div>
-          {/* Context fields hidden for astropad */}
-        </div>
-      </div>
-
-      {/* Locker Configuration */}
-      <div className="card card-hover">
-        <div className="flex items-center space-x-md mb-lg">
-          <h3 className="text-xl font-bold text-primary">Locker Configuration</h3>
-          <InfoTooltip content="Configure the locker contract, locker data, and reward admins/recipients for advanced liquidity management." />
-        </div>
-        <div className="space-y-lg">
-          <div>
-            <label className="block text-sm font-semibold text-primary mb-sm">
-              Locker Address
-              <InfoTooltip content="Address of the locker contract. Defaults to the recommended Clanker locker." />
-            </label>
-            <input
-              type="text"
-              value={config.locker.locker}
-              onChange={e => patchedUpdateConfig({ locker: { ...config.locker, locker: e.target.value } })}
-              className="input font-mono text-xs"
-              placeholder="0x..."
-            />
-            <div className="text-xs text-muted mt-sm">
-              Use the default unless you have a custom locker contract.
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-primary mb-sm">
-              Locker Data (bytes)
-              <InfoTooltip content="(Advanced) Encoded locker data for custom logic. Leave blank for default behavior." />
-            </label>
-            <input
-              type="text"
-              value={config.locker.lockerData}
-              onChange={e => patchedUpdateConfig({ locker: { ...config.locker, lockerData: e.target.value } })}
-              className="input font-mono text-xs"
-              placeholder="0x... (optional)"
-            />
-            <div className="text-xs text-muted mt-sm">
-              Leave blank unless your locker requires custom data.
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-primary mb-sm">
-              Reward Recipients (comma-separated addresses)
-              <InfoTooltip content="Addresses that receive rewards from the locker. Separate multiple addresses with commas." />
-            </label>
-            <input
-              type="text"
-              value={config.rewards.recipients.map(r => r.recipient).join(', ')}
-              onChange={e => {
-                const recipients = e.target.value.split(',').map(a => a.trim());
-                patchedUpdateConfig({
-                  rewards: {
-                    ...config.rewards,
-                    recipients: config.rewards.recipients.map((r, i) => ({ ...r, recipient: recipients[i] || r.recipient }))
-                  }
-                });
-              }}
-              className="input font-mono text-xs"
-              placeholder="0x..., 0x..., ..."
-            />
-            <div className="text-xs text-muted mt-sm">
-              Each reward recipient address will receive a share of rewards.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Extensions (Advanced) */}
-      <div className="card card-hover">
-        <div className="flex items-center space-x-md mb-lg">
-          <h3 className="text-xl font-bold text-primary">Extensions (Advanced)</h3>
-          <InfoTooltip content="Add arbitrary extensions to your token deployment. For advanced users and integrations only." />
-        </div>
-        <div className="space-y-md">
-          {(config.advanced.customExtensions || []).map((ext, idx) => (
-            <div key={idx} className="grid grid-4 gap-md items-center">
-              <input type="text" value={ext.address || ''} onChange={e => {
-                const updated = [...config.advanced.customExtensions];
-                updated[idx] = { ...updated[idx], address: e.target.value };
-                patchedUpdateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
-              }} placeholder="Extension Address" className="input font-mono text-xs" />
-              <input type="number" value={ext.msgValue || ''} onChange={e => {
-                const updated = [...config.advanced.customExtensions];
-                updated[idx] = { ...updated[idx], msgValue: Number(e.target.value) };
-                patchedUpdateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
-              }} placeholder="msg.value" className="input font-mono text-xs" />
-              <input type="number" value={ext.extensionBps || ''} onChange={e => {
-                const updated = [...config.advanced.customExtensions];
-                updated[idx] = { ...updated[idx], extensionBps: Number(e.target.value) };
-                patchedUpdateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
-              }} placeholder="Extension Bps" className="input font-mono text-xs" />
-              <input type="text" value={ext.extensionData || ''} onChange={e => {
-                const updated = [...config.advanced.customExtensions];
-                updated[idx] = { ...updated[idx], extensionData: e.target.value };
-                patchedUpdateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
-              }} placeholder="Extension Data (bytes)" className="input font-mono text-xs" />
-              <button type="button" onClick={() => {
-                const updated = [...config.advanced.customExtensions];
-                updated.splice(idx, 1);
-                patchedUpdateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
-              }} className="btn btn-secondary" style={{ padding: 'var(--spacing-sm)' }}>✕</button>
-            </div>
-          ))}
-          <button type="button" onClick={() => {
-            const updated = [...(config.advanced.customExtensions || []), { address: '', msgValue: 0, extensionBps: 0, extensionData: '' }];
-            patchedUpdateConfig({ advanced: { ...config.advanced, customExtensions: updated } });
-          }} className="btn btn-secondary text-sm mt-md">
-            + Add Extension
-          </button>
-        </div>
-      </div>
-      {/* Gas/Fee Estimation Controls (Advanced) */}
-      <div className="card card-hover">
-        <div className="flex items-center space-x-md mb-lg">
-          <h3 className="text-xl font-bold text-primary">Gas/Fee Estimation Controls (Advanced)</h3>
-          <InfoTooltip content="Override gas estimation or enable gas optimization. For advanced users only." />
-        </div>
-        <div className="space-y-md">
-          <label className="flex items-center space-x-md cursor-pointer">
-            <input
-              type="checkbox"
-              checked={config.advanced.gasOptimization}
-              onChange={e => patchedUpdateConfig({ advanced: { ...config.advanced, gasOptimization: e.target.checked } })}
-              className="rounded"
-            />
-            <span className="form-label">Enable Gas Optimization</span>
-          </label>
-          <div className="form-group">
-            <label className="form-label">Custom Gas Limit <InfoTooltip content='Advanced: Set a custom gas limit for deployment. Leave blank for automatic estimation.' /></label>
-            <input
-              type="number"
-              value={config.advanced.customGasLimit || ''}
-              onChange={e => patchedUpdateConfig({ advanced: { ...config.advanced, customGasLimit: Number(e.target.value) } })}
-              placeholder="e.g., 5000000 (optional)"
-              className="input font-mono text-xs"
-            />
-          </div>
         </div>
       </div>
 

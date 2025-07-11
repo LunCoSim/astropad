@@ -1,330 +1,114 @@
-import React, { useState } from 'react';
-import type { RewardRecipient, FeeDistributionValidation } from '../../../lib/types';
+import React, { useState, useEffect } from 'react';
 import { InfoTooltip } from './InfoTooltip';
+import type { RewardRecipient } from '../../lib/types';
 
-interface FeeCollectorsManagerProps {
+type FeeCollectorsManagerProps = {
   recipients: RewardRecipient[];
   onRecipientsChange: (recipients: RewardRecipient[]) => void;
-  useSimpleDistribution: boolean;
-  onUseSimpleDistributionChange: (useSimple: boolean) => void;
-  validation: FeeDistributionValidation;
-  totalFeeBps: number; // Add this prop
-}
-
-// Updated fee collector templates to reflect Clanker v4's actual fee structure
-// IMPORTANT: Clanker automatically takes 20% at protocol level during swaps
-// These templates show distribution of LP fees only (must sum to 100%)
-const FEE_COLLECTOR_TEMPLATES = [
-  {
-    id: 'simple',
-    name: 'Simple (2-way split)',
-    description: 'You 75%, Platform 25% (of LP fees)',
-    note: 'Clanker automatically gets 20% at protocol level',
-    recipients: [
-      { bps: 7500, label: 'You', isDefault: true }, // 75% of LP fees
-      { bps: 2500, label: 'Platform', isDefault: true } // 25% of LP fees
-    ]
-  },
-  {
-    id: 'team-split',
-    name: 'Team Split (4-way)',
-    description: 'You 50%, Team 25%, Platform 20%, Marketing 5% (of LP fees)',
-    note: 'Clanker automatically gets 20% at protocol level',
-    recipients: [
-      { bps: 5000, label: 'You', isDefault: true }, // 50% of LP fees
-      { bps: 2500, label: 'Team' }, // 25% of LP fees
-      { bps: 2000, label: 'Platform', isDefault: true }, // 20% of LP fees
-      { bps: 500, label: 'Marketing' } // 5% of LP fees
-    ]
-  },
-  {
-    id: 'dao-structure',
-    name: 'DAO Structure (7-way)',
-    description: 'Distributed governance model (of LP fees)',
-    note: 'Clanker automatically gets 20% at protocol level',
-    recipients: [
-      { bps: 3000, label: 'Treasury' }, // 30% of LP fees
-      { bps: 2000, label: 'Development' }, // 20% of LP fees
-      { bps: 2000, label: 'Platform', isDefault: true }, // 20% of LP fees
-      { bps: 1500, label: 'Marketing' }, // 15% of LP fees
-      { bps: 1000, label: 'Operations' }, // 10% of LP fees
-      { bps: 300, label: 'Community' }, // 3% of LP fees
-      { bps: 200, label: 'Ecosystem' } // 2% of LP fees
-    ]
-  }
-];
+  validation: { isValid: boolean; errors: string[]; warnings: string[]; totalBps: number; maxCollectors: number; remainingBps: number; };
+  totalFeeBps: number;
+  defaultAddress: string;
+};
 
 const ASTROPAD_FEE_ADDRESS = '0x2eC50faa88b1CEeeB77bb36e7e31eb7C1FAeB348';
-const LUNCO_FEE_ADDRESS = '0x2eC50faa88b1CEeeB77bb36e7e31eb7C1FAeB348';
+const ASTROPAD_FIXED_BPS = 2000; // 20% of LP
 
-function ensureLunCoCollector(recipients: RewardRecipient[], totalFeeBps: number): RewardRecipient[] {
-  const filtered = recipients
-    .filter(r => r.recipient.toLowerCase() !== LUNCO_FEE_ADDRESS.toLowerCase())
-    .map(r => ({ ...r, token: 'Both' })); // Force 'token' to 'Both' for all
-  let userSum = filtered.reduce((sum, r) => sum + r.bps, 0);
-  // Cap userSum at 8000, reduce last recipient if needed
-  if (userSum > 8000 && filtered.length > 0) {
-    const over = userSum - 8000;
-    filtered[filtered.length - 1].bps = Math.max(0, filtered[filtered.length - 1].bps - over);
-    userSum = filtered.reduce((sum, r) => sum + r.bps, 0);
+function ensureAstropadCollector(recipients: RewardRecipient[]): RewardRecipient[] {
+  const withoutAstropad = recipients.filter(r => r.recipient.toLowerCase() !== ASTROPAD_FEE_ADDRESS.toLowerCase());
+  const userBpsSum = withoutAstropad.reduce((sum, r) => sum + r.bps, 0);
+  if (userBpsSum > 8000) {
+    // Cap if over
+    withoutAstropad[withoutAstropad.length - 1].bps -= (userBpsSum - 8000);
   }
-  const platformBps = 10000 - userSum;
   return [
-    ...filtered,
+    ...withoutAstropad,
     {
-      recipient: LUNCO_FEE_ADDRESS,
-      admin: LUNCO_FEE_ADDRESS,
-      bps: platformBps,
-      label: '', // Hidden from UI
-      isDefault: true,
-      token: 'Both', // Always set to Both for platform
+      recipient: ASTROPAD_FEE_ADDRESS,
+      admin: ASTROPAD_FEE_ADDRESS, // Fixed, but can be made editable if needed
+      bps: ASTROPAD_FIXED_BPS,
+      token: 'Both',
+      isFixed: true,
+      label: 'Astropad',
+      customAdmin: false,
     }
   ];
 }
 
-function FeeCollectorsManager({
+export { FeeCollectorsManager, ensureAstropadCollector };
+
+export default function FeeCollectorsManager({
   recipients,
   onRecipientsChange,
-  useSimpleDistribution,
-  onUseSimpleDistributionChange,
   validation,
-  totalFeeBps
+  totalFeeBps,
+  defaultAddress,
 }: FeeCollectorsManagerProps) {
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [useCustom, setUseCustom] = useState(false);
 
-  const applyTemplate = (templateId: string) => {
-    const template = FEE_COLLECTOR_TEMPLATES.find(t => t.id === templateId);
-    if (!template) return;
-
-    const newRecipients: RewardRecipient[] = template.recipients.map((r) => ({
-      recipient: r.isDefault ? (r.label === 'Platform' ? ASTROPAD_FEE_ADDRESS : '') : '',
-      admin: r.isDefault ? (r.label === 'Platform' ? ASTROPAD_FEE_ADDRESS : '') : '',
-      bps: r.bps,
-      label: r.label,
-      isDefault: r.isDefault,
-      token: 'Both', // Always set token
-    }));
-
-    onRecipientsChange(newRecipients);
-    setSelectedTemplate(templateId);
-  };
-
-  // Always enforce LunCo collector in the list
-  const enforcedRecipients = ensureLunCoCollector(recipients, totalFeeBps);
-
-  // In the UI, only allow editing of non-platform recipients. The platform recipient is always present in the config but not shown or editable.
-  const editableRecipients = enforcedRecipients.filter(r => r.recipient.toLowerCase() !== LUNCO_FEE_ADDRESS.toLowerCase());
+  // Enforce Astropad
+  const enforcedRecipients = ensureAstropadCollector(recipients);
+  const editableRecipients = enforcedRecipients.filter(r => !r.isFixed);
 
   const handleAddRecipient = () => {
     if (editableRecipients.length >= 6) return;
-    const newRecipient: RewardRecipient = {
-      recipient: '',
-      admin: '',
-      bps: 0,
-      label: `Collector ${editableRecipients.length + 1}`,
-      isDefault: false,
-      token: 'Both', // Always set token
-    };
-    onRecipientsChange(ensureLunCoCollector([...editableRecipients, newRecipient], totalFeeBps));
+    const remainingBps = 8000 - editableRecipients.reduce((sum, r) => sum + r.bps, 0);
+    const newBps = Math.floor(remainingBps / (editableRecipients.length + 1));
+    const updated = editableRecipients.map(r => ({ ...r, bps: newBps }));
+    onRecipientsChange(ensureAstropadCollector([...updated, { recipient: '', admin: '', bps: newBps, token: 'Both', customAdmin: false }]));
   };
 
   const handleRemoveRecipient = (index: number) => {
-    onRecipientsChange(ensureLunCoCollector(editableRecipients.filter((_, i) => i !== index), totalFeeBps));
+    onRecipientsChange(ensureAstropadCollector(editableRecipients.filter((_, i) => i !== index)));
   };
 
-  const handleRecipientChange = (index: number, field: keyof RewardRecipient, value: string | number) => {
+  const handleRecipientChange = (index: number, field: keyof RewardRecipient, value: string | number | boolean) => {
     const updated = [...editableRecipients];
     updated[index] = { ...updated[index], [field]: value };
-    onRecipientsChange(ensureLunCoCollector(updated, totalFeeBps));
+    onRecipientsChange(ensureAstropadCollector(updated));
   };
 
+  // Dynamic example
+  const totalFeePercent = (totalFeeBps / 100).toFixed(2);
+  const clankerPercent = (totalFeeBps * 0.2 / 100).toFixed(2);
+  const lpPortion = totalFeeBps * 0.8 / 100;
+  const astropadPercent = (lpPortion * 0.2).toFixed(2);
+  const userPercent = (lpPortion * 0.8).toFixed(2);
+
+  useEffect(() => {
+    if (!useCustom) {
+      onRecipientsChange(ensureAstropadCollector([{ recipient: defaultAddress, admin: defaultAddress, bps: 8000, token: 'Both', customAdmin: false }]));
+    }
+  }, [useCustom, onRecipientsChange, defaultAddress]);
+
   return (
-    <div className="space-y-6">
-      {/* Fee Structure Info */}
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="text-blue-600">ℹ️</div>
-          <h3 className="text-sm font-medium text-blue-900">Clanker v4 Fee Structure</h3>
+    <div className="space-y-lg">
+      <label className="flex items-center space-x-md cursor-pointer">
+        <input type="checkbox" checked={useCustom} onChange={e => setUseCustom(e.target.checked)} className="rounded" />
+        <span className="form-label">Customize Fee Recipients</span>
+      </label>
+      {useCustom && (
+        <div>
+          {/* List editable recipients */}
+          {editableRecipients.map((r, index) => (
+            <div key={index} className="form-group grid grid-cols-5 gap-md">
+              <input className="input" value={r.recipient} onChange={e => handleRecipientChange(index, 'recipient', e.target.value)} placeholder="Recipient 0x..." />
+              <input className="input" type="number" value={r.bps} onChange={e => handleRecipientChange(index, 'bps', Number(e.target.value))} min="0" max="8000" />
+              <select className="input" value={r.token} onChange={e => handleRecipientChange(index, 'token', e.target.value)}>
+                <option>Both</option>
+                <option>Paired</option>
+                <option>Clanker</option>
+              </select>
+              <label className="flex items-center">
+                <input type="checkbox" checked={r.customAdmin || false} onChange={e => handleRecipientChange(index, 'customAdmin', e.target.checked)} />
+                Custom Admin
+              </label>
+              {r.customAdmin && <input className="input" value={r.admin} onChange={e => handleRecipientChange(index, 'admin', e.target.value)} placeholder="Admin 0x..." />}
+              <button className="btn btn-danger" onClick={() => handleRemoveRecipient(index)}>Remove</button>
+            </div>
+          ))}
+          {editableRecipients.length < 6 && <button className="btn btn-primary" onClick={handleAddRecipient}>Add Recipient</button>}
         </div>
-        <div className="text-sm text-blue-800 space-y-2">
-          <p><strong>Two-Layer System:</strong></p>
-          <ul className="list-disc list-inside space-y-1 ml-2">
-            <li><strong>Protocol Fee (20%):</strong> Automatically deducted by Clanker hook during swaps</li>
-            <li><strong>LunCo Fee (20%):</strong> Automatically routed to support protocol/ecosystem activities</li>
-            <li><strong>LP Fee Distribution:</strong> Remaining 80% distributed among your chosen recipients</li>
-          </ul>
-          <p className="mt-3">
-            <strong>Example:</strong> If you set 1% total fee → 0.2% to Clanker (automatic) + 0.2% to LunCo (automatic) + 0.8% to LP recipients
-          </p>
-        </div>
-      </div>
-      
-      <div className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <input
-            type="checkbox"
-            id="useSimpleDistribution"
-            checked={useSimpleDistribution}
-            onChange={(e) => onUseSimpleDistributionChange(e.target.checked)}
-            className="rounded"
-          />
-          <label htmlFor="useSimpleDistribution" className="text-sm">
-            Use simple distribution (75% You, 25% Platform)
-            <InfoTooltip content="Simple 2-way split of LP fees. Clanker's 20% protocol fee is automatic." />
-          </label>
-        </div>
-
-        {!useSimpleDistribution && (
-          <>
-            <div className="space-y-3">
-              <label className="text-sm font-medium">Fee Collector Templates</label>
-              <div className="grid gap-3">
-                {FEE_COLLECTOR_TEMPLATES.map((template) => (
-                  <div 
-                    key={template.id}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
-                      selectedTemplate === template.id ? 'ring-2 ring-blue-500 border-blue-300' : 'border-gray-200'
-                    }`}
-                    onClick={() => applyTemplate(template.id)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <h4 className="font-medium">{template.name}</h4>
-                        <p className="text-sm text-gray-600">{template.description}</p>
-                        <p className="text-xs text-blue-600 italic">{template.note}</p>
-                      </div>
-                      <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                        {template.recipients.length} collectors
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Custom Collectors Management */}
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <label className="text-sm font-medium">Custom Fee Collectors (LP fees, up to 100%)</label>
-                <button
-                  onClick={handleAddRecipient}
-                  disabled={editableRecipients.length >= 6}
-                  className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300"
-                >
-                  Add Collector
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {editableRecipients.map((recipient, index) => (
-                  <div key={index} className="p-3 border border-gray-200 rounded-lg">
-                    <div className="grid grid-cols-12 gap-3 items-center">
-                      <div className="col-span-3">
-                        <label className="text-xs text-gray-600">Label</label>
-                        <input
-                          type="text"
-                          value={recipient.label || ''}
-                          onChange={(e) => handleRecipientChange(index, 'label', e.target.value)}
-                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                          placeholder="Collector name"
-                        />
-                      </div>
-                      <div className="col-span-4">
-                        <label className="text-xs text-gray-600">Recipient Address</label>
-                        <input
-                          type="text"
-                          value={recipient.recipient}
-                          onChange={(e) => handleRecipientChange(index, 'recipient', e.target.value)}
-                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded font-mono"
-                          placeholder="0x..."
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <label className="text-xs text-gray-600">BPS</label>
-                        <input
-                          type="number"
-                          value={recipient.bps}
-                          onChange={(e) => handleRecipientChange(index, 'bps', Number(e.target.value))}
-                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                          min={0}
-                          max={10000}
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <label className="text-xs text-gray-600">Admin</label>
-                        <input
-                          type="text"
-                          value={recipient.admin}
-                          onChange={(e) => handleRecipientChange(index, 'admin', e.target.value)}
-                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded font-mono"
-                          placeholder="0x..."
-                        />
-                      </div>
-                      <div className="col-span-1 flex items-center justify-center">
-                        <button
-                          onClick={() => handleRemoveRecipient(index)}
-                          className="text-red-500 hover:text-red-700 disabled:opacity-50"
-                          title={'Remove collector'}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Display current distribution */}
-        <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-          <h4 className="text-sm font-medium mb-3">Current Fee Distribution</h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-blue-600 font-medium">Clanker Protocol Fee:</span>
-              <span className="font-mono">20% (automatic)</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-blue-600 font-medium">LunCo Fee:</span>
-              <span className="font-mono">20% (automatic)</span>
-            </div>
-            <div className="border-t pt-2">
-              <div className="text-gray-600 mb-1">LP Fee Distribution:</div>
-              <div className="flex justify-between ml-4">
-                <span>Clanker Protocol (automatic):</span>
-                <span className="font-mono">20%</span>
-              </div>
-              <div className="flex justify-between ml-4">
-                <span>LunCo (automatic):</span>
-                <span className="font-mono">20%</span>
-              </div>
-              {editableRecipients.map((recipient, index) => (
-                <div key={index} className="flex justify-between ml-4">
-                  <span>{recipient.label || `Collector ${index + 1}`}:</span>
-                  <span className="font-mono">{(recipient.bps / 100).toFixed(2)}%</span>
-                </div>
-              ))}
-            </div>
-            <div className="border-t pt-2 flex justify-between font-medium">
-              <span>Total LP Distribution:</span>
-              <span className="font-mono">100.00%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Validation messages */}
-        {!validation.isValid && (
-          <div className="text-red-600 text-sm space-y-1">
-            {validation.errors.map((error, index) => (
-              <div key={index}>• {error}</div>
-            ))}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
-
-export default FeeCollectorsManager;
-export { FeeCollectorsManager, ensureLunCoCollector };

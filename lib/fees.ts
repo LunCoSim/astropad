@@ -2,7 +2,7 @@ import { formatUnits, type PublicClient } from "viem";
 import { Clanker } from "clanker-sdk/v4";
 import { WETH_ADDRESS } from 'clanker-sdk';
 import type { RewardRecipient } from './types';
-import { validateFeeBps } from './validation';
+import { validateFeeBps, getTokenDecimals, getTokenSymbol } from './validation';
 
 export async function getAvailableFees(
   publicClient: PublicClient,
@@ -148,24 +148,25 @@ export function getFeeDisplayInfo(userFeeBps: number) {
   const totalFee = userFeeBps / 100;
   
   // Protocol automatically takes 20%
-  const protocolFee = (userFeeBps * PROTOCOL_FEE_PERCENTAGE) / 100;
+  const clankerFee = (userFeeBps * 0.2) / 100;
   
   // Remaining 80% goes to LP
-  const lpFee = (userFeeBps * LP_FEE_PERCENTAGE) / 100;
+  const lpFee = (userFeeBps * 0.8) / 100;
   
-  // LP fee distribution (based on default 75/25 split)
-  const userReceives = (lpFee * 0.75); // 75% of LP fees
-  const astropadReceives = (lpFee * 0.25); // 25% of LP fees
+  // LP fee distribution (based on 80/20 split: 80% to user, 20% to Astropad)
+  const userReceives = (lpFee * 0.8);
+  const astroPadReceives = (lpFee * 0.2);
+  
+  // Combined protocol fee (Clanker + Astropad)
+  const combinedProtocol = clankerFee + astroPadReceives;
   
   return {
     totalFee: `${totalFee.toFixed(2)}%`,
-    protocolFee: `${protocolFee.toFixed(2)}%`,
-    lpDistributable: `${lpFee.toFixed(2)}%`,
+    combinedProtocol: `${combinedProtocol.toFixed(2)}% (Clanker: ${clankerFee.toFixed(2)}%, Astropad: ${astroPadReceives.toFixed(2)}%)`,
     userReceives: `${userReceives.toFixed(2)}%`,
-    astropadReceives: `${astropadReceives.toFixed(2)}%`,
     // Basis points for contract usage
-    protocolBps: Math.floor(userFeeBps * PROTOCOL_FEE_PERCENTAGE),
-    userBps: 7500, // 75% of LP fees
-    astropadBps: 2500 // 25% of LP fees
+    clankerBps: Math.floor(userFeeBps * 0.2),
+    userBps: 8000, // 80% of LP fees
+    astroPadBps: 2000 // 20% of LP fees
   };
 }

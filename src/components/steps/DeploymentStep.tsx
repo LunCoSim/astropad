@@ -9,7 +9,7 @@ import { WETH_ADDRESS } from 'clanker-sdk';
 import { POOL_POSITIONS } from 'clanker-sdk';
 
 // Add missing import
-import { ensureLunCoCollector } from "../ui/FeeCollectorsManager";
+import { ensureAstropadCollector } from "../ui/FeeCollectorsManager";
 
 // New import for ERC20 ABI
 import { erc20Abi } from 'viem';
@@ -76,7 +76,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
 
   const buildFullClankerV4Config = () => {
     // Build comprehensive v4 configuration using ALL user settings
-    const recipientsWithLunCo = ensureLunCoCollector(config.rewards.recipients, config.fees.userFeeBps);
+    const recipientsWithAstropad = ensureAstropadCollector(config.rewards.recipients, config.fees.userFeeBps);
     const baseConfig: any = {
       name: config.name,
       symbol: config.symbol,
@@ -118,7 +118,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
       },
       // Use custom reward distribution
       rewards: {
-        recipients: recipientsWithLunCo.map((recipient: RewardRecipient) => ({
+        recipients: recipientsWithAstropad.map((recipient: RewardRecipient) => ({
           admin: recipient.admin as `0x${string}`,
           recipient: recipient.recipient as `0x${string}`,
           bps: recipient.bps,
@@ -497,29 +497,6 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
             </div>
           </div>
 
-          {/* Pool Configuration */}
-          <div>
-            <h4 className="font-semibold text-primary mb-md">Pool Configuration</h4>
-            <div className="grid grid-2 gap-lg">
-              <div className="space-y-sm">
-                <div className="text-sm">
-                  <span className="text-muted">Tick Spacing:</span>
-                  <span className="ml-sm font-semibold text-primary">{config.pool.tickSpacing}</span>
-                </div>
-                <div className="text-sm">
-                  <span className="text-muted">Starting Tick:</span>
-                  <span className="ml-sm font-semibold text-primary">{config.pool.tickIfToken0IsClanker}</span>
-                </div>
-              </div>
-              <div className="space-y-sm">
-                <div className="text-sm">
-                  <span className="text-muted">Positions:</span>
-                  <span className="ml-sm font-semibold text-primary">{config.pool.positions.length} position(s)</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Fee Structure */}
           <div>
             <h4 className="font-semibold text-primary mb-md">Fee Structure</h4>
@@ -534,14 +511,14 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
                   <span className="ml-sm font-semibold text-primary">{(config.fees.userFeeBps / 100).toFixed(2)}%</span>
                 </div>
                 <div className="text-sm">
-                  <span className="text-muted">Protocol Fee (automatic):</span>
-                  <span className="ml-sm font-semibold text-blue-600">{((config.fees.userFeeBps * 0.2) / 100).toFixed(2)}%</span>
+                  <span className="text-muted">Protocol Fee (Clanker + Astropad):</span>
+                  <span className="ml-sm font-semibold text-blue-600">{((config.fees.userFeeBps * 0.36) / 100).toFixed(2)}%</span>
                 </div>
               </div>
               <div className="space-y-sm">
                 <div className="text-sm">
-                  <span className="text-muted">LP Distributable:</span>
-                  <span className="ml-sm font-semibold text-success">{((config.fees.userFeeBps * 0.8) / 100).toFixed(2)}%</span>
+                  <span className="text-muted">User Share:</span>
+                  <span className="ml-sm font-semibold text-success">{((config.fees.userFeeBps * 0.64) / 100).toFixed(2)}%</span>
                 </div>
                 <div className="text-sm">
                   <span className="text-muted">Fee Collectors:</span>

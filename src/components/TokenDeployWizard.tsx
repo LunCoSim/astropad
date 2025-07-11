@@ -15,6 +15,7 @@ import { WIZARD_STEPS, BASE_NETWORK, CLANKER_V4_ADDRESSES, DEFAULT_CUSTOM_POSITI
 import { POOL_POSITIONS } from 'clanker-sdk';
 import { validateStep } from '../../lib/validation';
 
+import { useAppKit } from '@reown/appkit/react';
 
 // Types
 import type { TokenConfig } from '../../lib/types';
@@ -32,6 +33,7 @@ export function TokenDeployWizard({
 }: TokenDeployWizardProps) {
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
+  const { open } = useAppKit();
 
   // ========== UI STATE ==========
   const [currentStep, setCurrentStep] = useState(0);
@@ -305,6 +307,7 @@ export function TokenDeployWizard({
             config={config}
             updateConfig={updateConfig}
             onNext={nextStep}
+            address={address}
           />
         );
       case 1:
@@ -352,7 +355,7 @@ export function TokenDeployWizard({
       <div className="text-center" style={{ padding: 'var(--spacing-3xl) 0' }}>
         <h2 className="text-2xl font-bold text-primary mb-md">Wallet Required for Deployment</h2>
         <p className="text-secondary mb-md">Please connect your wallet to deploy your token. You can configure everything else without a wallet.</p>
-        <button className="btn btn-primary btn-lg" onClick={() => window?.open?.()}>Connect Wallet</button>
+        <button className="btn btn-primary btn-lg" onClick={() => open()}>Connect Wallet</button>
       </div>
     );
   }
