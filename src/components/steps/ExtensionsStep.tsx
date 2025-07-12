@@ -1,10 +1,11 @@
 import type { TokenConfig } from '../../../lib/types';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { addAirdropEntry, removeAirdropEntry, updateAirdropEntry } from '../../../lib/clanker-utils';
-import { calculateDevBuyEstimate } from '../../../lib/calculations';
+import { calculateDevBuyTokens } from '../../../lib/calculations';
 import { useState, useEffect } from 'react';
 import { usePublicClient } from 'wagmi';
 import { validatePairToken } from '../../../lib/validation';
+import { BASE_NETWORK } from '../../../lib/clanker-utils';
 
 interface ExtensionsStepProps {
   config: TokenConfig;
@@ -86,14 +87,53 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
     });
   };
 
-  const devBuyEstimate = calculateDevBuyEstimate(
-    config.devBuy?.amount ?? 0,
-    Number(config.startingMarketCap)
-  );
+  // Calculate available supply for dev buy (subtract vault and airdrop)
+  const totalTokenSupply = 100_000_000_000; // Default supply
+  let availableSupply = totalTokenSupply;
+  if (vault.enabled && vault.percentage > 0) {
+    availableSupply -= (totalTokenSupply * vault.percentage) / 100;
+  }
+  if (airdrop.enabled && airdrop.amount > 0) {
+    availableSupply -= airdrop.amount;
+  }
+  if (availableSupply < 0) availableSupply = 0;
+
+  // Use the correct paired token address for WETH if not set
+  let pairedToken = config.pool?.pairedToken;
+  if (!pairedToken && config.pairTokenType === 'WETH') {
+    // Import BASE_NETWORK at the top if not already
+    // import { BASE_NETWORK } from '../../../lib/clanker-utils';
+    pairedToken = BASE_NETWORK.WETH_ADDRESS;
+  }
+
+  // Use the accurate AMM constant product formula for dev buy estimate
+  let devBuyEstimate: ReturnType<typeof calculateDevBuyTokens> | null = null;
+  const devBuyAmount = Number(config.devBuy?.amount);
+  const startingMarketCap = Number(config.startingMarketCap);
+  if (
+    devBuyAmount > 0 &&
+    startingMarketCap > 0 &&
+    !isNaN(devBuyAmount) &&
+    !isNaN(startingMarketCap) &&
+    availableSupply > 0
+  ) {
+    try {
+      devBuyEstimate = calculateDevBuyTokens(devBuyAmount, startingMarketCap, availableSupply);
+      // Cap tokensReceived at availableSupply
+      if (devBuyEstimate.tokensReceived > availableSupply) {
+        devBuyEstimate.tokensReceived = availableSupply;
+      }
+    } catch {}
+  }
 
   // Save estimated tokens to config for later use (if dev buy is enabled)
   useEffect(() => {
-    if (config.devBuy?.enabled && devBuyEstimate) {
+    if (
+      config.devBuy?.enabled &&
+      devBuyEstimate &&
+      isFinite(devBuyEstimate.tokensReceived) &&
+      devBuyEstimate.tokensReceived > 0
+    ) {
       updateConfig({ devBuy: { ...devBuy, estimatedTokens: devBuyEstimate.tokensReceived } });
     }
   }, [config.devBuy?.enabled, devBuyEstimate?.tokensReceived]);
@@ -320,17 +360,39 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                 </div>
               </div>
 
-              {devBuyEstimate && (
-                <div className="card" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-                  <div className="text-sm space-y-xs">
-                    <div className="font-semibold text-primary">Estimated Purchase:</div>
-                    <div className="text-secondary">
-                      ~{(devBuyEstimate.tokensReceived / 1_000_000_000).toFixed(2)}B tokens 
-                      ({devBuyEstimate.priceImpact.toFixed(2)}% of supply)
+                  {/* Robust NaN/invalid handling for dev buy estimate */}
+                  {devBuyEstimate &&
+                    isFinite(devBuyEstimate.tokensReceived) &&
+                    isFinite(devBuyEstimate.priceImpact) &&
+                    devBuyEstimate.tokensReceived > 0 &&
+                    devBuyEstimate.priceImpact >= 0 &&
+                    devBuyEstimate.tokensReceived < availableSupply * 0.9999 &&
+                    devBuyEstimate.priceImpact < 99.99 ? (
+                    <div className="card" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                      <div className="text-sm space-y-xs">
+                        <div className="font-semibold text-primary">Estimated Purchase:</div>
+                        <div className="text-secondary">
+                          ~{(devBuyEstimate.tokensReceived / 1_000_000_000).toFixed(2)}B tokens 
+                          ({devBuyEstimate.priceImpact.toFixed(2)}% of supply)
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              )}
+                  ) : devBuyEstimate &&
+                    isFinite(devBuyEstimate.tokensReceived) &&
+                    isFinite(devBuyEstimate.priceImpact) &&
+                    (devBuyEstimate.tokensReceived >= availableSupply * 0.9999 || devBuyEstimate.priceImpact >= 99.99) ? (
+                    <div className="card" style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                      <div className="text-sm text-danger font-semibold">
+                        Error: Dev buy amount is too high and would consume nearly all of the available supply. Please reduce the dev buy amount.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="card" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                      <div className="text-sm text-danger">
+                        Unable to estimate dev buy. Please check that both the dev buy amount and starting market cap are set and valid, and that available supply is positive.
+                      </div>
+                    </div>
+                  )}
             </div>
           )}
         </div>
