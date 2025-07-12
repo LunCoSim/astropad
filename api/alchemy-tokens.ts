@@ -44,7 +44,7 @@ export async function fetchDeployedTokensViaAlchemy(walletAddress: string): Prom
     console.log(`Found ${clankerTokens.length} Clanker tokens owned by wallet`);
     return clankerTokens;
 
-  } catch (error: Error) {
+  } catch (error: unknown) {
     console.error('Error fetching tokens via Alchemy:', error);
     return [];
   }
@@ -93,7 +93,7 @@ async function getOwnedTokens(alchemyUrl: string, walletAddress: string): Promis
     console.log(`Found ${validTokens.length} tokens with non-zero balance`);
     return validTokens;
 
-  } catch (error: Error) {
+  } catch (error: unknown) {
     console.error('Error getting owned tokens:', error);
     return [];
   }
@@ -133,11 +133,11 @@ async function filterClankerTokensWithTimeout(
         console.log(`❌ Not a Clanker token: ${token.contractAddress}`);
       }
       
-    } catch (error: Error) {
-      if (error.message === 'Timeout') {
+    } catch (error: unknown) {
+      if ((error as Error).message === 'Timeout') {
         console.log(`⏰ Timeout checking token ${token.contractAddress} - skipping`);
       } else {
-        console.error(`Error checking token ${token.contractAddress}:`, error.message);
+        console.error(`Error checking token ${token.contractAddress}:`, (error as Error).message);
       }
     }
   }
@@ -181,7 +181,7 @@ async function checkIfClankerTokenFast(
       source: 'automatic' as const,
     };
 
-  } catch (error: Error) {
+  } catch (error: unknown) {
     return null;
   }
 }
@@ -251,7 +251,7 @@ async function findTokenCreatedEventFast(alchemyUrl: string, tokenAddress: strin
         // Add small delay to avoid rate limiting
         await new Promise(resolve => setTimeout(resolve, 50));
         
-      } catch (error: Error) {
+      } catch (error: unknown) {
         console.log(`Error searching blocks ${searchFromBlock}-${toBlock}, continuing...`);
         continue;
       }
@@ -260,7 +260,7 @@ async function findTokenCreatedEventFast(alchemyUrl: string, tokenAddress: strin
     console.log(`No TokenCreated event found for ${tokenAddress} in recent blocks`);
     return null;
     
-  } catch (error: Error) {
+  } catch (error: unknown) {
     console.error(`Error in fast search for ${tokenAddress}:`, error);
     return null;
   }
@@ -293,7 +293,7 @@ async function getCurrentBlockNumber(alchemyUrl: string): Promise<number> {
     
     return parseInt(blockNumber, 16);
 
-  } catch (error: Error) {
+  } catch (error: unknown) {
     return 0x1e84800 + 100000; // Fallback to a reasonable recent block
   }
 }
@@ -357,7 +357,7 @@ async function getTransactionDetails(alchemyUrl: string, txHash: string): Promis
       timestamp: parseInt(block.timestamp, 16) * 1000, // Convert to milliseconds
     };
 
-  } catch (error: Error) {
+  } catch (error: unknown) {
     return null;
   }
 }
@@ -395,7 +395,7 @@ async function getTokenMetadata(alchemyUrl: string, tokenAddress: string): Promi
       logo: metadata?.logo,
     };
 
-  } catch (error: Error) {
+  } catch (error: unknown) {
     console.error(`Error getting token metadata for ${tokenAddress}:`, error);
     return {
       name: '',
