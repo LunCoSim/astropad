@@ -77,12 +77,14 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
   };
 
   const handleFeeCollectorsChange = (recipients: RewardRecipient[]) => {
-    // Always enforce hidden LunCo collector and force token: 'Both'
+    // Always force token: 'Both'
     const recipientsWithToken = recipients.map(r => ({ ...r, token: 'Both' }));
     updateConfig({
       rewards: {
         ...config.rewards,
-        recipients: ensureAstropadCollector(recipientsWithToken),
+        recipients: config.rewards.useSimpleDistribution
+          ? recipientsWithToken
+          : ensureAstropadCollector(recipientsWithToken),
         customDistribution: !config.rewards.useSimpleDistribution
       }
     });

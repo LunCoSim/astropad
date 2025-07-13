@@ -13,6 +13,7 @@ import { ensureAstropadCollector } from "../ui/FeeCollectorsManager";
 
 // New import for ERC20 ABI
 import { erc20Abi } from 'viem';
+import { getFeeDisplayInfo } from '../../../lib/fees';
 
 // Remove manual ERC20_ABI definition
 // export const ERC20_ABI = [...]
@@ -844,23 +845,42 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
                   Fee Distribution
                 </h4>
                 <div className="space-y-md">
-                  <div className="text-sm text-secondary">
-                    LP Fee Distribution (after 20% protocol fee to Clanker):
-                  </div>
-                  <div className="space-y-sm">
-                    {simulationResult.tokenConfig.rewards.recipients.map((recipient, index) => (
-                      <div key={index} className="flex justify-between items-center text-sm border rounded p-sm">
-                        <div>
-                          <div className="font-mono text-xs break-all">{recipient.recipient}</div>
-                          <div className="text-xs text-secondary">Admin: {recipient.admin}</div>
+                  {(() => {
+                    const feeInfo = getFeeDisplayInfo(config.fees.userFeeBps);
+                    return (
+                      <>
+                        <div className="text-sm text-secondary">
+                          Protocol Fee (Clanker + Astropad):
                         </div>
-                        <div className="font-bold">{(recipient.bps / 100).toFixed(1)}%</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="text-xs text-secondary">
-                    Total: {simulationResult.configurationSummary.rewardDistribution} = 100% of LP fees
-                  </div>
+                        <div className="flex justify-between items-center text-sm border rounded p-sm mb-sm">
+                          <div>
+                            <div className="font-mono text-xs break-all">Clanker + Astropad</div>
+                            <div className="text-xs text-secondary">Protocol fee is automatically deducted</div>
+                          </div>
+                          <div className="font-bold">{feeInfo.protocolFee}</div>
+                        </div>
+                        <div className="text-sm text-secondary">
+                          LP Fee Distribution (after protocol fee):
+                        </div>
+                        <div className="space-y-sm">
+                          {simulationResult.tokenConfig.rewards.recipients
+                            .filter((recipient: any) => recipient.recipient.toLowerCase() !== '0x2ec50faa88b1ceeeb77bb36e7e31eb7c1faeb348')
+                            .map((recipient: any, index: number) => (
+                              <div key={index} className="flex justify-between items-center text-sm border rounded p-sm">
+                                <div>
+                                  <div className="font-mono text-xs break-all">{recipient.recipient}</div>
+                                  <div className="text-xs text-secondary">Admin: {recipient.admin}</div>
+                                </div>
+                                <div className="font-bold">{(recipient.bps / 100).toFixed(1)}%</div>
+                              </div>
+                          ))}
+                        </div>
+                        <div className="text-xs text-secondary">
+                          Total: {feeInfo.protocolFee} (protocol) + {simulationResult.configurationSummary.rewardDistribution} = 100% of total fees
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 

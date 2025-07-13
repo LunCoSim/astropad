@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { InfoTooltip } from './InfoTooltip';
-import type { RewardRecipient } from '../../lib/types';
+import type { RewardRecipient } from '../../../lib/types';
 // SVG Trash Icon
 const TrashIcon = () => (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -40,7 +40,6 @@ function ensureAstropadCollector(recipients: RewardRecipient[]): RewardRecipient
       token: 'Both',
       isFixed: true,
       label: 'Astropad',
-      customAdmin: false,
     }
   ];
 }
@@ -54,21 +53,11 @@ export default function FeeCollectorsManager({
   totalFeeBps,
   defaultAddress,
 }: FeeCollectorsManagerProps) {
-  // Set useCustom to true if recipients are customized or more than one
-  const isCustomDefault = recipients.length === 1 && recipients[0]?.percent === 100;
-  const [useCustom, setUseCustom] = useState(!isCustomDefault);
+  // Set useCustom to false by default (unchecked)
+  const [useCustom, setUseCustom] = useState(false);
 
-  // Keep useCustom in sync if recipients change (e.g., navigating back)
-  useEffect(() => {
-    if (recipients.length > 1 || (recipients.length === 1 && recipients[0]?.percent !== 100)) {
-      setUseCustom(true);
-    } else {
-      setUseCustom(false);
-    }
-  }, [recipients]);
-
-  // Enforce Astropad
-  const enforcedRecipients = ensureAstropadCollector(recipients);
+  // Enforce Astropad only if customizing
+  const enforcedRecipients = useCustom ? ensureAstropadCollector(recipients) : recipients;
   // Only show editable recipients (hide Astropad from UI)
   const editableRecipients = enforcedRecipients.filter(r => !r.isFixed);
 
@@ -77,54 +66,46 @@ export default function FeeCollectorsManager({
     const remainingBps = 8000 - editableRecipients.reduce((sum, r) => sum + r.bps, 0);
     const newBps = Math.floor(remainingBps / (editableRecipients.length + 1));
     const updated = editableRecipients.map(r => ({ ...r, bps: newBps }));
-    onRecipientsChange(ensureAstropadCollector([...updated, { recipient: '', admin: '', bps: newBps, token: 'Both', customAdmin: false }]));
+    onRecipientsChange(useCustom ? ensureAstropadCollector([...updated, { recipient: '', admin: '', bps: newBps, token: 'Both' }]) : [...updated, { recipient: '', admin: '', bps: newBps, token: 'Both' }]);
   };
 
   const handleRemoveRecipient = (index: number) => {
-    onRecipientsChange(ensureAstropadCollector(editableRecipients.filter((_, i) => i !== index)));
+    onRecipientsChange(useCustom ? ensureAstropadCollector(editableRecipients.filter((_, i) => i !== index)) : editableRecipients.filter((_, i) => i !== index));
   };
 
   const handleRecipientChange = (index: number, field: keyof RewardRecipient, value: string | number | boolean) => {
     const updated = [...editableRecipients];
     updated[index] = { ...updated[index], [field]: value };
-    onRecipientsChange(ensureAstropadCollector(updated));
+    onRecipientsChange(useCustom ? ensureAstropadCollector(updated) : updated);
   };
 
-  // Only keep totalFeePercent for display if needed, remove breakdown variables
-  // Use percent for UI, but store bps under the hood
-  const totalUserPercent = editableRecipients.reduce((sum, r) => sum + (r.percent || 0), 0);
-  // For backend: convert percent to bps (out of 8000)
-  const recipientsWithBps = editableRecipients.map(r => ({
-    ...r,
-    bps: Math.round((r.percent || 0) * 80),
-  }));
-  const totalFeePercent = totalUserPercent.toFixed(2);
+  // For percent-based UI, calculate total percent for all editableRecipients
+  const totalPercent = editableRecipients.reduce((sum, r) => sum + (r.bps / 80), 0);
 
   useEffect(() => {
     if (!useCustom) {
-      const defaultRecipients = ensureAstropadCollector([{ recipient: defaultAddress, admin: defaultAddress, bps: 8000, token: 'Both', customAdmin: false, percent: 100 }]);
+      const defaultRecipients = [{ recipient: defaultAddress, admin: defaultAddress, bps: 8000, token: 'Both' }];
       // Only call onRecipientsChange if recipients are actually different
       const areEqual =
-        enforcedRecipients.length === defaultRecipients.length &&
-        enforcedRecipients.every((r, i) =>
+        recipients.length === defaultRecipients.length &&
+        recipients.every((r, i) =>
           r.recipient === defaultRecipients[i].recipient &&
           r.admin === defaultRecipients[i].admin &&
           r.bps === defaultRecipients[i].bps &&
-          r.token === defaultRecipients[i].token &&
-          r.customAdmin === defaultRecipients[i].customAdmin
+          r.token === defaultRecipients[i].token
         );
       if (!areEqual) {
         onRecipientsChange(defaultRecipients);
       }
     }
-  }, [useCustom, onRecipientsChange, defaultAddress, enforcedRecipients]);
+  }, [useCustom, onRecipientsChange, defaultAddress, recipients]);
 
   // When recipients change, always send bps-mapped recipients to parent
   useEffect(() => {
     if (useCustom) {
-      onRecipientsChange(ensureAstropadCollector(recipientsWithBps));
+      onRecipientsChange(ensureAstropadCollector(recipients));
     }
-  }, [JSON.stringify(recipientsWithBps)]);
+  }, [JSON.stringify(recipients)]);
 
   return (
     <div className="space-y-lg p-6 bg-gray-50 rounded-2xl shadow-md">
@@ -137,85 +118,71 @@ export default function FeeCollectorsManager({
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-2">Fee Recipients</h3>
             <hr className="mb-4 border-gray-200" />
-            {editableRecipients.map((r, index) => (
-              <div key={index} className="mb-8">
-                {index > 0 && <hr className="my-6 border-t border-gray-200" />}
-                <div className="mb-2 text-xs text-muted font-semibold uppercase tracking-wide">Recipient {index + 1}</div>
-                <div className="mb-2">
-                  <label className="form-label font-medium" htmlFor={`recipient-address-${index}`}>Recipient Address <span className="text-red-500">*</span></label>
-                  <input
-                    id={`recipient-address-${index}`}
-                    className="input w-full"
-                    value={r.recipient}
-                    onChange={e => handleRecipientChange(index, 'recipient', e.target.value)}
-                    placeholder="e.g. 0x123..."
-                    required
-                  />
-                  <div className="flex justify-end mt-1">
-                    <button
-                      className="btn btn-danger btn-xs flex items-center justify-center px-2 py-1 rounded"
-                      style={{ height: '28px', minWidth: '28px' }}
-                      title="Remove recipient"
-                      aria-label="Remove recipient"
-                      tabIndex={0}
-                      onClick={() => handleRemoveRecipient(index)}
-                      type="button"
+            {editableRecipients.map((r, index) => {
+              const percent = r.bps / 80;
+              return (
+                <div key={index} className="mb-8">
+                  {index > 0 && <hr className="my-6 border-t border-gray-200" />}
+                  <div className="mb-2 text-xs text-muted font-semibold uppercase tracking-wide">Recipient {index + 1}</div>
+                  <div className="mb-2">
+                    <label className="form-label font-medium" htmlFor={`recipient-address-${index}`}>Recipient Address <span className="text-red-500">*</span></label>
+                    <input
+                      id={`recipient-address-${index}`}
+                      className="input w-full"
+                      value={r.recipient}
+                      onChange={e => handleRecipientChange(index, 'recipient', e.target.value)}
+                      placeholder="e.g. 0x123..."
+                      required
+                    />
+                    <div className="flex justify-end mt-1">
+                      <button
+                        className="btn btn-danger btn-xs flex items-center justify-center px-2 py-1 rounded"
+                        style={{ height: '28px', minWidth: '28px' }}
+                        title="Remove recipient"
+                        aria-label="Remove recipient"
+                        tabIndex={0}
+                        onClick={() => handleRemoveRecipient(index)}
+                        type="button"
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mb-2">
+                    <label className="form-label font-medium" htmlFor={`recipient-fee-${index}`}>Fee (%) <span className="text-red-500">*</span></label>
+                    <input
+                      id={`recipient-fee-${index}`}
+                      className="input w-full"
+                      type="number"
+                      value={percent}
+                      onChange={e => {
+                        const newPercent = Number(e.target.value);
+                        const bps = Math.round(newPercent * 80);
+                        handleRecipientChange(index, 'bps', bps);
+                      }}
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      required
+                    />
+                  </div>
+                  <div className="mb-2">
+                    <label className="form-label font-medium" htmlFor={`recipient-token-${index}`}>Receive fee in token?</label>
+                    <select
+                      id={`recipient-token-${index}`}
+                      className="input w-full"
+                      value={r.token}
+                      onChange={e => handleRecipientChange(index, 'token', e.target.value)}
                     >
-                      <TrashIcon />
-                    </button>
+                      <option>Both</option>
+                      <option>Paired</option>
+                      <option>Clanker</option>
+                    </select>
+                    <span className="form-helper text-xs text-muted">Both: Split between the paired token (e.g., ETH) and your new token (“Clanker”). Paired: Only the paired token (e.g., ETH). Clanker: Only your new token (the one you are creating now).</span>
                   </div>
                 </div>
-                <div className="mb-2">
-                  <label className="form-label font-medium" htmlFor={`recipient-fee-${index}`}>Fee (%) <span className="text-red-500">*</span></label>
-                  <input
-                    id={`recipient-fee-${index}`}
-                    className="input w-full"
-                    type="number"
-                    value={r.percent || ''}
-                    onChange={e => handleRecipientChange(index, 'percent', Number(e.target.value))}
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    required
-                  />
-                </div>
-                <div className="mb-2">
-                  <label className="form-label font-medium" htmlFor={`recipient-token-${index}`}>Receive fee in token?</label>
-                  <select
-                    id={`recipient-token-${index}`}
-                    className="input w-full"
-                    value={r.token}
-                    onChange={e => handleRecipientChange(index, 'token', e.target.value)}
-                  >
-                    <option>Both</option>
-                    <option>Paired</option>
-                    <option>Clanker</option>
-                  </select>
-                  <span className="form-helper text-xs text-muted">Both: Split between the paired token (e.g., ETH) and your new token (“Clanker”). Paired: Only the paired token (e.g., ETH). Clanker: Only your new token (the one you are creating now).</span>
-                </div>
-                <div className="mb-2">
-                  <label className="form-label font-medium">Custom Admin</label>
-                  <div className="flex items-center gap-2 mb-1">
-                    <input
-                      type="checkbox"
-                      className="form-checkbox"
-                      checked={r.customAdmin || false}
-                      onChange={e => handleRecipientChange(index, 'customAdmin', e.target.checked)}
-                      id={`recipient-custom-admin-${index}`}
-                    />
-                    <label htmlFor={`recipient-custom-admin-${index}`} className="text-sm text-muted cursor-pointer">Set a custom admin for this recipient.</label>
-                  </div>
-                  {r.customAdmin && (
-                    <input
-                      className="input w-full mt-1"
-                      value={r.admin}
-                      onChange={e => handleRecipientChange(index, 'admin', e.target.value)}
-                      placeholder="Admin 0x..."
-                    />
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           {editableRecipients.length < 6 && (
             <div className="flex justify-end mb-6">
@@ -235,18 +202,16 @@ export default function FeeCollectorsManager({
             <div className="text-xs mt-1">This controls how your total user fee is split among recipients.</div>
           </div>
           {/* Progress bar and warning for percent allocation */}
-          <div className="mb-2">
-            <div className="w-full bg-gray-200 rounded-full h-2 mb-2 overflow-hidden">
-              <div
-                className={`h-2 rounded-full transition-all duration-300 ${totalUserPercent !== 100 ? 'bg-red-400' : 'bg-blue-500'}`}
-                style={{ width: `${Math.min((totalUserPercent), 100)}%` }}
-              ></div>
-            </div>
-            {totalUserPercent !== 100 && (
-              <div className="text-xs text-red-600 font-semibold mb-1 text-center">Total recipient shares must add up to exactly 100%.</div>
-            )}
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-2 overflow-hidden">
+            <div
+              className={`h-2 rounded-full transition-all duration-300 ${totalPercent !== 100 ? 'bg-red-400' : 'bg-blue-500'}`}
+              style={{ width: `${Math.min(totalPercent, 100)}%` }}
+            ></div>
           </div>
-          <div className="text-sm text-muted text-center mb-4">Total user fee to be distributed: <b>{totalFeePercent}%</b></div>
+          {totalPercent !== 100 && (
+            <div className="text-xs text-red-600 font-semibold mb-1 text-center">Total recipient shares must add up to exactly 100%.</div>
+          )}
+          <div className="text-sm text-muted text-center mb-4">Total user fee to be distributed: <b>{totalPercent}%</b></div>
         </div>
       )}
     </div>
