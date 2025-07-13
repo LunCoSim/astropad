@@ -384,17 +384,22 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
       });
       console.log('[DEPLOY] Clanker SDK initialized');
 
-      // Estimate gas
-      console.log('[DEPLOY] Estimating gas...');
-      const gasEstimate = await publicClient.estimateGas({
-        // ... your gas estimation params here ...
-      });
-      console.log('[DEPLOY] Estimated gas required:', gasEstimate);
-
       // Deploy token
       console.log('[DEPLOY] Calling clanker.deploy...');
       const deployResult: ClankerDeployResult = await clanker.deploy(fullConfig);
       console.log('[DEPLOY] Deploy result:', deployResult);
+
+      if (deployResult.error) {
+        const errorString = JSON.stringify(deployResult.error, Object.getOwnPropertyNames(deployResult.error)).toLowerCase();
+        if (errorString.includes('user rejected')) {
+          setError('Transaction rejected by user.');
+        } else {
+          console.error('[DEPLOY] Deployment error from SDK:', deployResult.error);
+          setError(deployResult.error.message || 'An unknown error occurred during deployment.');
+        }
+        setIsDeploying(false);
+        return;
+      }
 
       // Wait for transaction (if applicable)
       let txReceipt;
@@ -423,8 +428,12 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
       console.log('✅ Token deployed successfully using SDK!');
       
     } catch (err: any) {
-      console.error('[DEPLOY] Deployment error:', err);
-      setError(err.message || String(err));
+      if (err.message && err.message.includes('User rejected the request')) {
+        setError('Transaction rejected by user.');
+      } else {
+        console.error('[DEPLOY] Deployment error:', err);
+        setError(err.message || String(err));
+      }
       setIsDeploying(false);
     }
   };
