@@ -207,6 +207,10 @@ function App() {
       <main className="container" style={{ paddingTop: 'var(--spacing-2xl)', paddingBottom: 'var(--spacing-2xl)' }}>
         {renderCurrentView()}
       </main>
+
+      <div className="alpha-notification">
+        Alpha Version
+      </div>
     </div>
   );
 }
