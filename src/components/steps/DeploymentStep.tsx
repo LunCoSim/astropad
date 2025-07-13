@@ -522,50 +522,44 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
                 </div>
                 <div className="text-sm">
                   <span className="text-muted">Fee Collectors:</span>
-                  <span className="ml-sm font-semibold text-primary">{config.rewards.recipients.length}</span>
+                  <span className="ml-sm font-semibold text-primary">{config.rewards.recipients.filter(r => r.recipient.toLowerCase() !== '0x2ec50faa88b1ceeeb77bb36e7e31eb7c1faeb348').length}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Fee Collectors Breakdown */}
-          {config.rewards.recipients.length > 0 && (
-            <div>
-              <h4 className="font-semibold text-primary mb-md">LP Fee Distribution ({config.rewards.recipients.length}/7)</h4>
-              <div className="space-y-sm">
-                <div className="text-xs text-muted mb-sm">
-                  Note: 20% protocol fee is automatically deducted by Clanker during swaps. Below shows LP fee distribution.
+          <div>
+            <h4 className="font-semibold text-primary mb-md">LP Fee Distribution</h4>
+            <div className="space-y-sm">
+              <div className="text-xs text-muted mb-sm">
+                Protocol fee is automatically deducted. Below shows the user LP fee distribution.
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <div className="flex items-center space-x-sm">
+                  <span className="text-muted">Collector 1:</span>
+                  <span className="font-mono text-xs text-muted">
+                    {config.tokenAdmin.slice(0, 6)}...{config.tokenAdmin.slice(-4)}
+                  </span>
                 </div>
-                {config.rewards.recipients.map((recipient, index) => (
-                  <div key={index} className="flex justify-between items-center text-sm">
-                    <div className="flex items-center space-x-sm">
-                      <span className="text-muted">{recipient.label || `Collector ${index + 1}`}:</span>
-                      <span className="font-mono text-xs text-muted">
-                        {recipient.recipient.slice(0, 6)}...{recipient.recipient.slice(-4)}
-                      </span>
-                    </div>
-                    <span className="font-semibold text-primary">{(recipient.bps / 100).toFixed(2)}%</span>
-                  </div>
-                ))}
-                <div className="border-t border-border pt-sm mt-sm">
-                  <div className="flex justify-between items-center text-sm font-semibold">
-                    <span className="text-muted">Total LP Distribution:</span>
-                    <span className="text-primary">
-                      {(config.rewards.recipients.reduce((sum, r) => sum + r.bps, 0) / 100).toFixed(2)}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm text-blue-600">
-                    <span>+ Clanker Protocol Fee:</span>
-                    <span>{((config.fees.userFeeBps * 0.2) / 100).toFixed(2)}%</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm font-bold border-t pt-sm">
-                    <span>Total Fee Structure:</span>
-                    <span>{(config.fees.userFeeBps / 100).toFixed(2)}%</span>
-                  </div>
+                <span className="font-semibold text-primary">{((config.fees.userFeeBps * 0.64) / 100).toFixed(2)}%</span>
+              </div>
+              <div className="border-t border-border pt-sm mt-sm">
+                <div className="flex justify-between items-center text-sm font-semibold">
+                  <span className="text-muted">Total LP Distribution:</span>
+                  <span className="text-primary">{((config.fees.userFeeBps * 0.64) / 100).toFixed(2)}%</span>
+                </div>
+                <div className="flex justify-between items-center text-sm text-blue-600">
+                  <span>+ Protocol Fee:</span>
+                  <span>{((config.fees.userFeeBps * 0.36) / 100).toFixed(2)}%</span>
+                </div>
+                <div className="flex justify-between items-center text-sm font-bold border-t pt-sm">
+                  <span>Total Fee Structure:</span>
+                  <span>{(config.fees.userFeeBps / 100).toFixed(2)}%</span>
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
           {/* Extensions */}
           <div>
