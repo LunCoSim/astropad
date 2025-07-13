@@ -265,8 +265,8 @@ export const CLANKER_V4_ADDRESSES = {
 
 // Validation limits for fees and other parameters
 export const VALIDATION_LIMITS = {
-  MIN_FEE_BPS: 100,  // 1%
-  MAX_FEE_BPS: 10000, // 100%
+  MIN_FEE_BPS: 30,  // 0.3%
+  MAX_FEE_BPS: 300, // 3%
 };
 
 export function getTokenPairDisplayName(address: `0x${string}` | string): string {

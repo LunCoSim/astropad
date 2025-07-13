@@ -282,7 +282,7 @@ export const AdvancedConfigStep: React.FC<AdvancedConfigStepProps> = ({
               </div>
             </div>
                          <div className="text-xs text-muted mt-sm">
-               Total fee: {feeInfo.totalFee} | Protocol (Clanker + Astropad): {feeInfo.combinedProtocol} | User: {feeInfo.userReceives}
+               Total fee: {feeInfo.totalFee} | Protocol Fee: {feeInfo.protocolFee} | User: {feeInfo.userReceives}
              </div>
           </div>
 

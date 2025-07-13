@@ -511,7 +511,7 @@ export function DeploymentStep({ config, onPrevious, updateConfig }: DeploymentS
                   <span className="ml-sm font-semibold text-primary">{(config.fees.userFeeBps / 100).toFixed(2)}%</span>
                 </div>
                 <div className="text-sm">
-                  <span className="text-muted">Protocol Fee (Clanker + Astropad):</span>
+                  <span className="text-muted">Protocol Fee:</span>
                   <span className="ml-sm font-semibold text-blue-600">{((config.fees.userFeeBps * 0.36) / 100).toFixed(2)}%</span>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { InfoTooltip } from './InfoTooltip';
-import type { RewardRecipient } from '../../lib/types.ts';
+import type { RewardRecipient } from '../../lib/types';
 
 type FeeCollectorsManagerProps = {
   recipients: RewardRecipient[];
@@ -67,12 +67,8 @@ export default function FeeCollectorsManager({
     onRecipientsChange(ensureAstropadCollector(updated));
   };
 
-  // Dynamic example
+  // Only keep totalFeePercent for display if needed, remove breakdown variables
   const totalFeePercent = (totalFeeBps / 100).toFixed(2);
-  const clankerPercent = (totalFeeBps * 0.2 / 100).toFixed(2);
-  const lpPortion = totalFeeBps * 0.8 / 100;
-  const astropadPercent = (lpPortion * 0.2).toFixed(2);
-  const userPercent = (lpPortion * 0.8).toFixed(2);
 
   useEffect(() => {
     if (!useCustom) {

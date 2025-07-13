@@ -146,27 +146,13 @@ export function calculateTokenFees(
  */
 export function getFeeDisplayInfo(userFeeBps: number) {
   const totalFee = userFeeBps / 100;
-  
   // Protocol automatically takes 20%
-  const clankerFee = (userFeeBps * 0.2) / 100;
-  
-  // Remaining 80% goes to LP
-  const lpFee = (userFeeBps * 0.8) / 100;
-  
-  // LP fee distribution (based on 80/20 split: 80% to user, 20% to Astropad)
-  const userReceives = (lpFee * 0.8);
-  const astroPadReceives = (lpFee * 0.2);
-  
-  // Combined protocol fee (Clanker + Astropad)
-  const combinedProtocol = clankerFee + astroPadReceives;
-  
+  const protocolFee = (userFeeBps * 0.36) / 100; // 36% of total fee (Clanker + Astropad combined)
+  // User receives the rest
+  const userReceives = (userFeeBps / 100) - protocolFee;
   return {
     totalFee: `${totalFee.toFixed(2)}%`,
-    combinedProtocol: `${combinedProtocol.toFixed(2)}% (Clanker: ${clankerFee.toFixed(2)}%, Astropad: ${astroPadReceives.toFixed(2)}%)`,
+    protocolFee: `${protocolFee.toFixed(2)}%`,
     userReceives: `${userReceives.toFixed(2)}%`,
-    // Basis points for contract usage
-    clankerBps: Math.floor(userFeeBps * 0.2),
-    userBps: 8000, // 80% of LP fees
-    astroPadBps: 2000 // 20% of LP fees
   };
 }
