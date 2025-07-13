@@ -61,13 +61,6 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
     entries: [{ address: '', amount: 1 }],
   };
   const airdrop = { ...defaultAirdrop, ...(config.airdrop ?? {}) };
-  const defaultDevBuy = {
-    enabled: false,
-    amount: 0.1,
-    amountOutMin: 0,
-    recipient: config.tokenAdmin || '',
-  };
-  const devBuy = { ...defaultDevBuy, ...(config.devBuy ?? {}) };
 
   const handleAddAirdropEntry = () => {
     updateConfig({
@@ -106,37 +99,7 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
     pairedToken = BASE_NETWORK.WETH_ADDRESS;
   }
 
-  // Use the accurate AMM constant product formula for dev buy estimate
-  let devBuyEstimate: ReturnType<typeof calculateDevBuyTokens> | null = null;
-  const devBuyAmount = Number(config.devBuy?.amount);
-  const startingMarketCap = Number(config.startingMarketCap);
-  if (
-    devBuyAmount > 0 &&
-    startingMarketCap > 0 &&
-    !isNaN(devBuyAmount) &&
-    !isNaN(startingMarketCap) &&
-    availableSupply > 0
-  ) {
-    try {
-      devBuyEstimate = calculateDevBuyTokens(devBuyAmount, startingMarketCap, availableSupply);
-      // Cap tokensReceived at availableSupply
-      if (devBuyEstimate.tokensReceived > availableSupply) {
-        devBuyEstimate.tokensReceived = availableSupply;
-      }
-    } catch {}
-  }
-
-  // Save estimated tokens to config for later use (if dev buy is enabled)
-  useEffect(() => {
-    if (
-      config.devBuy?.enabled &&
-      devBuyEstimate &&
-      isFinite(devBuyEstimate.tokensReceived) &&
-      devBuyEstimate.tokensReceived > 0
-    ) {
-      updateConfig({ devBuy: { ...devBuy, estimatedTokens: devBuyEstimate.tokensReceived } });
-    }
-  }, [config.devBuy?.enabled, devBuyEstimate?.tokensReceived]);
+  // Remove all Dev Buy logic, state, and JSX (card, calculations, useEffect, etc.)
 
   return (
     <div className="space-y-2xl animate-fade-in">
@@ -305,94 +268,6 @@ export function ExtensionsStep({ config, updateConfig, onNext, onPrevious }: Ext
                   </button>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Dev Buy Configuration */}
-      <div className="card card-hover">
-        <div className="flex items-center space-x-md mb-lg">
-          <h3 className="text-xl font-bold text-primary">Dev Buy</h3>
-          <InfoTooltip content="Automatically purchase tokens after deployment" />
-        </div>
-
-        <div className="space-y-lg">
-          <label className="flex items-center space-x-md cursor-pointer">
-            <input
-              type="checkbox"
-              checked={devBuy.enabled}
-              onChange={(e) => updateConfig({ devBuy: { ...devBuy, enabled: e.target.checked } })}
-              className="rounded"
-            />
-            <span className="form-label">Enable Dev Buy</span>
-          </label>
-
-          {devBuy.enabled && (
-            <div className="space-y-lg">
-              <div className="grid grid-2 gap-lg">
-                <div className="form-group">
-                  <label className="form-label">
-                    {config.pairTokenType === 'WETH' ? 'ETH Amount' : `${pairTokenInfo?.symbol || 'Token'} Amount`}
-                  </label>
-                  <input
-                    type="number"
-                    value={(config.devBuy?.amount ?? defaultDevBuy.amount)}
-                    onChange={(e) => updateConfig({ devBuy: { ...defaultDevBuy, ...(config.devBuy ?? {}), amount: Number(e.target.value) } })}
-                    min="0.00001"
-                    step="0.00001"
-                    className="input font-mono"
-                    placeholder={config.pairTokenType === 'WETH' ? '0.00001' : '1000'}
-                  />
-                  <div className="form-hint">
-                    Minimum: 0.00001 {config.pairTokenType === 'WETH' ? 'ETH' : (pairTokenInfo?.symbol || 'TOKEN')} (avoids precision issues)
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Recipient Address</label>
-                  <input
-                    type="text"
-                    value={devBuy.recipient}
-                    onChange={(e) => updateConfig({ devBuy: { ...devBuy, recipient: e.target.value } })}
-                    placeholder="0x... recipient address"
-                    className="input font-mono text-sm"
-                  />
-                </div>
-              </div>
-
-                  {/* Robust NaN/invalid handling for dev buy estimate */}
-                  {devBuyEstimate &&
-                    isFinite(devBuyEstimate.tokensReceived) &&
-                    isFinite(devBuyEstimate.priceImpact) &&
-                    devBuyEstimate.tokensReceived > 0 &&
-                    devBuyEstimate.priceImpact >= 0 &&
-                    devBuyEstimate.tokensReceived < availableSupply * 0.9999 &&
-                    devBuyEstimate.priceImpact < 99.99 ? (
-                    <div className="card" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-                      <div className="text-sm space-y-xs">
-                        <div className="font-semibold text-primary">Estimated Purchase:</div>
-                        <div className="text-secondary">
-                          ~{(devBuyEstimate.tokensReceived / 1_000_000_000).toFixed(2)}B tokens 
-                          ({devBuyEstimate.priceImpact.toFixed(2)}% of supply)
-                        </div>
-                      </div>
-                    </div>
-                  ) : devBuyEstimate &&
-                    isFinite(devBuyEstimate.tokensReceived) &&
-                    isFinite(devBuyEstimate.priceImpact) &&
-                    (devBuyEstimate.tokensReceived >= availableSupply * 0.9999 || devBuyEstimate.priceImpact >= 99.99) ? (
-                    <div className="card" style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-                      <div className="text-sm text-danger font-semibold">
-                        Error: Dev buy amount is too high and would consume nearly all of the available supply. Please reduce the dev buy amount.
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="card" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                      <div className="text-sm text-danger">
-                        Unable to estimate dev buy. Please check that both the dev buy amount and starting market cap are set and valid, and that available supply is positive.
-                      </div>
-                    </div>
-                  )}
             </div>
           )}
         </div>

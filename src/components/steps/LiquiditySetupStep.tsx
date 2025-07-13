@@ -10,6 +10,9 @@ import { POOL_POSITIONS } from 'clanker-sdk';
 import { validatePairToken } from '../../../lib/validation';
 import { addCustomPosition, removeCustomPosition, updateCustomPosition } from '../../../lib/clanker-utils';
 
+// --- Dev Buy Configuration (moved from ExtensionsStep) ---
+import { calculateDevBuyTokens } from '../../../lib/calculations';
+
 const POOL_POSITION_OPTIONS = [
   { label: 'Standard', value: 'Standard', description: 'Single wide position for maximum liquidity.' },
   { label: 'Project', value: 'Project', description: 'Multiple positions for project-style liquidity.' },
@@ -89,23 +92,78 @@ export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }:
 
   const handleAddCustomPosition = () => {
     updateConfig({
-      customPositions: addCustomPosition(config.customPositions)
+      customPositions: addCustomPosition(config.customPositions ?? [])
     });
   };
 
   const handleRemoveCustomPosition = (index: number) => {
     updateConfig({
-      customPositions: removeCustomPosition(config.customPositions, index)
+      customPositions: removeCustomPosition(config.customPositions ?? [], index)
     });
   };
 
   const handleUpdateCustomPosition = (index: number, field: 'tickLower' | 'tickUpper' | 'positionBps', value: number) => {
     updateConfig({
-      customPositions: updateCustomPosition(config.customPositions, index, field, value)
+      customPositions: updateCustomPosition(config.customPositions ?? [], index, field, value)
     });
   };
 
   // Token distribution calculation removed for v4 - handled automatically by extensions
+
+  const defaultDevBuy = {
+    enabled: false,
+    amount: 0.1,
+    amountOutMin: 0,
+    recipient: config.tokenAdmin || '',
+  };
+  const devBuy = { ...defaultDevBuy, ...(config.devBuy ?? {}) };
+
+  // Calculate available supply for dev buy (subtract vault and airdrop)
+  const totalTokenSupply = 100_000_000_000; // Default supply
+  let availableSupply = totalTokenSupply;
+  if (config.vault?.enabled && config.vault.percentage > 0) {
+    availableSupply -= (totalTokenSupply * config.vault.percentage) / 100;
+  }
+  if (config.airdrop?.enabled && config.airdrop.amount > 0) {
+    availableSupply -= config.airdrop.amount;
+  }
+  if (availableSupply < 0) availableSupply = 0;
+
+  // Set a default value for startingMarketCap if not set
+  const defaultMarketCap = config.pairTokenType === 'WETH' ? 10 : 1000000000;
+  const startingMarketCap = typeof config.startingMarketCap === 'number' && !isNaN(config.startingMarketCap)
+    ? config.startingMarketCap
+    : defaultMarketCap;
+
+  // Use the accurate AMM constant product formula for dev buy estimate
+  let devBuyEstimate = null;
+  const devBuyAmount = Number(config.devBuy?.amount);
+  if (
+    devBuyAmount > 0 &&
+    startingMarketCap > 0 &&
+    !isNaN(devBuyAmount) &&
+    !isNaN(startingMarketCap) &&
+    availableSupply > 0
+  ) {
+    try {
+      devBuyEstimate = calculateDevBuyTokens(devBuyAmount, startingMarketCap, availableSupply);
+      if (devBuyEstimate.tokensReceived > availableSupply) {
+        devBuyEstimate.tokensReceived = availableSupply;
+      }
+    } catch {}
+  }
+
+  // Save estimated tokens to config for later use (if dev buy is enabled)
+  useEffect(() => {
+    if (
+      config.devBuy?.enabled &&
+      devBuyEstimate &&
+      isFinite(devBuyEstimate.tokensReceived) &&
+      devBuyEstimate.tokensReceived > 0
+    ) {
+      updateConfig({ devBuy: { ...devBuy, estimatedTokens: devBuyEstimate.tokensReceived } });
+    }
+  }, [config.devBuy?.enabled, devBuyEstimate?.tokensReceived]);
 
   return (
     <div className="space-y-2xl animate-fade-in">
@@ -234,8 +292,11 @@ export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }:
             <div className="relative">
               <input
                 type="number"
-                value={config.startingMarketCap || ''}
-                onChange={(e) => updateConfig({ startingMarketCap: parseFloat(e.target.value) || '' })}
+                value={config.startingMarketCap ?? defaultMarketCap}
+                onChange={e => {
+                  const value = e.target.value;
+                  updateConfig({ startingMarketCap: value === '' ? undefined : parseFloat(value) });
+                }}
                 placeholder={config.pairTokenType === 'WETH' ? '10.0' : '1000000000'}
                 step="0.001"
                 min="0.001"
@@ -254,6 +315,92 @@ export function LiquiditySetupStep({ config, updateConfig, onNext, onPrevious }:
               <div>• Recommended: 1-10 ETH for WETH, or set an appropriate value for your custom token (billions supported)</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Dev Buy Configuration (moved from ExtensionsStep) */}
+      <div className="card card-hover animate-slide-up mt-xl">
+        <div className="flex items-center space-x-md mb-lg">
+          <h3 className="text-xl font-bold text-primary">Dev Buy</h3>
+          <InfoTooltip content="Automatically purchase tokens after deployment" />
+        </div>
+        <div className="space-y-lg">
+          <label className="flex items-center space-x-md cursor-pointer">
+            <input
+              type="checkbox"
+              checked={devBuy.enabled}
+              onChange={(e) => updateConfig({ devBuy: { ...devBuy, enabled: e.target.checked } })}
+              className="rounded"
+            />
+            <span className="form-label">Enable Dev Buy</span>
+          </label>
+          {devBuy.enabled && (
+            <div className="space-y-lg">
+              <div className="grid grid-2 gap-lg">
+                <div className="form-group">
+                  <label className="form-label">
+                    {config.pairTokenType === 'WETH' ? 'ETH Amount' : `${pairTokenInfo?.symbol || 'Token'} Amount`}
+                  </label>
+                  <input
+                    type="number"
+                    value={(config.devBuy?.amount ?? defaultDevBuy.amount)}
+                    onChange={(e) => updateConfig({ devBuy: { ...defaultDevBuy, ...(config.devBuy ?? {}), amount: Number(e.target.value) } })}
+                    min="0.00001"
+                    step="0.00001"
+                    className="input font-mono"
+                    placeholder={config.pairTokenType === 'WETH' ? '0.00001' : '1000'}
+                  />
+                  <div className="form-hint">
+                    Minimum: 0.00001 {config.pairTokenType === 'WETH' ? 'ETH' : (pairTokenInfo?.symbol || 'TOKEN')} (avoids precision issues)
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Recipient Address</label>
+                  <input
+                    type="text"
+                    value={devBuy.recipient}
+                    onChange={(e) => updateConfig({ devBuy: { ...devBuy, recipient: e.target.value } })}
+                    placeholder="0x... recipient address"
+                    className="input font-mono text-sm"
+                  />
+                </div>
+              </div>
+              {/* Robust NaN/invalid handling for dev buy estimate */}
+              {devBuyEstimate &&
+                isFinite(devBuyEstimate.tokensReceived) &&
+                isFinite(devBuyEstimate.priceImpact) &&
+                devBuyEstimate.tokensReceived > 0 &&
+                devBuyEstimate.priceImpact >= 0 &&
+                devBuyEstimate.tokensReceived < availableSupply * 0.9999 &&
+                devBuyEstimate.priceImpact < 99.99 ? (
+                <div className="card" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                  <div className="text-sm space-y-xs">
+                    <div className="font-semibold text-primary">Estimated Purchase:</div>
+                    <div className="text-secondary">
+                      ~{(devBuyEstimate.tokensReceived / 1_000_000_000).toFixed(2)}B tokens 
+                      ({((devBuyEstimate.tokensReceived / totalTokenSupply) * 100).toFixed(2)}% of supply)
+                    </div>
+                  </div>
+                </div>
+              ) :
+                devBuyEstimate &&
+                isFinite(devBuyEstimate.tokensReceived) &&
+                isFinite(devBuyEstimate.priceImpact) &&
+                (devBuyEstimate.tokensReceived >= availableSupply * 0.9999 || devBuyEstimate.priceImpact >= 99.99) ? (
+                <div className="card" style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                  <div className="text-sm text-danger font-semibold">
+                    Error: Dev buy amount is too high and would consume nearly all of the available supply. Please reduce the dev buy amount.
+                  </div>
+                </div>
+              ) : (
+                <div className="card" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                  <div className="text-sm text-danger">
+                    Unable to estimate dev buy. Please check that both the dev buy amount and starting market cap are set and valid, and that available supply is positive.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
