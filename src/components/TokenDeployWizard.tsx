@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePublicClient, useWalletClient } from 'wagmi';
 
 // Step Components
@@ -80,10 +80,7 @@ export function TokenDeployWizard({
       pairTokenType: 'WETH',
       mev: {
         enabled: true,
-        moduleType: 'block-delay',
-        blockDelay: 2,
-        customModule: undefined,
-        customData: undefined
+        blockDelay: 2
       },
       locker: {
         locker: CLANKER_V4_ADDRESSES.LOCKER,
@@ -133,6 +130,7 @@ export function TokenDeployWizard({
       vanity: {
         enabled: false,
         suffix: '0x4b07',
+        type: 'suffix',
         customSalt: undefined
       },
       advanced: {
@@ -214,10 +212,7 @@ export function TokenDeployWizard({
       pairTokenType: 'WETH',
       mev: {
         enabled: true,
-        moduleType: 'block-delay',
-        blockDelay: 2,
-        customModule: undefined,
-        customData: undefined
+        blockDelay: 2
       },
       locker: {
         locker: CLANKER_V4_ADDRESSES.LOCKER,
@@ -267,6 +262,7 @@ export function TokenDeployWizard({
       vanity: {
         enabled: false,
         suffix: '0x4b07',
+        type: 'suffix',
         customSalt: undefined
       },
       advanced: {
@@ -279,9 +275,10 @@ export function TokenDeployWizard({
     setShowDraftModal(false);
   };
 
-  const updateConfig = (updates: Partial<TokenConfig>) => {
+  // Memoized updateConfig to prevent unnecessary re-renders
+  const updateConfig = useCallback((updates: Partial<TokenConfig>) => {
     setConfig(prev => ({ ...prev, ...updates, interfaceName: 'astropad' }));
-  };
+  }, []);
 
   const isStepValid = (stepIndex: number): boolean => {
     return validateStep(stepIndex, config);

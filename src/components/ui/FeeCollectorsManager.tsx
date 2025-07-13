@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { InfoTooltip } from './InfoTooltip';
-import type { RewardRecipient } from '../../lib/types';
+import type { RewardRecipient } from '../../lib/types.ts';
 
 type FeeCollectorsManagerProps = {
   recipients: RewardRecipient[];
@@ -76,9 +76,22 @@ export default function FeeCollectorsManager({
 
   useEffect(() => {
     if (!useCustom) {
-      onRecipientsChange(ensureAstropadCollector([{ recipient: defaultAddress, admin: defaultAddress, bps: 8000, token: 'Both', customAdmin: false }]));
+      const defaultRecipients = ensureAstropadCollector([{ recipient: defaultAddress, admin: defaultAddress, bps: 8000, token: 'Both', customAdmin: false }]);
+      // Only call onRecipientsChange if recipients are actually different
+      const areEqual =
+        enforcedRecipients.length === defaultRecipients.length &&
+        enforcedRecipients.every((r, i) =>
+          r.recipient === defaultRecipients[i].recipient &&
+          r.admin === defaultRecipients[i].admin &&
+          r.bps === defaultRecipients[i].bps &&
+          r.token === defaultRecipients[i].token &&
+          r.customAdmin === defaultRecipients[i].customAdmin
+        );
+      if (!areEqual) {
+        onRecipientsChange(defaultRecipients);
+      }
     }
-  }, [useCustom, onRecipientsChange, defaultAddress]);
+  }, [useCustom, onRecipientsChange, defaultAddress, enforcedRecipients]);
 
   return (
     <div className="space-y-lg">
